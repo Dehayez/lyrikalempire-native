@@ -9,34 +9,68 @@ export const usePanels = () => {
   const [allowHover, setAllowHover] = useState(true);
   const hoverRefLeft = useRef(false);
   const hoverRefRight = useRef(false);
+  const leftHoverTimeoutRef = useRef(null);
+  const rightHoverTimeoutRef = useRef(null);
 
   const handleMouseEnterLeft = () => {
     if (!allowHover) return;
+    
+    // Clear any pending hide timeout
+    if (leftHoverTimeoutRef.current) {
+      clearTimeout(leftHoverTimeoutRef.current);
+      leftHoverTimeoutRef.current = null;
+    }
+    
     hoverRefLeft.current = true;
     setIsLeftDivVisible(true);
   };
 
   const handleMouseLeaveLeft = () => {
     hoverRefLeft.current = false;
-    if (!hoverRefLeft.current) {
-      setIsLeftDivVisible(false);
-    }
+    
+    // Add a delay before hiding to allow mouse movement to panel
+    leftHoverTimeoutRef.current = setTimeout(() => {
+      if (!hoverRefLeft.current) {
+        setIsLeftDivVisible(false);
+      }
+    }, 150); // 150ms delay
   };
 
   const handleMouseEnterRight = () => {
     if (!allowHover) return;
+    
+    // Clear any pending hide timeout
+    if (rightHoverTimeoutRef.current) {
+      clearTimeout(rightHoverTimeoutRef.current);
+      rightHoverTimeoutRef.current = null;
+    }
+    
     hoverRefRight.current = true;
     setIsRightDivVisible(true);
   };
 
   const handleMouseLeaveRight = () => {
     hoverRefRight.current = false;
-    if (!hoverRefRight.current) {
-      setIsRightDivVisible(false);
-    }
+    
+    // Add a delay before hiding to allow mouse movement to panel
+    rightHoverTimeoutRef.current = setTimeout(() => {
+      if (!hoverRefRight.current) {
+        setIsRightDivVisible(false);
+      }
+    }, 150); // 150ms delay
   };
 
   const toggleSidePanel = (panel) => {
+    // Clear any pending timeouts when toggling
+    if (leftHoverTimeoutRef.current) {
+      clearTimeout(leftHoverTimeoutRef.current);
+      leftHoverTimeoutRef.current = null;
+    }
+    if (rightHoverTimeoutRef.current) {
+      clearTimeout(rightHoverTimeoutRef.current);
+      rightHoverTimeoutRef.current = null;
+    }
+    
     if (panel === 'left') {
       setIsLeftPanelVisible(!isLeftPanelVisible);
       setIsLeftDivVisible(!isLeftPanelVisible);
@@ -56,6 +90,16 @@ export const usePanels = () => {
   };
 
   const closeSidePanel = (panel) => {
+    // Clear any pending timeouts when closing
+    if (leftHoverTimeoutRef.current) {
+      clearTimeout(leftHoverTimeoutRef.current);
+      leftHoverTimeoutRef.current = null;
+    }
+    if (rightHoverTimeoutRef.current) {
+      clearTimeout(rightHoverTimeoutRef.current);
+      rightHoverTimeoutRef.current = null;
+    }
+    
     if (panel === 'left' && isLeftPanelVisible) {
       setIsLeftPanelVisible(false);
     } else if (panel === 'right' && isRightPanelVisible) {
@@ -72,6 +116,18 @@ export const usePanels = () => {
       setAllowHover(true);
     }, 200);
   };
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (leftHoverTimeoutRef.current) {
+        clearTimeout(leftHoverTimeoutRef.current);
+      }
+      if (rightHoverTimeoutRef.current) {
+        clearTimeout(rightHoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return {
     isLeftPanelVisible,

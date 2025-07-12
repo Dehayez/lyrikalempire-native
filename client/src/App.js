@@ -270,12 +270,6 @@ function App() {
             Drop files to upload
           </div>
         )}
-        {!isMobileOrTablet() && !isAuthRoute && (
-          <>
-            <div className="invisible-hover-bridge invisible-hover-bridge--left" onMouseEnter={handleMouseEnterLeft} onMouseLeave={handleMouseLeaveLeft}></div>
-            <div className="invisible-hover-bridge invisible-hover-bridge--right" onMouseEnter={handleMouseEnterRight} onMouseLeave={handleMouseLeaveRight}></div>
-          </>
-        )}
         <ToastContainer />
         {currentBeat && (
           <LyricsModal 

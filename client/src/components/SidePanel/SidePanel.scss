@@ -68,24 +68,6 @@
   }
 }
 
-.invisible-hover-bridge {
-  position: fixed;
-  top: 0;
-  height: 100px;
-  width: 80px;
-  z-index: 15;
-  opacity: 0;
-  background-color: transparent;
-  pointer-events: auto;
-
-  &--left {
-    left: 0;
-  }
-  &--right {
-    right: 0;
-  }
-}
-
 @keyframes slideInLeft {
   from { transform: translateX(-100%); }
   to { transform: translateX(0); }
