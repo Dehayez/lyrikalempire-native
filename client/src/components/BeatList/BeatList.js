@@ -34,13 +34,12 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const { setPlaylistId } = usePlaylist();
   const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats } = useBeat();
   const beats = externalBeats || allBeats;
-  const [filteredBeats, setFilteredBeats] = useState(beats);
 
   // Virtual scrolling state
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
   const [rowHeight, setRowHeight] = useState(60);
   
-  const { sortedItems: sortedBeats, sortConfig, onSort } = useSort(filteredBeats);
+  const { sortedItems: sortedBeats, sortConfig, onSort } = useSort(beats);
   
 const [selectedGenre, setSelectedGenre] = useState(() => getInitialState('selectedItems', {}).genres || []);
 const [selectedMood, setSelectedMood] = useState(() => getInitialState('selectedItems', {}).moods || []);
@@ -54,14 +53,110 @@ const filteredAndSortedBeats = useMemo(() => {
     const matchesSearchText = fieldsToSearch.some(
       field => field && field.toLowerCase().includes(searchText.toLowerCase())
     );
+    
+    // Filter by associations (genres, moods, keywords, features)
+    const serviceAssocs = [
+      { type: 'genres', selected: selectedGenre },
+      { type: 'moods', selected: selectedMood },
+      { type: 'keywords', selected: selectedKeyword },
+      { type: 'features', selected: selectedFeature },
+    ].filter((a) => a.selected.length > 0);
+
+    let matchesAssociations = true;
+    if (serviceAssocs.length > 0) {
+      matchesAssociations = serviceAssocs.every(assoc => {
+        const beatAssociations = beat[assoc.type] || [];
+        const selectedIds = assoc.selected.map(item => item.id);
+        return beatAssociations.some(beatAssoc => 
+          selectedIds.includes(beatAssoc[`${assoc.type.slice(0, -1)}_id`])
+        );
+      });
+    }
+    
     const matchesTierlist =
       selectedTierlist.length === 0 ||
       selectedTierlist.some(item => beat.tierlist === item.id);
 
-    return matchesSearchText && matchesTierlist;
+    return matchesSearchText && matchesAssociations && matchesTierlist;
   });
   return result;
-}, [sortedBeats, searchText, selectedTierlist]);
+}, [sortedBeats, searchText, selectedGenre, selectedMood, selectedKeyword, selectedFeature, selectedTierlist]);
+
+// Calculate counts dynamically based on current beats with new structure
+const calculateCounts = useCallback((beatsToCount) => {
+  const counts = {
+    genres: {},
+    moods: {},
+    keywords: {},
+    features: {},
+    tierlist: {}
+  };
+
+  beatsToCount.forEach(beat => {
+    // Count associations using new beat structure
+    ['genres', 'moods', 'keywords', 'features'].forEach(type => {
+      const associations = beat[type] || [];
+      associations.forEach(association => {
+        const idField = `${type.slice(0, -1)}_id`; // e.g., genre_id, mood_id
+        const id = association[idField];
+        const name = association.name;
+        
+        if (id && name) {
+          if (!counts[type][id]) {
+            counts[type][id] = { id, name, count: 0 };
+          }
+          counts[type][id].count++;
+        }
+      });
+    });
+
+    // Count tierlist (direct property on beat)
+    if (beat.tierlist) {
+      const tierlist = beat.tierlist;
+      if (!counts.tierlist[tierlist]) {
+        counts.tierlist[tierlist] = { id: tierlist, name: tierlist, count: 0 };
+      }
+      counts.tierlist[tierlist].count++;
+    }
+  });
+
+  return counts;
+}, []);
+
+// Generate filter options with dynamic counts
+const filterOptionsWithCounts = useMemo(() => {
+  const counts = calculateCounts(filteredAndSortedBeats);
+  
+  return {
+    genres: genres.map(genre => ({
+      ...genre,
+      count: counts.genres[genre.id]?.count || 0
+    })),
+    moods: moods.map(mood => ({
+      ...mood,
+      count: counts.moods[mood.id]?.count || 0
+    })),
+    keywords: keywords.map(keyword => ({
+      ...keyword,
+      count: counts.keywords[keyword.id]?.count || 0
+    })),
+    features: features.map(feature => ({
+      ...feature,
+      count: counts.features[feature.id]?.count || 0
+    })),
+    tierlist: [
+      { id: 'M', name: 'M', count: counts.tierlist['M']?.count || 0 },
+      { id: 'G', name: 'G', count: counts.tierlist['G']?.count || 0 },
+      { id: 'S', name: 'S', count: counts.tierlist['S']?.count || 0 },
+      { id: 'A', name: 'A', count: counts.tierlist['A']?.count || 0 },
+      { id: 'B', name: 'B', count: counts.tierlist['B']?.count || 0 },
+      { id: 'C', name: 'C', count: counts.tierlist['C']?.count || 0 },
+      { id: 'D', name: 'D', count: counts.tierlist['D']?.count || 0 },
+      { id: 'E', name: 'E', count: counts.tierlist['E']?.count || 0 },
+      { id: 'F', name: 'F', count: counts.tierlist['F']?.count || 0 },
+    ]
+  };
+}, [filteredAndSortedBeats, genres, moods, keywords, features, calculateCounts]);
 
   const filterDropdownRef = useRef(null);
   const [filterDropdownHeight, setFilterDropdownHeight] = useState(0);
@@ -247,48 +342,6 @@ const handlePlayPause = useCallback((beat) => {
     }, 50);
 };
 
-// Main filtering effect: service + tierlist (now using client-side filtering)
-useEffect(() => {
-  // Only run filter if beats are loaded
-  if (!beats || beats.length === 0) {
-    setFilteredBeats([]);
-    return;
-  }
-
-  const filterBeats = () => {
-    let filtered = beats;
-    
-    const serviceAssocs = [
-      { type: 'genres', selected: selectedGenre },
-      { type: 'moods', selected: selectedMood },
-      { type: 'keywords', selected: selectedKeyword },
-      { type: 'features', selected: selectedFeature },
-    ].filter((a) => a.selected.length > 0);
-
-    if (serviceAssocs.length > 0) {
-      filtered = filtered.filter(beat => {
-        return serviceAssocs.every(assoc => {
-          const beatAssociations = beat[assoc.type] || [];
-          const selectedIds = assoc.selected.map(item => item.id);
-          return beatAssociations.some(beatAssoc => 
-            selectedIds.includes(beatAssoc[`${assoc.type.slice(0, -1)}_id`])
-          );
-        });
-      });
-    }
-
-    if (selectedTierlist.length > 0) {
-      filtered = filtered.filter(beat => 
-        selectedTierlist.some(tierlist => beat.tierlist === tierlist.id)
-      );
-    }
-
-    setFilteredBeats(filtered);
-  };
-
-  filterBeats();
-}, [selectedGenre, selectedMood, selectedKeyword, selectedFeature, selectedTierlist, beats]);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowMessage(true);
@@ -453,21 +506,11 @@ useEffect(() => {
       <FilterDropdown
         ref={filterDropdownRef} 
         filters={[
-          { id: 'tierlist-filter', name: 'tierlist', label: 'Tierlist', options: [
-            { id: 'M', name: 'M' },
-            { id: 'G', name: 'G' },
-            { id: 'S', name: 'S' },
-            { id: 'A', name: 'A' },
-            { id: 'B', name: 'B' },
-            { id: 'C', name: 'C' },
-            { id: 'D', name: 'D' },
-            { id: 'E', name: 'E' },
-            { id: 'F', name: 'F' },
-          ] },
-          { id: 'genre-filter', name: 'genres', label: 'Genres', options: genres },
-          { id: 'mood-filter', name: 'moods', label: 'Moods', options: moods },
-          { id: 'keyword-filter', name: 'keywords', label: 'Keywords', options: keywords },
-          { id: 'feature-filter', name: 'features', label: 'Features', options: features },
+          { id: 'tierlist-filter', name: 'tierlist', label: 'Tierlist', options: filterOptionsWithCounts.tierlist },
+          { id: 'genre-filter', name: 'genres', label: 'Genres', options: filterOptionsWithCounts.genres },
+          { id: 'mood-filter', name: 'moods', label: 'Moods', options: filterOptionsWithCounts.moods },
+          { id: 'keyword-filter', name: 'keywords', label: 'Keywords', options: filterOptionsWithCounts.keywords },
+          { id: 'feature-filter', name: 'features', label: 'Features', options: filterOptionsWithCounts.features },
           { id: 'hidden-filter', name: 'hidden', label: 'Hidden', options: [] }
         ]}
         onFilterChange={handleFilterChange}
