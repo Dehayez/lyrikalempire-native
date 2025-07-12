@@ -68,13 +68,15 @@
   }
 }
 
-.invisible-hover-panel {
+.invisible-hover-bridge {
   position: fixed;
   top: 0;
-  bottom: 0;
-  width: 12px;
-  z-index: 10;
-  opacity: 1;
+  height: 100px;
+  width: 80px;
+  z-index: 15;
+  opacity: 0;
+  background-color: transparent;
+  pointer-events: auto;
 
   &--left {
     left: 0;
