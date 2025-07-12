@@ -7,18 +7,17 @@ export const getGenres = async () => {
   return await apiRequest('get', '', API_URL);
 };
 
-export const getGenresWithCounts = async () => {
-  return await apiRequest('get', '/with-counts', API_URL);
-};
-
-export const addGenre = async (name) => {
+export const createGenre = async (name) => {
   return await apiRequest('post', '', API_URL, { name });
 };
 
-export const updateGenre = async (id, data) => {
-  return await apiRequest('put', `/${id}`, API_URL, data);
+export const updateGenre = async (id, name) => {
+  return await apiRequest('put', `/${id}`, API_URL, { name });
 };
 
 export const deleteGenre = async (id) => {
   return await apiRequest('delete', `/${id}`, API_URL);
 };
+
+// Backwards compatibility alias
+export const addGenre = createGenre;

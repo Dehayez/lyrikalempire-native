@@ -7,18 +7,17 @@ export const getFeatures = async () => {
   return await apiRequest('get', '', API_URL);
 };
 
-export const getFeaturesWithCounts = async () => {
-  return await apiRequest('get', '/with-counts', API_URL);
-};
-
-export const addFeature = async (name) => {
+export const createFeature = async (name) => {
   return await apiRequest('post', '', API_URL, { name });
 };
 
-export const updateFeature = async (id, data) => {
-  return await apiRequest('put', `/${id}`, API_URL, data);
+export const updateFeature = async (id, name) => {
+  return await apiRequest('put', `/${id}`, API_URL, { name });
 };
 
 export const deleteFeature = async (id) => {
   return await apiRequest('delete', `/${id}`, API_URL);
 };
+
+// Backwards compatibility alias
+export const addFeature = createFeature;

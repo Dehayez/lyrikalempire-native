@@ -1,106 +1,99 @@
-import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
-import { getGenresWithCounts, getMoodsWithCounts, getFeaturesWithCounts, getKeywordsWithCounts } from '../services';
-import { useUser } from './UserContext'; // Import the useUser hook
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getGenres, getMoods, getFeatures, getKeywords } from '../services';
 
 const DataContext = createContext();
+
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+};
 
 export const DataProvider = ({ children }) => {
   const [genres, setGenres] = useState([]);
   const [moods, setMoods] = useState([]);
   const [keywords, setKeywords] = useState([]);
   const [features, setFeatures] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { user } = useUser(); // Get the user context
 
   const fetchGenres = async () => {
     try {
-      const genresData = await getGenresWithCounts();
+      const genresData = await getGenres();
       setGenres(genresData);
-    } catch (err) {
-      console.error('Error fetching genres:', err);
-      setError(err);
+    } catch (error) {
+      console.error('Error fetching genres:', error);
     }
   };
 
   const fetchMoods = async () => {
     try {
-      const moodsData = await getMoodsWithCounts();
+      const moodsData = await getMoods();
       setMoods(moodsData);
-    } catch (err) {
-      console.error('Error fetching moods:', err);
-      setError(err);
+    } catch (error) {
+      console.error('Error fetching moods:', error);
     }
   };
 
   const fetchKeywords = async () => {
     try {
-      const keywordsData = await getKeywordsWithCounts();
+      const keywordsData = await getKeywords();
       setKeywords(keywordsData);
-    } catch (err) {
-      console.error('Error fetching keywords:', err);
-      setError(err);
+    } catch (error) {
+      console.error('Error fetching keywords:', error);
     }
   };
 
   const fetchFeatures = async () => {
     try {
-      const featuresData = await getFeaturesWithCounts();
+      const featuresData = await getFeatures();
       setFeatures(featuresData);
-    } catch (err) {
-      console.error('Error fetching features:', err);
-      setError(err);
+    } catch (error) {
+      console.error('Error fetching features:', error);
     }
   };
 
-  const fetchData = async (user) => {
-    if (!user || !user.id) {
-      setLoading(false);
-      return;
-    }
-
+  const refetchAll = async () => {
     try {
-      const [genresData, moodsData, keywordsData, featuresData] = await Promise.all([
-        getGenresWithCounts(),
-        getMoodsWithCounts(),
-        getKeywordsWithCounts(),
-        getFeaturesWithCounts()
+      const [
+        genresData,
+        moodsData,
+        keywordsData,
+        featuresData
+      ] = await Promise.all([
+        getGenres(),
+        getMoods(),
+        getKeywords(),
+        getFeatures()
       ]);
       setGenres(genresData);
       setMoods(moodsData);
       setKeywords(keywordsData);
       setFeatures(featuresData);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error refetching all data:', error);
     }
   };
 
   useEffect(() => {
-    fetchData(user);
-  }, [user]);
-
-  const value = useMemo(() => ({
-    genres,
-    moods,
-    keywords,
-    features,
-    loading,
-    error,
-    refetch: () => fetchData(user),
-    fetchGenres,
-    fetchMoods,
-    fetchKeywords,
-    fetchFeatures,
-  }), [genres, moods, keywords, features, loading, error, user]);
+    refetchAll();
+  }, []);
 
   return (
-    <DataContext.Provider value={value}>
+    <DataContext.Provider
+      value={{
+        genres,
+        moods,
+        keywords,
+        features,
+        fetchGenres,
+        fetchMoods,
+        fetchKeywords,
+        fetchFeatures,
+        refetchAll,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );
 };
-
-export const useData = () => useContext(DataContext);

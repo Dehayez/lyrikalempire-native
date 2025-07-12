@@ -131,19 +131,19 @@ const filterOptionsWithCounts = useMemo(() => {
     genres: genres.map(genre => ({
       ...genre,
       count: counts.genres[genre.id]?.count || 0
-    })),
+    })).sort((a, b) => b.count - a.count),
     moods: moods.map(mood => ({
       ...mood,
       count: counts.moods[mood.id]?.count || 0
-    })),
+    })).sort((a, b) => b.count - a.count),
     keywords: keywords.map(keyword => ({
       ...keyword,
       count: counts.keywords[keyword.id]?.count || 0
-    })),
+    })).sort((a, b) => b.count - a.count),
     features: features.map(feature => ({
       ...feature,
       count: counts.features[feature.id]?.count || 0
-    })),
+    })).sort((a, b) => b.count - a.count),
     tierlist: [
       { id: 'M', name: 'M', count: counts.tierlist['M']?.count || 0 },
       { id: 'G', name: 'G', count: counts.tierlist['G']?.count || 0 },
@@ -154,7 +154,7 @@ const filterOptionsWithCounts = useMemo(() => {
       { id: 'D', name: 'D', count: counts.tierlist['D']?.count || 0 },
       { id: 'E', name: 'E', count: counts.tierlist['E']?.count || 0 },
       { id: 'F', name: 'F', count: counts.tierlist['F']?.count || 0 },
-    ]
+    ].sort((a, b) => b.count - a.count)
   };
 }, [filteredAndSortedBeats, genres, moods, keywords, features, calculateCounts]);
 

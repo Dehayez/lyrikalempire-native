@@ -7,18 +7,17 @@ export const getKeywords = async () => {
   return await apiRequest('get', '', API_URL);
 };
 
-export const getKeywordsWithCounts = async () => {
-  return await apiRequest('get', '/with-counts', API_URL);
-};
-
-export const addKeyword = async (name) => {
+export const createKeyword = async (name) => {
   return await apiRequest('post', '', API_URL, { name });
 };
 
-export const updateKeyword = async (id, data) => {
-  return await apiRequest('put', `/${id}`, API_URL, data);
+export const updateKeyword = async (id, name) => {
+  return await apiRequest('put', `/${id}`, API_URL, { name });
 };
 
 export const deleteKeyword = async (id) => {
   return await apiRequest('delete', `/${id}`, API_URL);
 };
+
+// Backwards compatibility alias
+export const addKeyword = createKeyword;
