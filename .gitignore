@@ -1,4 +1,4 @@
 node_modules/electron/dist/Electron.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework
 
-# Ignore .env file
 .env
+.cursor/
