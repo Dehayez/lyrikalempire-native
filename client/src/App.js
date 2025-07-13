@@ -229,9 +229,22 @@ function App() {
   };
 
   const handleSessionUpdate = useCallback((props) => {
-    console.log('App received session update:', props);
+    console.log('🎮 App received session update:', props);
+    
+    // Add more detailed debugging
+    console.log('🎮 Session update details:', {
+      oldMasterSession: sessionProps.masterSession,
+      newMasterSession: props.masterSession,
+      oldCurrentSessionId: sessionProps.currentSessionId,
+      newCurrentSessionId: props.currentSessionId,
+      oldIsCurrentSessionMaster: sessionProps.isCurrentSessionMaster,
+      newIsCurrentSessionMaster: props.isCurrentSessionMaster,
+      oldSessionName: sessionProps.sessionName,
+      newSessionName: props.sessionName
+    });
+    
     setSessionProps(props);
-  }, []);
+  }, [sessionProps]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

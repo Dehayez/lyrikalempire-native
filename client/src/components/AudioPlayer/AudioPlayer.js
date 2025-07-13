@@ -231,6 +231,13 @@ const AudioPlayer = ({
   // Pass session props up to App level for PlayingIndicator
   useEffect(() => {
     if (onSessionUpdate) {
+      console.log('🎮 AudioPlayer sending session update:', {
+        masterSession,
+        currentSessionId,
+        isCurrentSessionMaster,
+        sessionName
+      });
+      
       onSessionUpdate({
         masterSession,
         currentSessionId,

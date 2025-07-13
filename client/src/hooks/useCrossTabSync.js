@@ -20,6 +20,29 @@ export const useCrossTabSync = ({
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
   const wasHidden = useRef(false);
+  
+  // Function to determine if this tab should be the master
+  const shouldBecomeMaster = useCallback(() => {
+    // If there's already a master, this tab shouldn't become master
+    if (masterSession) {
+      console.log('👑 Not becoming master - master already exists:', masterSession);
+      return false;
+    }
+    
+    // If this tab is hidden, it shouldn't become master
+    if (document.hidden) {
+      console.log('👑 Not becoming master - tab is hidden');
+      return false;
+    }
+    
+    // If we have a beat and are playing, we can become master
+    if (currentBeat && isPlaying) {
+      console.log('👑 Should become master - no existing master and tab is active');
+      return true;
+    }
+    
+    return false;
+  }, [masterSession, currentBeat, isPlaying]);
 
   // Add tab visibility detection
   useEffect(() => {
@@ -128,11 +151,20 @@ export const useCrossTabSync = ({
   // Emit play event to other tabs
   const broadcastPlay = useCallback(() => {
     if (currentBeat && !isProcessingRemoteEvent.current) {
+      console.log('📣 Broadcasting play event:', {
+        currentBeat: currentBeat.title,
+        masterSession,
+        sessionId: sessionId.current,
+        isProcessingRemoteEvent: isProcessingRemoteEvent.current,
+        isPlaying
+      });
+      
       // Only set this session as master if there isn't already a master
-      if (!masterSession) {
+      // and this tab should become master
+      if (shouldBecomeMaster()) {
         console.log('👑 Setting self as master session (no existing master)');
         setMasterSession(sessionId.current);
-      } else {
+      } else if (masterSession) {
         console.log('ℹ️ Not changing master session, using existing:', masterSession);
       }
       
@@ -145,7 +177,7 @@ export const useCrossTabSync = ({
         sessionName: browserName
       });
     }
-  }, [currentBeat, emitAudioPlay, audioCore, masterSession]);
+  }, [currentBeat, emitAudioPlay, audioCore, masterSession, sessionId, shouldBecomeMaster, isPlaying]);
 
   // Emit pause event to other tabs
   const broadcastPause = useCallback(() => {
@@ -205,12 +237,24 @@ export const useCrossTabSync = ({
     };
 
     const handleRemotePlay = (data) => {
+      console.log('📻 Received remote play event:', {
+        data,
+        currentMasterSession: masterSession,
+        currentSessionId: sessionId.current,
+        isCurrentTabMaster: sessionId.current === masterSession
+      });
+      
       // Only update master session if we don't have one yet
+      // or if the incoming session matches the existing master
       if (!masterSession) {
         console.log('👑 Setting master session from remote play event:', data.sessionId);
         setMasterSession(data.sessionId);
+      } else if (masterSession === data.sessionId) {
+        // If the master session matches, this is just a play event from the master
+        console.log('✅ Confirmed existing master session:', masterSession);
       } else {
-        console.log('ℹ️ Keeping existing master session:', masterSession);
+        // If we already have a different master, log it but don't change
+        console.log('⚠️ Received play event from non-master tab. Keeping existing master:', masterSession);
       }
       
       if (currentBeat && data.beatId === currentBeat.id) {
@@ -503,10 +547,13 @@ export const useCrossTabSync = ({
   // Calculate if this is the master tab
   const isCurrentTabMaster = masterSession === sessionId.current;
   
-  console.log('🔍 Master session check:', { 
+  // Add more detailed debugging
+  console.log('🔍 Master session detailed check:', { 
     masterSession, 
     currentSessionId: sessionId.current, 
-    isCurrentTabMaster
+    isCurrentTabMaster,
+    isProcessingRemoteEvent: isProcessingRemoteEvent.current,
+    isPlaying
   });
   
   return {
@@ -518,6 +565,7 @@ export const useCrossTabSync = ({
     masterSession,
     currentSessionId: sessionId.current,
     isCurrentSessionMaster: isCurrentTabMaster,
+    sessionName: getShortBrowserName(),
     emitStateRequest  // Add this to expose the function to useAudioSync
   };
 }; 
