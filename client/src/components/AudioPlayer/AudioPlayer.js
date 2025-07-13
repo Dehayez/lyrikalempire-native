@@ -197,7 +197,8 @@ const AudioPlayer = ({
     handlePlayPause,
     masterSession,
     currentSessionId,
-    isCurrentSessionMaster
+    isCurrentSessionMaster,
+    sessionName
   } = useAudioSync({
     audioCore,
     audioInteractions,
@@ -233,10 +234,11 @@ const AudioPlayer = ({
       onSessionUpdate({
         masterSession,
         currentSessionId,
-        isCurrentSessionMaster
+        isCurrentSessionMaster,
+        sessionName
       });
     }
-  }, [masterSession, currentSessionId, isCurrentSessionMaster, onSessionUpdate]);
+  }, [masterSession, currentSessionId, isCurrentSessionMaster, sessionName, onSessionUpdate]);
 
   // Set up waveform
   useWaveform({

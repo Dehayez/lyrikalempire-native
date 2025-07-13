@@ -1,13 +1,15 @@
 import React from 'react';
 import './PlayingIndicator.scss';
 import { IoHeadsetSharp } from "react-icons/io5";
+import { getShortBrowserName } from '../../utils';
 
 const PlayingIndicator = ({ 
   masterSession, 
   currentSessionId, 
   isCurrentSessionMaster, 
   isPlaying,
-  currentBeat 
+  currentBeat,
+  sessionName
 }) => {
   if (!isPlaying || !currentBeat) {
     return null;
@@ -19,9 +21,14 @@ const PlayingIndicator = ({
   }
 
   const getSessionDisplayName = (sessionId) => {
-    if (!sessionId) return 'Unknown';
-    const parts = sessionId.split('_');
-    return `Tab ${parts[1]?.slice(-4) || 'Unknown'}`;
+    if (!sessionId) return 'Unknown Browser';
+    // If we have a sessionName from WebSocket, use it
+    if (sessionName) {
+      return sessionName;
+    }
+
+    const browserName = getShortBrowserName();
+    return browserName || 'Unknown Browser';
   };
 
   const masterDisplayName = getSessionDisplayName(masterSession);

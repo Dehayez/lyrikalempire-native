@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useWebSocket } from '../contexts';
+import { getShortBrowserName } from '../utils';
 
 // Generate a unique session ID for this tab
 const generateSessionId = () => {
@@ -30,12 +31,13 @@ export const useCrossTabSync = ({
   const broadcastPlay = useCallback(() => {
     if (currentBeat && !isProcessingRemoteEvent.current) {
       setMasterSession(sessionId.current);
+      const browserName = getShortBrowserName();
       emitAudioPlay({
         beatId: currentBeat.id,
         timestamp: Date.now(),
         currentTime: audioCore.getCurrentTime(),
         sessionId: sessionId.current,
-        sessionName: `Tab ${sessionId.current.split('_')[1]?.slice(-4) || 'Unknown'}`
+        sessionName: browserName
       });
     }
   }, [currentBeat, emitAudioPlay, audioCore]);
@@ -43,12 +45,13 @@ export const useCrossTabSync = ({
   // Emit pause event to other tabs
   const broadcastPause = useCallback(() => {
     if (currentBeat && !isProcessingRemoteEvent.current) {
+      const browserName = getShortBrowserName();
       emitAudioPause({
         beatId: currentBeat.id,
         timestamp: Date.now(),
         currentTime: audioCore.getCurrentTime(),
         sessionId: sessionId.current,
-        sessionName: `Tab ${sessionId.current.split('_')[1]?.slice(-4) || 'Unknown'}`
+        sessionName: browserName
       });
     }
   }, [currentBeat, emitAudioPause, audioCore]);

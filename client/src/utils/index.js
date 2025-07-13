@@ -13,3 +13,4 @@ export * from './stateUtils';
 export * from './toastUtils';
 export * from './uploadUtils';
 export { formatTime, createSlides, syncAllPlayers, toggleFullPagePlayer } from './audioPlayerUtils';
+export * from './browserUtils';

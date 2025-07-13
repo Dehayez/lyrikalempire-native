@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { syncAllPlayers as syncAllPlayersUtil } from '../utils';
+import { syncAllPlayers as syncAllPlayersUtil, getShortBrowserName } from '../utils';
 import { useCrossTabSync } from './useCrossTabSync';
 
 export const useAudioSync = ({
@@ -329,6 +329,7 @@ export const useAudioSync = ({
     handlePlayPause,
     masterSession,
     currentSessionId,
-    isCurrentSessionMaster
+    isCurrentSessionMaster,
+    sessionName: masterSession ? getShortBrowserName() : null
   };
 }; 

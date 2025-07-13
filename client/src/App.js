@@ -462,6 +462,7 @@ function App() {
             isCurrentSessionMaster={sessionProps.isCurrentSessionMaster}
             isPlaying={isPlaying}
             currentBeat={currentBeat}
+            sessionName={sessionProps.sessionName}
           />
         )}
       </div>
