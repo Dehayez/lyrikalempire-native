@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { syncAllPlayers as syncAllPlayersUtil, getShortBrowserName } from '../utils';
 import { useCrossTabSync } from './useCrossTabSync';
+import { useWebSocket } from '../contexts';
 
 export const useAudioSync = ({
   audioCore,
@@ -23,6 +24,9 @@ export const useAudioSync = ({
   isPlaying,
   setCurrentBeat
 }) => {
+  // Get WebSocket context directly
+  const { emitStateRequest: wsEmitStateRequest } = useWebSocket();
+  
   // Cross-tab synchronization
   const { 
     broadcastPlay, 
@@ -31,8 +35,8 @@ export const useAudioSync = ({
     broadcastBeatChange,
     masterSession,
     currentSessionId,
-    isCurrentSessionMaster,
-    emitStateRequest
+    isCurrentSessionMaster
+    // We're not using emitStateRequest from useCrossTabSync anymore
   } = useCrossTabSync({
     currentBeat,
     isPlaying,
@@ -375,12 +379,19 @@ export const useAudioSync = ({
     // Skip for master tab - it controls the time
     if (isCurrentSessionMaster || !currentBeat) return;
     
+    // Debug check if wsEmitStateRequest is available
+    console.log('🔍 wsEmitStateRequest available in useAudioSync:', typeof wsEmitStateRequest === 'function');
+    
     // Function to request time sync
     const requestTimeSync = () => {
       // Only request sync if we're playing and not the master
       if (isPlaying && !isCurrentSessionMaster) {
         console.log('⏱️ Non-master tab requesting time sync');
-        emitStateRequest();
+        if (typeof wsEmitStateRequest === 'function') {
+          wsEmitStateRequest();
+        } else {
+          console.error('❌ wsEmitStateRequest is not a function!');
+        }
       }
     };
     
@@ -391,7 +402,15 @@ export const useAudioSync = ({
     const handleVisibilityChange = () => {
       if (!document.hidden && isPlaying && !isCurrentSessionMaster) {
         console.log('👁️ Tab became visible - requesting immediate time sync');
-        requestTimeSync();
+        if (typeof wsEmitStateRequest === 'function') {
+          // Call directly instead of through requestTimeSync to avoid any issues
+          console.log('📡 Directly calling wsEmitStateRequest from visibility handler');
+          wsEmitStateRequest();
+        } else {
+          console.error('❌ wsEmitStateRequest is not a function in visibility handler!');
+          // Try requestTimeSync as fallback
+          requestTimeSync();
+        }
       }
     };
     
@@ -401,7 +420,7 @@ export const useAudioSync = ({
       clearInterval(syncInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isCurrentSessionMaster, isPlaying, currentBeat, emitStateRequest]);
+  }, [isCurrentSessionMaster, isPlaying, currentBeat, wsEmitStateRequest]);
 
 
   return {

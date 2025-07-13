@@ -426,6 +426,7 @@ export const useCrossTabSync = ({
     isProcessingRemoteEvent: () => isProcessingRemoteEvent.current,
     masterSession,
     currentSessionId: sessionId.current,
-    isCurrentSessionMaster: masterSession === sessionId.current
+    isCurrentSessionMaster: masterSession === sessionId.current,
+    emitStateRequest  // Add this to expose the function to useAudioSync
   };
 }; 
