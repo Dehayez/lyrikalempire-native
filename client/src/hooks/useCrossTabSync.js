@@ -25,19 +25,16 @@ export const useCrossTabSync = ({
   const shouldBecomeMaster = useCallback(() => {
     // If there's already a master, this tab shouldn't become master
     if (masterSession) {
-      console.log('👑 Not becoming master - master already exists:', masterSession);
       return false;
     }
     
     // If this tab is hidden, it shouldn't become master
     if (document.hidden) {
-      console.log('👑 Not becoming master - tab is hidden');
       return false;
     }
     
     // If we have a beat and are playing, we can become master
     if (currentBeat && isPlaying) {
-      console.log('👑 Should become master - no existing master and tab is active');
       return true;
     }
     
@@ -52,7 +49,6 @@ export const useCrossTabSync = ({
       
       // If tab becomes visible after being hidden
       if (!isHidden && wasHidden.current) {
-        console.log('👁️ Tab became visible - requesting sync update');
         // Request current state from master
         emitStateRequest();
       }
@@ -76,7 +72,6 @@ export const useCrossTabSync = ({
     if (isPlaying && currentBeat) {
       // Only set as master if no master exists yet
       if (!masterSession) {
-        console.log('👑 Setting self as master session (started playing)');
         setMasterSession(sessionId.current);
       }
     }
@@ -90,8 +85,6 @@ export const useCrossTabSync = ({
     if (!isCurrentTabMaster) return;
     
     const handleBeforeUnload = () => {
-      console.log('👋 Master tab closing - pausing audio and notifying other tabs');
-      
       // Pause audio immediately
       if (isPlaying && audioCore) {
         audioCore.pause();
@@ -134,12 +127,10 @@ export const useCrossTabSync = ({
     if (socket && socket.connected) {
       // Add a small delay to ensure all components are initialized
       const timer = setTimeout(() => {
-        console.log('🔄 New tab requesting state from other tabs (initial)');
         emitStateRequest();
         
         // Try again after a longer delay to ensure everything is loaded
         setTimeout(() => {
-          console.log('🔄 New tab requesting state from other tabs (retry)');
           emitStateRequest();
         }, 2000);
       }, 500); // 500ms delay
@@ -151,21 +142,10 @@ export const useCrossTabSync = ({
   // Emit play event to other tabs
   const broadcastPlay = useCallback(() => {
     if (currentBeat && !isProcessingRemoteEvent.current) {
-      console.log('📣 Broadcasting play event:', {
-        currentBeat: currentBeat.title,
-        masterSession,
-        sessionId: sessionId.current,
-        isProcessingRemoteEvent: isProcessingRemoteEvent.current,
-        isPlaying
-      });
-      
       // Only set this session as master if there isn't already a master
       // and this tab should become master
       if (shouldBecomeMaster()) {
-        console.log('👑 Setting self as master session (no existing master)');
         setMasterSession(sessionId.current);
-      } else if (masterSession) {
-        console.log('ℹ️ Not changing master session, using existing:', masterSession);
       }
       
       const browserName = getShortBrowserName();
@@ -217,44 +197,21 @@ export const useCrossTabSync = ({
   // Listen for events from other tabs
   useEffect(() => {
     if (!socket) {
-      console.log('⚠️ Socket not available for event listeners');
       return;
     }
-    
-    console.log('🔄 Setting up socket event listeners', { 
-      socketConnected: socket.connected, 
-      socketId: socket.id,
-      currentBeat: currentBeat?.title || 'none',
-      isPlaying
-    });
 
     // Listen for socket connection and request state
     const handleConnect = () => {
-      console.log('🔌 Socket connected, requesting state...');
       setTimeout(() => {
         emitStateRequest();
       }, 100);
     };
 
     const handleRemotePlay = (data) => {
-      console.log('📻 Received remote play event:', {
-        data,
-        currentMasterSession: masterSession,
-        currentSessionId: sessionId.current,
-        isCurrentTabMaster: sessionId.current === masterSession
-      });
-      
       // Only update master session if we don't have one yet
       // or if the incoming session matches the existing master
       if (!masterSession) {
-        console.log('👑 Setting master session from remote play event:', data.sessionId);
         setMasterSession(data.sessionId);
-      } else if (masterSession === data.sessionId) {
-        // If the master session matches, this is just a play event from the master
-        console.log('✅ Confirmed existing master session:', masterSession);
-      } else {
-        // If we already have a different master, log it but don't change
-        console.log('⚠️ Received play event from non-master tab. Keeping existing master:', masterSession);
       }
       
       if (currentBeat && data.beatId === currentBeat.id) {
@@ -265,7 +222,6 @@ export const useCrossTabSync = ({
         const isCurrentTabMaster = sessionId.current === masterSession;
         
         if (isCurrentTabMaster) {
-          console.log('🔊 This tab is master - playing audio');
           // Force audio to play - browsers require user interaction for autoplay
           const startTime = Date.now();
           const tryPlay = () => {
@@ -288,7 +244,6 @@ export const useCrossTabSync = ({
           
           tryPlay();
         } else {
-          console.log('🔇 This tab is not master - updating UI only (no sound)');
           // Just update the state without playing audio
           setTimeout(() => {
             isProcessingRemoteEvent.current = false;
@@ -304,7 +259,6 @@ export const useCrossTabSync = ({
         
         // Check if this pause is due to master tab closing
         if (data.masterClosed) {
-          console.log('👑 Master tab closed - clearing master session');
           setMasterSession(null); // Clear master session so a new tab can become master
         }
         
@@ -332,18 +286,6 @@ export const useCrossTabSync = ({
     };
 
     const handleStateRequest = () => {
-      console.log('📨 Received state request. Master:', masterSession === sessionId.current, 'Beat:', !!currentBeat, 'Playing:', isPlaying, 'AudioReady:', audioCore.isReady(), 'SessionId:', sessionId.current);
-      
-      // Debug audio state
-      if (currentBeat) {
-        console.log('🎵 Current beat details:', { 
-          title: currentBeat.title, 
-          id: currentBeat.id,
-          audioSrc: currentBeat.audio,
-          audioPlayerSrc: audioCore.playerRef.current?.audio?.current?.src || 'no src'
-        });
-      }
-      
       // If this tab has current state (playing or paused), respond with it
       // Don't just rely on masterSession since it might not be set correctly
       if (currentBeat) {
@@ -363,25 +305,12 @@ export const useCrossTabSync = ({
             sessionName: browserName,
             timestamp: Date.now()
           };
-          console.log('📤 Sending state response:', stateData, 'Using master:', masterSession || sessionId.current);
           emitStateResponse(stateData);
-        } else {
-          console.log('ℹ️ Not responding to state request - not the master tab');
         }
-      } else {
-        console.log('❌ Not responding to state request - no current beat. Details:', {
-          hasBeat: !!currentBeat,
-          isPlaying,
-          masterSession,
-          currentSessionId: sessionId.current
-        });
       }
     };
 
     const handleStateResponse = (data) => {
-      console.log('📥 Received state response:', data);
-      console.log('Current state - Master:', masterSession, 'Playing:', isPlaying, 'Beat:', currentBeat?.title);
-      
       // Always update time sync from master, even if we're already playing
       if (data.isPlaying && currentBeat && data.beatId === currentBeat.id && data.currentTime) {
         const currentTabTime = audioCore.getCurrentTime();
@@ -389,35 +318,29 @@ export const useCrossTabSync = ({
         
         // If time is out of sync by more than 1 second, update it
         if (timeDiff > 1) {
-          console.log(`⏱️ Time sync: Local ${currentTabTime.toFixed(2)}s vs Master ${data.currentTime.toFixed(2)}s (diff: ${timeDiff.toFixed(2)}s)`);
           audioCore.setCurrentTime(data.currentTime);
         }
       }
       
       // Only accept full state if we don't have a master session yet or if we're not playing
       if (!masterSession || !isPlaying) {
-        console.log('✅ Accepting state response and syncing...');
         isProcessingRemoteEvent.current = true;
         
         // Set the master session to the RESPONDING session's ID
         // This ensures the original playing tab remains master
         setMasterSession(data.sessionId);
-        console.log('👑 Setting master session to:', data.sessionId, '(original playing tab)');
         
         // Set the current beat if different
         if (!currentBeat || currentBeat.id !== data.beatId) {
-          console.log('🎵 Setting new beat:', data.beat.title);
           setCurrentBeat(data.beat);
         }
         
         // Set playing state
         if (data.isPlaying) {
-          console.log('▶️ Setting playing state to true');
           setIsPlaying(true);
           
           // Set current time
           if (data.currentTime) {
-            console.log('⏰ Setting current time to:', data.currentTime);
             audioCore.setCurrentTime(data.currentTime);
           }
           
@@ -425,79 +348,50 @@ export const useCrossTabSync = ({
           const isCurrentTabMaster = sessionId.current === masterSession;
           
           if (isCurrentTabMaster) {
-            console.log('🔊 This tab is master - playing audio');
             // Try to play audio (may fail due to autoplay restrictions)
             setTimeout(() => {
               if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
-                console.log('🔊 Attempting to play audio...');
-                audioCore.play().then(() => {
-                  console.log('✅ Audio playing successfully');
-                }).catch((error) => {
-                  console.log('❌ Autoplay failed (expected):', error.message);
-                });
-              } else {
-                console.log('⚠️ Audio not ready for playback');
+                audioCore.play().catch(() => {});
               }
               isProcessingRemoteEvent.current = false;
             }, 100);
           } else {
-            console.log('🔇 This tab is not master - updating UI only (no sound)');
             // Just update the state without playing audio
             isProcessingRemoteEvent.current = false;
           }
         } else {
-          console.log('⏸️ Setting playing state to false');
           setIsPlaying(false);
           
           // Always pause audio in all tabs to ensure silence
           audioCore.pause();
           isProcessingRemoteEvent.current = false;
         }
-      } else {
-        console.log('ℹ️ Already have master and playing - only synced time if needed');
       }
     };
 
     const handleMasterClosed = (data) => {
-      console.log('👋 Received master-closed event:', data);
-      
       // If the closing master is our current master, clear the master session
       if (masterSession === data.sessionId) {
-        console.log('👑 Master tab closed - clearing master session');
         setMasterSession(null);
         
         // If we have a current beat and it matches, pause audio
         if (currentBeat && data.beatId === currentBeat.id) {
-          console.log('⏸️ Pausing audio due to master tab closing');
           setIsPlaying(false);
           audioCore.pause();
         }
       }
     };
 
-    // Log all event registrations
-    console.log('📡 Registering socket event handlers');
-    
     socket.on('connect', handleConnect);
     socket.on('audio-play', handleRemotePlay);
     socket.on('audio-pause', handleRemotePause);
     socket.on('audio-seek', handleRemoteSeek);
     socket.on('beat-change', handleRemoteBeatChange);
     socket.on('master-closed', handleMasterClosed);
-    
-    // Add explicit debug for state request/response events
-    socket.on('request-state', (data) => {
-      console.log('🔔 request-state event received', data);
-      handleStateRequest(data);
-    });
-    
-    socket.on('state-response', (data) => {
-      console.log('🔔 state-response event received', data);
-      handleStateResponse(data);
-    });
+    socket.on('request-state', handleStateRequest);
+    socket.on('state-response', handleStateResponse);
 
     return () => {
-      console.log('🧹 Cleaning up socket event handlers');
       socket.off('connect', handleConnect);
       socket.off('audio-play', handleRemotePlay);
       socket.off('audio-pause', handleRemotePause);
@@ -515,12 +409,9 @@ export const useCrossTabSync = ({
     const isCurrentTabMaster = masterSession === sessionId.current;
     if (!isCurrentTabMaster || !currentBeat) return;
     
-    console.log('⏱️ Setting up master time broadcast');
-    
     // Function to broadcast current time to all tabs
     const broadcastTime = () => {
       if (currentBeat) {
-        console.log(`⏱️ Master broadcasting current ${isPlaying ? 'time' : 'state'}:`, audioCore.getCurrentTime().toFixed(2) + 's');
         // Use state response to broadcast current state including time
         const browserName = getShortBrowserName();
         const stateData = {
@@ -546,15 +437,6 @@ export const useCrossTabSync = ({
 
   // Calculate if this is the master tab
   const isCurrentTabMaster = masterSession === sessionId.current;
-  
-  // Add more detailed debugging
-  console.log('🔍 Master session detailed check:', { 
-    masterSession, 
-    currentSessionId: sessionId.current, 
-    isCurrentTabMaster,
-    isProcessingRemoteEvent: isProcessingRemoteEvent.current,
-    isPlaying
-  });
   
   return {
     broadcastPlay,

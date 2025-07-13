@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { IoVolumeMuteSharp, IoVolumeMediumSharp, IoVolumeHighSharp, IoVolumeLowSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './VolumeSlider.scss';
@@ -7,37 +7,51 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const VolumeSlider = ({ volume, handleVolumeChange }) => {
   const sliderRef = useRef();
+  const volumeRef = useRef(volume);
+  const handleVolumeChangeRef = useRef(handleVolumeChange);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [isMuted, setIsMuted] = useState(() => JSON.parse(localStorage.getItem('isMuted')) || false);
   const [prevVolume, setPrevVolume] = useState(() => parseFloat(localStorage.getItem('prevVolume')) || volume);
+  const initialSetupDone = useRef(false);
 
-  const calculateVolume = (event) => {
+  // Update refs when props change
+  useEffect(() => {
+    volumeRef.current = volume;
+    handleVolumeChangeRef.current = handleVolumeChange;
+  }, [volume, handleVolumeChange]);
+
+  const calculateVolume = useCallback((event) => {
     const rect = sliderRef.current.getBoundingClientRect();
     const newVolume = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-    handleVolumeChange({ target: { value: newVolume } });
-    setIsMuted(newVolume === 0);
-    localStorage.setItem('isMuted', JSON.stringify(newVolume === 0));
-    localStorage.setItem('prevVolume', newVolume.toString());
-  };
+    
+    // Only update if volume actually changed by more than 1%
+    if (Math.abs(newVolume - volumeRef.current) > 0.01) {
+      handleVolumeChangeRef.current({ target: { value: newVolume } });
+      setIsMuted(newVolume === 0);
+      localStorage.setItem('isMuted', JSON.stringify(newVolume === 0));
+      localStorage.setItem('prevVolume', newVolume.toString());
+    }
+  }, []);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (isMuted) {
-      handleVolumeChange({ target: { value: prevVolume === 0 ? 1 : prevVolume } });
+      const volumeToRestore = prevVolume === 0 ? 1 : prevVolume;
+      handleVolumeChangeRef.current({ target: { value: volumeToRestore } });
       setIsMuted(false);
       localStorage.setItem('isMuted', JSON.stringify(false));
     } else {
-      setPrevVolume(volume);
-      handleVolumeChange({ target: { value: 0 } });
+      setPrevVolume(volumeRef.current);
+      handleVolumeChangeRef.current({ target: { value: 0 } });
       setIsMuted(true);
       localStorage.setItem('isMuted', JSON.stringify(true));
-      localStorage.setItem('prevVolume', volume.toString());
+      localStorage.setItem('prevVolume', volumeRef.current.toString());
     }
-  };
+  }, [isMuted, prevVolume]);
 
-  const handleMouseMove = (event) => {
+  const handleMouseMove = useCallback((event) => {
     if (isDragging) calculateVolume(event);
-  };
+  }, [isDragging, calculateVolume]);
 
   useEffect(() => {
     const handleMouseUp = () => setIsDragging(false);
@@ -47,19 +61,29 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [isDragging]);
+  }, [isDragging, handleMouseMove]);
 
   useEffect(() => {
-    // Restore volume and mute state on component mount
-    const savedIsMuted = JSON.parse(localStorage.getItem('isMuted'));
-    const savedPrevVolume = parseFloat(localStorage.getItem('prevVolume'));
-    if (savedIsMuted) {
-      setIsMuted(true);
-      handleVolumeChange({ target: { value: 0 } });
-    } else if (!isNaN(savedPrevVolume)) {
-      handleVolumeChange({ target: { value: savedPrevVolume } });
+    // Restore volume and mute state on component mount - only once
+    if (!initialSetupDone.current) {
+      const savedIsMuted = JSON.parse(localStorage.getItem('isMuted'));
+      const savedPrevVolume = parseFloat(localStorage.getItem('prevVolume'));
+      
+      if (savedIsMuted) {
+        setIsMuted(true);
+        // Use setTimeout to avoid triggering during render
+        setTimeout(() => {
+          handleVolumeChangeRef.current({ target: { value: 0 } });
+        }, 0);
+      } else if (!isNaN(savedPrevVolume)) {
+        setTimeout(() => {
+          handleVolumeChangeRef.current({ target: { value: savedPrevVolume } });
+        }, 0);
+      }
+      
+      initialSetupDone.current = true;
     }
-  }, [handleVolumeChange]);
+  }, []); // Empty dependency array = only run once on mount
 
   const volumeIcon = volume > 0.66 ? <IoVolumeHighSharp size={24} />
     : volume > 0.33 ? <IoVolumeMediumSharp size={24} />

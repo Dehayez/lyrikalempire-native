@@ -59,44 +59,35 @@ app.get('*', (req, res) => {
 
 // WebSocket connection handling
 io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-  
   // Handle audio player events
   socket.on('audio-play', (data) => {
-    console.log(`Socket ${socket.id} emitted audio-play`);
     socket.broadcast.emit('audio-play', data);
   });
   
   socket.on('audio-pause', (data) => {
-    console.log(`Socket ${socket.id} emitted audio-pause`);
     socket.broadcast.emit('audio-pause', data);
   });
   
   socket.on('audio-seek', (data) => {
-    console.log(`Socket ${socket.id} emitted audio-seek`);
     socket.broadcast.emit('audio-seek', data);
   });
   
   socket.on('beat-change', (data) => {
-    console.log(`Socket ${socket.id} emitted beat-change`);
     socket.broadcast.emit('beat-change', data);
   });
   
   // Add handlers for state request/response
   socket.on('request-state', (data) => {
-    console.log(`Socket ${socket.id} emitted request-state`);
     // Broadcast to all clients except sender
     socket.broadcast.emit('request-state', data);
   });
   
   socket.on('state-response', (data) => {
-    console.log(`Socket ${socket.id} emitted state-response`);
     // Broadcast to all clients except sender
     socket.broadcast.emit('state-response', data);
   });
   
   socket.on('master-closed', (data) => {
-    console.log(`Socket ${socket.id} emitted master-closed`);
     // Broadcast to all clients including sender
     io.emit('master-closed', data);
   });
@@ -112,6 +103,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`WebSocket server is ready for connections`);
+  // Server is now running silently
 });

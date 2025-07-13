@@ -11,7 +11,6 @@ export const setTitleWithStorage = (title) => {
     // Store in localStorage for persistence
     localStorage.setItem('currentDocumentTitle', title);
     
-    console.log('📝 Title set and stored:', title);
   } catch (error) {
     console.error('Error setting title:', error);
   }
@@ -36,7 +35,6 @@ export const setupTitleSync = () => {
   const checkAndRestoreTitle = () => {
     const storedTitle = getStoredTitle();
     if (document.title !== storedTitle) {
-      console.log('🔄 Restoring title from storage:', storedTitle);
       document.title = storedTitle;
     }
   };
@@ -56,10 +54,7 @@ export const setupTitleSync = () => {
   // Handle storage events (when another tab updates localStorage)
   window.addEventListener('storage', (event) => {
     if (event.key === 'currentDocumentTitle') {
-      console.log('🔄 Title updated in another tab:', event.newValue);
       document.title = event.newValue;
     }
   });
-  
-  console.log('🔄 Title sync mechanism set up');
 }; 

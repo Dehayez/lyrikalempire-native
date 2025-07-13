@@ -65,26 +65,19 @@ export const WebSocketProvider = ({ children }) => {
 
   const emitStateRequest = () => {
     if (socket && isConnected) {
-      console.log('🚀 Emitting state request', { socketId: socket.id, isConnected });
       socket.emit('request-state');
-    } else {
-      console.log('⚠️ Cannot emit state request - socket not ready', { socket: !!socket, isConnected });
     }
   };
 
   const emitStateResponse = (data) => {
     if (socket && isConnected) {
-      console.log('🚀 Emitting state response:', data);
       socket.emit('state-response', data);
     }
   };
 
   const emitMasterClosed = (data) => {
     if (socket && isConnected) {
-      console.log('👋 Emitting master-closed event:', data);
       socket.emit('master-closed', data);
-    } else {
-      console.log('⚠️ Cannot emit master-closed - socket not ready', { socket: !!socket, isConnected });
     }
   };
 

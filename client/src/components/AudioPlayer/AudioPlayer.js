@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import H5AudioPlayer from 'react-h5-audio-player';
 import { isMobileOrTablet, slideOut } from '../../utils';
 import { 
@@ -38,6 +38,14 @@ const AudioPlayer = ({
   if (!currentBeat) {
     return null;
   }
+
+  // Store onSessionUpdate in a ref to prevent it from causing re-renders
+  const onSessionUpdateRef = useRef(onSessionUpdate);
+  
+  // Update the ref when the prop changes
+  useEffect(() => {
+    onSessionUpdateRef.current = onSessionUpdate;
+  }, [onSessionUpdate]);
 
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
@@ -229,23 +237,22 @@ const AudioPlayer = ({
   });
 
   // Pass session props up to App level for PlayingIndicator
-  useEffect(() => {
-    if (onSessionUpdate) {
-      console.log('🎮 AudioPlayer sending session update:', {
-        masterSession,
-        currentSessionId,
-        isCurrentSessionMaster,
-        sessionName
-      });
-      
-      onSessionUpdate({
+  // Use a stable callback to prevent infinite updates
+  const updateSessionInfo = useCallback(() => {
+    if (onSessionUpdateRef.current) {
+      onSessionUpdateRef.current({
         masterSession,
         currentSessionId,
         isCurrentSessionMaster,
         sessionName
       });
     }
-  }, [masterSession, currentSessionId, isCurrentSessionMaster, sessionName, onSessionUpdate]);
+  }, [masterSession, currentSessionId, isCurrentSessionMaster, sessionName]);
+
+  // Call the stable callback in an effect
+  useEffect(() => {
+    updateSessionInfo();
+  }, [updateSessionInfo]);
 
   // Set up waveform
   useWaveform({
