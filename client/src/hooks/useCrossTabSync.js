@@ -141,27 +141,39 @@ export const useCrossTabSync = ({
         isProcessingRemoteEvent.current = true;
         setIsPlaying(true);
         
-        // Force audio to play - browsers require user interaction for autoplay
-        const startTime = Date.now();
-        const tryPlay = () => {
-          if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
-            audioCore.play().then(() => {
-              isProcessingRemoteEvent.current = false;
-            }).catch((error) => {
-              // If play fails (usually due to lack of user interaction), just update state
-              // This allows the UI to show the correct play state even if audio can't play
-              isProcessingRemoteEvent.current = false;
-            });
-          } else if (Date.now() - startTime < 1000) {
-            // If audio isn't ready, try again after a short delay (max 1 second)
-            setTimeout(tryPlay, 100);
-          } else {
-            // Give up after 1 second and just clear the flag
-            isProcessingRemoteEvent.current = false;
-          }
-        };
+        // Check if this tab is the master
+        const isCurrentTabMaster = sessionId.current === masterSession;
         
-        tryPlay();
+        if (isCurrentTabMaster) {
+          console.log('🔊 This tab is master - playing audio');
+          // Force audio to play - browsers require user interaction for autoplay
+          const startTime = Date.now();
+          const tryPlay = () => {
+            if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
+              audioCore.play().then(() => {
+                isProcessingRemoteEvent.current = false;
+              }).catch((error) => {
+                // If play fails (usually due to lack of user interaction), just update state
+                // This allows the UI to show the correct play state even if audio can't play
+                isProcessingRemoteEvent.current = false;
+              });
+            } else if (Date.now() - startTime < 1000) {
+              // If audio isn't ready, try again after a short delay (max 1 second)
+              setTimeout(tryPlay, 100);
+            } else {
+              // Give up after 1 second and just clear the flag
+              isProcessingRemoteEvent.current = false;
+            }
+          };
+          
+          tryPlay();
+        } else {
+          console.log('🔇 This tab is not master - updating UI only (no sound)');
+          // Just update the state without playing audio
+          setTimeout(() => {
+            isProcessingRemoteEvent.current = false;
+          }, 100);
+        }
       }
     };
 
@@ -262,23 +274,35 @@ export const useCrossTabSync = ({
             audioCore.setCurrentTime(data.currentTime);
           }
           
-          // Try to play audio (may fail due to autoplay restrictions)
-          setTimeout(() => {
-            if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
-              console.log('🔊 Attempting to play audio...');
-              audioCore.play().then(() => {
-                console.log('✅ Audio playing successfully');
-              }).catch((error) => {
-                console.log('❌ Autoplay failed (expected):', error.message);
-              });
-            } else {
-              console.log('⚠️ Audio not ready for playback');
-            }
+          // Check if this tab is the master
+          const isCurrentTabMaster = sessionId.current === masterSession;
+          
+          if (isCurrentTabMaster) {
+            console.log('🔊 This tab is master - playing audio');
+            // Try to play audio (may fail due to autoplay restrictions)
+            setTimeout(() => {
+              if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
+                console.log('🔊 Attempting to play audio...');
+                audioCore.play().then(() => {
+                  console.log('✅ Audio playing successfully');
+                }).catch((error) => {
+                  console.log('❌ Autoplay failed (expected):', error.message);
+                });
+              } else {
+                console.log('⚠️ Audio not ready for playback');
+              }
+              isProcessingRemoteEvent.current = false;
+            }, 100);
+          } else {
+            console.log('🔇 This tab is not master - updating UI only (no sound)');
+            // Just update the state without playing audio
             isProcessingRemoteEvent.current = false;
-          }, 100);
+          }
         } else {
           console.log('⏸️ Setting playing state to false');
           setIsPlaying(false);
+          
+          // Always pause audio in all tabs to ensure silence
           audioCore.pause();
           isProcessingRemoteEvent.current = false;
         }

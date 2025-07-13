@@ -127,30 +127,56 @@ export const useAudioSync = ({
 
   // Handle play/pause from UI
   const handlePlayPause = useCallback((play) => {
-    audioCore.togglePlayPause(play);
+    // Check if this tab is the master
+    const isCurrentTabMaster = isCurrentSessionMaster;
     
-    // Also broadcast directly since UI-triggered play/pause might not trigger audio events immediately
+    if (isCurrentTabMaster) {
+      console.log('🔊 This tab is master - toggling audio playback');
+      // Only actually play/pause audio in the master tab
+      audioCore.togglePlayPause(play);
+    } else {
+      console.log('🔇 This tab is not master - not playing audio, just updating UI');
+      // For non-master tabs, just update the UI state without playing audio
+      setIsPlaying(play);
+    }
+    
+    // Always broadcast to sync all tabs
     if (play) {
       broadcastPlay();
     } else {
       broadcastPause();
     }
-  }, [audioCore, broadcastPlay, broadcastPause]);
+  }, [audioCore, broadcastPlay, broadcastPause, isCurrentSessionMaster, setIsPlaying]);
 
   // Handle when song ends - trigger next track or repeat
   const handleEnded = useCallback(() => {
-    if (repeat === 'Repeat One') {
-      audioCore.setCurrentTime(0);
-      audioCore.play();
+    // Only the master tab should handle the ended event
+    if (isCurrentSessionMaster) {
+      console.log('🔄 Master tab - handling track end');
+      if (repeat === 'Repeat One') {
+        audioCore.setCurrentTime(0);
+        audioCore.play();
+      } else {
+        onNext();
+      }
     } else {
-      onNext();
+      console.log('ℹ️ Non-master tab - ignoring track end event');
     }
-  }, [onNext, repeat, audioCore]);
+  }, [onNext, repeat, audioCore, isCurrentSessionMaster]);
 
   // Set up main audio player event listeners
   useEffect(() => {
     const mainAudio = audioCore.playerRef.current?.audio.current;
     if (!mainAudio) return;
+    
+    // Ensure non-master tabs have their audio muted
+    if (!isCurrentSessionMaster && mainAudio) {
+      console.log('🔇 Non-master tab - muting audio');
+      mainAudio.muted = true;
+    } else if (isCurrentSessionMaster && mainAudio) {
+      console.log('🔊 Master tab - unmuting audio');
+      mainAudio.muted = false;
+    }
 
     const handleTimeUpdate = () => {
       // Update interaction state with current time
@@ -171,12 +197,16 @@ export const useAudioSync = ({
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
         
-        if (hasValidSrc && audioCore.isPaused()) {
+        // Only play audio in the master tab
+        if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          console.log('🔊 Master tab - playing audio after data loaded');
           audioCore.play().catch(error => {
             if (error.name !== 'AbortError') {
-              // Audio play failed after data loaded
+              console.log('❌ Audio play failed after data loaded:', error.message);
             }
           });
+        } else if (!isCurrentSessionMaster) {
+          console.log('🔇 Non-master tab - not playing audio after data loaded');
         }
       }
     };
@@ -189,12 +219,16 @@ export const useAudioSync = ({
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
         
-        if (hasValidSrc && audioCore.isPaused()) {
+        // Only play audio in the master tab
+        if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          console.log('🔊 Master tab - playing audio after can play');
           audioCore.play().catch(error => {
             if (error.name !== 'AbortError') {
-              // Audio play failed after src ready
+              console.log('❌ Audio play failed after can play:', error.message);
             }
           });
+        } else if (!isCurrentSessionMaster) {
+          console.log('🔇 Non-master tab - not playing audio after can play');
         }
       }
     };
@@ -272,8 +306,23 @@ export const useAudioSync = ({
     // Also try after a short delay in case metadata isn't loaded yet
     const timeoutId = setTimeout(initialSync, 200);
 
+    // Re-run this effect when master session changes
+    const checkMasterStatus = () => {
+      if (!isCurrentSessionMaster && mainAudio) {
+        console.log('🔇 Non-master tab - muting audio (status check)');
+        mainAudio.muted = true;
+      } else if (isCurrentSessionMaster && mainAudio) {
+        console.log('🔊 Master tab - unmuting audio (status check)');
+        mainAudio.muted = false;
+      }
+    };
+    
+    // Add listener for master session changes
+    const masterCheckInterval = setInterval(checkMasterStatus, 1000);
+    
     return () => {
       clearTimeout(timeoutId);
+      clearInterval(masterCheckInterval);
       mainAudio.removeEventListener('timeupdate', handleTimeUpdate);
       mainAudio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       mainAudio.removeEventListener('loadeddata', handleLoadedData);
