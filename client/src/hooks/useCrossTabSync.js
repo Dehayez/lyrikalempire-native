@@ -19,6 +19,34 @@ export const useCrossTabSync = ({
   const isProcessingRemoteEvent = useRef(false);
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
+  const wasHidden = useRef(false);
+
+  // Add tab visibility detection
+  useEffect(() => {
+    // Function to handle visibility change
+    const handleVisibilityChange = () => {
+      const isHidden = document.hidden;
+      
+      // If tab becomes visible after being hidden
+      if (!isHidden && wasHidden.current) {
+        console.log('👁️ Tab became visible - requesting sync update');
+        // Request current state from master
+        emitStateRequest();
+      }
+      
+      wasHidden.current = isHidden;
+    };
+
+    // Add visibility change listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Initial check
+    wasHidden.current = document.hidden;
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [emitStateRequest]);
 
   // Set this session as master when it starts playing
   useEffect(() => {
@@ -247,7 +275,19 @@ export const useCrossTabSync = ({
       console.log('📥 Received state response:', data);
       console.log('Current state - Master:', masterSession, 'Playing:', isPlaying, 'Beat:', currentBeat?.title);
       
-      // Only accept state if we don't have a master session yet or if we're not playing
+      // Always update time sync from master, even if we're already playing
+      if (data.isPlaying && currentBeat && data.beatId === currentBeat.id && data.currentTime) {
+        const currentTabTime = audioCore.getCurrentTime();
+        const timeDiff = Math.abs(currentTabTime - data.currentTime);
+        
+        // If time is out of sync by more than 1 second, update it
+        if (timeDiff > 1) {
+          console.log(`⏱️ Time sync: Local ${currentTabTime.toFixed(2)}s vs Master ${data.currentTime.toFixed(2)}s (diff: ${timeDiff.toFixed(2)}s)`);
+          audioCore.setCurrentTime(data.currentTime);
+        }
+      }
+      
+      // Only accept full state if we don't have a master session yet or if we're not playing
       if (!masterSession || !isPlaying) {
         console.log('✅ Accepting state response and syncing...');
         isProcessingRemoteEvent.current = true;
@@ -307,7 +347,7 @@ export const useCrossTabSync = ({
           isProcessingRemoteEvent.current = false;
         }
       } else {
-        console.log('❌ Ignoring state response - already have master or playing');
+        console.log('ℹ️ Already have master and playing - only synced time if needed');
       }
     };
 
@@ -342,6 +382,41 @@ export const useCrossTabSync = ({
       socket.off('state-response');
     };
   }, [socket, currentBeat, isPlaying, audioCore, setIsPlaying, setCurrentBeat, masterSession, sessionId, emitStateResponse, emitStateRequest]);
+
+  // Add periodic time broadcast from master tab
+  useEffect(() => {
+    // Only the master tab should broadcast time updates
+    const isCurrentTabMaster = masterSession === sessionId.current;
+    if (!isCurrentTabMaster || !currentBeat || !isPlaying) return;
+    
+    console.log('⏱️ Setting up master time broadcast');
+    
+    // Function to broadcast current time to all tabs
+    const broadcastTime = () => {
+      if (isPlaying && currentBeat) {
+        console.log('⏱️ Master broadcasting current time:', audioCore.getCurrentTime().toFixed(2) + 's');
+        // Use state response to broadcast current state including time
+        const browserName = getShortBrowserName();
+        const stateData = {
+          beatId: currentBeat.id,
+          beat: currentBeat,
+          isPlaying: isPlaying,
+          currentTime: audioCore.getCurrentTime(),
+          sessionId: sessionId.current,
+          sessionName: browserName,
+          timestamp: Date.now()
+        };
+        emitStateResponse(stateData);
+      }
+    };
+    
+    // Broadcast time every 10 seconds
+    const timeInterval = setInterval(broadcastTime, 10000);
+    
+    return () => {
+      clearInterval(timeInterval);
+    };
+  }, [masterSession, sessionId, currentBeat, isPlaying, audioCore, emitStateResponse]);
 
   return {
     broadcastPlay,

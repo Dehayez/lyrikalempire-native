@@ -31,7 +31,8 @@ export const useAudioSync = ({
     broadcastBeatChange,
     masterSession,
     currentSessionId,
-    isCurrentSessionMaster
+    isCurrentSessionMaster,
+    emitStateRequest
   } = useCrossTabSync({
     currentBeat,
     isPlaying,
@@ -369,6 +370,38 @@ export const useAudioSync = ({
     return () => clearTimeout(timeoutId);
   }, [currentBeat, isPlaying, audioCore]);
 
+  // Add periodic time sync for non-master tabs
+  useEffect(() => {
+    // Skip for master tab - it controls the time
+    if (isCurrentSessionMaster || !currentBeat) return;
+    
+    // Function to request time sync
+    const requestTimeSync = () => {
+      // Only request sync if we're playing and not the master
+      if (isPlaying && !isCurrentSessionMaster) {
+        console.log('⏱️ Non-master tab requesting time sync');
+        emitStateRequest();
+      }
+    };
+    
+    // Set up periodic sync (every 5 seconds)
+    const syncInterval = setInterval(requestTimeSync, 5000);
+    
+    // Also sync when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isPlaying && !isCurrentSessionMaster) {
+        console.log('👁️ Tab became visible - requesting immediate time sync');
+        requestTimeSync();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(syncInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isCurrentSessionMaster, isPlaying, currentBeat, emitStateRequest]);
 
 
   return {
