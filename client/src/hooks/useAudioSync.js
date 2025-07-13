@@ -75,8 +75,6 @@ export const useAudioSync = ({
 
   // Handle seeking from display players
   const handleSeeked = useCallback((e) => {
-    console.log('🎯 Audio seeked to:', e.target.currentTime);
-    
     const newTime = e.target.currentTime;
     const currentTime = audioCore.getCurrentTime();
     
@@ -88,8 +86,6 @@ export const useAudioSync = ({
 
   // Handle seeking while dragging (onSeek event)
   const handleSeek = useCallback((e) => {
-    console.log('🎯 Audio seeking to:', e.target.currentTime);
-    
     const newTime = e.target.currentTime;
     // Immediately update the main audio player
     audioCore.setCurrentTime(newTime);
@@ -115,11 +111,9 @@ export const useAudioSync = ({
     onCanPlay: () => {},
     onLoadedData: () => {},
     onSeeked: (e) => {
-      console.log('🎯 onSeeked event triggered');
       handleSeeked(e);
     },
     onSeek: (e) => {
-      console.log('🎯 onSeek event triggered');
       handleSeek(e);
     },
     // Allow timeupdate for progress updates but don't let it conflict
@@ -238,8 +232,6 @@ export const useAudioSync = ({
         
         progressContainers.forEach((container, index) => {
           const clickHandler = (e) => {
-            console.log(`🎯 Progress bar clicked! Seeking to ${Math.round(e.offsetX / container.offsetWidth * 100)}%`);
-            
             const progress = e.offsetX / container.offsetWidth;
             const duration = audioCore.getDuration();
             const newTime = progress * duration;
@@ -267,9 +259,6 @@ export const useAudioSync = ({
     
     // Add progress bar click listeners
     addProgressClickListeners();
-    
-    // Log only when actually setting up events
-    console.log('🎮 Audio events configured');
     
     // Initial sync - force update even when paused
     const initialSync = () => {
