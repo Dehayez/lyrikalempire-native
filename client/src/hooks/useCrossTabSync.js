@@ -108,11 +108,12 @@ export const useCrossTabSync = ({
         beatId: currentBeat.id,
         timestamp: Date.now(),
         currentTime: audioCore.getCurrentTime(),
-        sessionId: sessionId.current,
+        // Use the current master session ID to maintain consistency
+        sessionId: masterSession || sessionId.current,
         sessionName: browserName
       });
     }
-  }, [currentBeat, emitAudioPause, audioCore]);
+  }, [currentBeat, emitAudioPause, audioCore, masterSession]);
 
   // Emit seek event to other tabs
   const broadcastSeek = useCallback((time) => {
@@ -209,6 +210,10 @@ export const useCrossTabSync = ({
       if (currentBeat && data.beatId === currentBeat.id) {
         isProcessingRemoteEvent.current = true;
         setIsPlaying(false);
+        
+        // Don't change the master session when pausing
+        // This ensures the same tab remains master when playback resumes
+        
         audioCore.pause();
         isProcessingRemoteEvent.current = false;
       }
@@ -245,24 +250,32 @@ export const useCrossTabSync = ({
         });
       }
       
-      // If this tab has current state and is playing, respond with it
+      // If this tab has current state (playing or paused), respond with it
       // Don't just rely on masterSession since it might not be set correctly
-      if (currentBeat && isPlaying) {
-        const browserName = getShortBrowserName();
-        const stateData = {
-          beatId: currentBeat.id,
-          beat: currentBeat,
-          isPlaying: isPlaying,
-          currentTime: audioCore.getCurrentTime(),
-          // Always send the master session ID if we have one, otherwise use our own ID
-          sessionId: masterSession || sessionId.current,
-          sessionName: browserName,
-          timestamp: Date.now()
-        };
-        console.log('📤 Sending state response:', stateData, 'Using master:', masterSession || sessionId.current);
-        emitStateResponse(stateData);
+      if (currentBeat) {
+        // If we're the master or there's no master yet, respond
+        const isCurrentTabMaster = masterSession === sessionId.current;
+        const shouldRespond = isCurrentTabMaster || !masterSession;
+        
+        if (shouldRespond) {
+          const browserName = getShortBrowserName();
+          const stateData = {
+            beatId: currentBeat.id,
+            beat: currentBeat,
+            isPlaying: isPlaying,
+            currentTime: audioCore.getCurrentTime(),
+            // Always send the master session ID if we have one, otherwise use our own ID
+            sessionId: masterSession || sessionId.current,
+            sessionName: browserName,
+            timestamp: Date.now()
+          };
+          console.log('📤 Sending state response:', stateData, 'Using master:', masterSession || sessionId.current);
+          emitStateResponse(stateData);
+        } else {
+          console.log('ℹ️ Not responding to state request - not the master tab');
+        }
       } else {
-        console.log('❌ Not responding to state request - no beat or not playing. Details:', {
+        console.log('❌ Not responding to state request - no current beat. Details:', {
           hasBeat: !!currentBeat,
           isPlaying,
           masterSession,
@@ -387,14 +400,14 @@ export const useCrossTabSync = ({
   useEffect(() => {
     // Only the master tab should broadcast time updates
     const isCurrentTabMaster = masterSession === sessionId.current;
-    if (!isCurrentTabMaster || !currentBeat || !isPlaying) return;
+    if (!isCurrentTabMaster || !currentBeat) return;
     
     console.log('⏱️ Setting up master time broadcast');
     
     // Function to broadcast current time to all tabs
     const broadcastTime = () => {
-      if (isPlaying && currentBeat) {
-        console.log('⏱️ Master broadcasting current time:', audioCore.getCurrentTime().toFixed(2) + 's');
+      if (currentBeat) {
+        console.log(`⏱️ Master broadcasting current ${isPlaying ? 'time' : 'state'}:`, audioCore.getCurrentTime().toFixed(2) + 's');
         // Use state response to broadcast current state including time
         const browserName = getShortBrowserName();
         const stateData = {
@@ -418,6 +431,15 @@ export const useCrossTabSync = ({
     };
   }, [masterSession, sessionId, currentBeat, isPlaying, audioCore, emitStateResponse]);
 
+  // Calculate if this is the master tab
+  const isCurrentTabMaster = masterSession === sessionId.current;
+  
+  console.log('🔍 Master session check:', { 
+    masterSession, 
+    currentSessionId: sessionId.current, 
+    isCurrentTabMaster
+  });
+  
   return {
     broadcastPlay,
     broadcastPause,
@@ -426,7 +448,7 @@ export const useCrossTabSync = ({
     isProcessingRemoteEvent: () => isProcessingRemoteEvent.current,
     masterSession,
     currentSessionId: sessionId.current,
-    isCurrentSessionMaster: masterSession === sessionId.current,
+    isCurrentSessionMaster: isCurrentTabMaster,
     emitStateRequest  // Add this to expose the function to useAudioSync
   };
 }; 

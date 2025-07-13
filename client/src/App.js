@@ -229,6 +229,7 @@ function App() {
   };
 
   const handleSessionUpdate = useCallback((props) => {
+    console.log('App received session update:', props);
     setSessionProps(props);
   }, []);
 
