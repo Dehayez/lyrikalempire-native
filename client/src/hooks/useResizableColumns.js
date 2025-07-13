@@ -10,7 +10,7 @@ export const useResizableColumns = (tableRef) => {
     2: 95,  // tierlist
     3: 80,  // bpm
     8: 60,  // duration
-    9: 40   // menu
+    9: 50   // menu
   };
 
   const resizableColumns = [1, 4, 5, 6, 7];

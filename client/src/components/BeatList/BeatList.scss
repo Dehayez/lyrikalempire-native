@@ -221,6 +221,10 @@
       td:nth-child(5) {
         display: none;
       }
+
+      .table-header__cell--title {
+        width: 100% !important;
+      }
     }
 
     @container (max-width: 500px) {
