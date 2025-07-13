@@ -107,14 +107,26 @@ export const syncAllPlayers = ({
   }
 
   // Force update display players by manipulating their progress bars directly
-  const updateProgressBar = (playerRef) => {
+  const updateProgressBar = (playerRef, playerName) => {
     if (playerRef?.current) {
+      const container = playerRef.current.container.current;
+      if (!container) return;
+      
+      // Check if user is currently seeking (dragging the progress bar)
+      const progressContainer = container.querySelector('.rhap_progress-container');
+      const isUserSeeking = progressContainer && progressContainer.matches(':active');
+      
+      // Don't update if user is actively seeking, unless it's a force update
+      if (isUserSeeking && !forceUpdate) {
+        return;
+      }
+      
       // Use requestAnimationFrame for smoother updates
       requestAnimationFrame(() => {
-        const progressBar = playerRef.current.container.current?.querySelector('.rhap_progress-filled');
-        const progressIndicator = playerRef.current.container.current?.querySelector('.rhap_progress-indicator');
-        const currentTimeEl = playerRef.current.container.current?.querySelector('.rhap_current-time');
-        const durationEl = playerRef.current.container.current?.querySelector('.rhap_total-time');
+        const progressBar = container.querySelector('.rhap_progress-filled');
+        const progressIndicator = container.querySelector('.rhap_progress-indicator');
+        const currentTimeEl = container.querySelector('.rhap_current-time');
+        const durationEl = container.querySelector('.rhap_total-time');
         
         if (progressBar) {
           const progressPercent = duration ? (currentTime / duration) * 100 : 0;
@@ -139,13 +151,13 @@ export const syncAllPlayers = ({
   };
 
   // Update all display players that are currently rendered
-  if (shouldShowMobilePlayer) {
-    updateProgressBar(mobilePlayerRef);
+  if (shouldShowMobilePlayer && mobilePlayerRef?.current) {
+    updateProgressBar(mobilePlayerRef, 'MOBILE');
   }
-  if (!isMobileOrTablet) {
-    updateProgressBar(desktopPlayerRef);
+  if (!isMobileOrTablet && desktopPlayerRef?.current) {
+    updateProgressBar(desktopPlayerRef, 'DESKTOP');
   }
-  if (shouldShowFullPagePlayer && isFullPageVisible) {
-    updateProgressBar(fullPageProgressRef);
+  if (shouldShowFullPagePlayer && isFullPageVisible && fullPageProgressRef?.current) {
+    updateProgressBar(fullPageProgressRef, 'FULLPAGE');
   }
 }; 

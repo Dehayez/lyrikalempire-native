@@ -75,6 +75,8 @@ export const useAudioSync = ({
 
   // Handle seeking from display players
   const handleSeeked = useCallback((e) => {
+    console.log('🎯 Audio seeked to:', e.target.currentTime);
+    
     const newTime = e.target.currentTime;
     const currentTime = audioCore.getCurrentTime();
     
@@ -83,6 +85,21 @@ export const useAudioSync = ({
       syncAllPlayers();
     }
   }, [audioCore, syncAllPlayers]);
+
+  // Handle seeking while dragging (onSeek event)
+  const handleSeek = useCallback((e) => {
+    console.log('🎯 Audio seeking to:', e.target.currentTime);
+    
+    const newTime = e.target.currentTime;
+    // Immediately update the main audio player
+    audioCore.setCurrentTime(newTime);
+    // Update the progress state for immediate visual feedback
+    audioInteractions.updateCurrentTime(newTime);
+    // Broadcast seek to other tabs
+    broadcastSeek(newTime);
+    // Sync all players
+    syncAllPlayers();
+  }, [audioCore, audioInteractions, syncAllPlayers, broadcastSeek]);
 
   // Override H5AudioPlayer events to prevent conflicts
   const preventDefaultAudioEvents = {
@@ -97,7 +114,21 @@ export const useAudioSync = ({
     onLoadStart: () => {},
     onCanPlay: () => {},
     onLoadedData: () => {},
-    onSeeked: handleSeeked,
+    onSeeked: (e) => {
+      console.log('🎯 onSeeked event triggered');
+      handleSeeked(e);
+    },
+    onSeek: (e) => {
+      console.log('🎯 onSeek event triggered');
+      handleSeek(e);
+    },
+    // Allow timeupdate for progress updates but don't let it conflict
+    onTimeUpdate: (e) => {
+      // Only update if this is not the main audio player
+      if (e.target !== audioCore.playerRef.current?.audio?.current) {
+        e.preventDefault();
+      }
+    },
   };
 
   // Handle play/pause from UI
@@ -200,6 +231,30 @@ export const useAudioSync = ({
       }
     };
 
+    // Add manual seeking detection for progress bars since onSeek might not be supported
+    const addProgressClickListeners = () => {
+      setTimeout(() => {
+        const progressContainers = document.querySelectorAll('.rhap_progress-container');
+        
+        progressContainers.forEach((container, index) => {
+          const clickHandler = (e) => {
+            console.log(`🎯 Progress bar clicked! Seeking to ${Math.round(e.offsetX / container.offsetWidth * 100)}%`);
+            
+            const progress = e.offsetX / container.offsetWidth;
+            const duration = audioCore.getDuration();
+            const newTime = progress * duration;
+            
+            audioCore.setCurrentTime(newTime);
+            audioInteractions.updateCurrentTime(newTime);
+            broadcastSeek(newTime);
+            syncAllPlayers(true);
+          };
+          
+          container.addEventListener('click', clickHandler);
+        });
+      }, 500); // Wait for DOM to be ready
+    };
+
     // Add all event listeners
     mainAudio.addEventListener('timeupdate', handleTimeUpdate);
     mainAudio.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -209,6 +264,12 @@ export const useAudioSync = ({
     mainAudio.addEventListener('pause', handlePause);
     mainAudio.addEventListener('ended', handleEnded);
     mainAudio.addEventListener('volumechange', handleVolumeChange);
+    
+    // Add progress bar click listeners
+    addProgressClickListeners();
+    
+    // Log only when actually setting up events
+    console.log('🎮 Audio events configured');
     
     // Initial sync - force update even when paused
     const initialSync = () => {
@@ -233,47 +294,13 @@ export const useAudioSync = ({
       mainAudio.removeEventListener('ended', handleEnded);
       mainAudio.removeEventListener('volumechange', handleVolumeChange);
     };
-  }, [audioCore.playerRef.current?.audio.current, audioCore, audioInteractions, setIsPlaying, syncAllPlayers, handleEnded, currentBeat, isPlaying]);
+  }, [audioCore, audioInteractions, setIsPlaying, syncAllPlayers, handleEnded, currentBeat, isPlaying]);
 
   // Effect to sync display players when they're rendered or view changes
   useEffect(() => {
-    const syncAfterRender = () => {
-      // Immediate sync without delay for view changes
-      syncAllPlayers(true);
-      
-      // Also force sync with requestAnimationFrame for next paint cycle
-      requestAnimationFrame(() => {
-        syncAllPlayers(true);
-      });
-    };
-    
-    // Immediate sync when switching views
-    syncAfterRender();
-    
-    return () => {};
+    // Simple sync when view changes
+    syncAllPlayers(true);
   }, [shouldShowFullPagePlayer, shouldShowMobilePlayer, isFullPageVisible, syncAllPlayers]);
-
-  // Additional effect to ensure sync after display players are mounted
-  useEffect(() => {
-    const ensureSync = () => {
-      if (audioCore.isReady() || audioCore.getDuration()) {
-        syncAllPlayers(true);
-      }
-    };
-
-    // Immediate sync, then fallback syncs
-    ensureSync();
-    
-    // Reduced timeout intervals for faster sync
-    const intervals = [0, 16, 50]; // 0ms, one frame, then 50ms
-    const timeouts = intervals.map(delay => 
-      setTimeout(ensureSync, delay)
-    );
-
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
-  }, [audioCore, syncAllPlayers]);
 
   // Apply current beat and playing state to auto-manage audio lifecycle
   useEffect(() => {

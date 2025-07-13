@@ -61,15 +61,25 @@ export const useAudioCore = () => {
   }, []);
 
   const setCurrentTime = useCallback((time) => {
+    console.log('🕐 Seeking to:', time);
     const audio = playerRef.current?.audio?.current;
+    
     if (audio && !isNaN(time)) {
       audio.currentTime = time;
+      console.log('✅ Successfully set currentTime to:', audio.currentTime);
+    } else {
+      console.log('❌ Cannot set currentTime:', { 
+        hasAudio: !!audio, 
+        isValidTime: !isNaN(time), 
+        time 
+      });
     }
   }, []);
 
   const getCurrentTime = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
-    return audio?.currentTime || 0;
+    const currentTime = audio?.currentTime || 0;
+    return currentTime;
   }, []);
 
   const getDuration = useCallback(() => {

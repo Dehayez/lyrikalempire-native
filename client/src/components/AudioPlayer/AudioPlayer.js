@@ -77,6 +77,9 @@ const AudioPlayer = ({
     getCurrentTime,
     getDuration,
     isReady,
+    getReadyState,
+    isEnded,
+    isPaused,
     // Interactions
     updateCurrentTime,
   } = audioPlayer;
@@ -175,9 +178,9 @@ const AudioPlayer = ({
     getCurrentTime,
     getDuration,
     isReady,
-    getReadyState: () => playerRef.current?.audio?.current?.readyState || 0,
-    isEnded: () => playerRef.current?.audio?.current?.ended || false,
-    isPaused: () => playerRef.current?.audio?.current?.paused ?? true
+    getReadyState,
+    isEnded,
+    isPaused
   };
 
   const audioInteractions = {

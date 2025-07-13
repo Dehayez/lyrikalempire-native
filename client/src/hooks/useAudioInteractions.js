@@ -123,6 +123,6 @@ export const useAudioInteractions = ({
     
     // Utilities
     setVolume,
-    setCurrentTime
+    setCurrentTimeState: setCurrentTime
   };
 }; 

@@ -58,12 +58,15 @@ export const useAudioPlayer = ({
     handlePlay(beats[prevIndex], true, beats);
   }, [currentBeat?.id, handlePlay]);
 
+  // Destructure audioInteractions to exclude the conflicting setCurrentTime
+  const { setCurrentTimeState, ...audioInteractionsWithoutSetCurrentTime } = audioInteractions;
+  
   return {
     // Audio core functionality
     ...audioCore,
     
-    // User interactions
-    ...audioInteractions,
+    // User interactions (excluding setCurrentTime to avoid conflict)
+    ...audioInteractionsWithoutSetCurrentTime,
     
     // High-level beat management
     handlePlay,
