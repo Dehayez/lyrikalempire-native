@@ -339,6 +339,34 @@ export const useAudioSync = ({
     };
   }, [audioCore, audioInteractions, setIsPlaying, syncAllPlayers, handleEnded, currentBeat, isPlaying]);
 
+  // Add effect to handle master tab closing
+  useEffect(() => {
+    // If there's no master session but we have a current beat and are playing,
+    // this tab should become the master
+    if (!masterSession && currentBeat && isPlaying && !document.hidden) {
+      console.log('👑 No master session detected - this tab will become master');
+      // Trigger a play event which will set this tab as master
+      broadcastPlay();
+      
+      // Unmute audio in this tab since it's now the master
+      const mainAudio = audioCore.playerRef.current?.audio.current;
+      if (mainAudio) {
+        console.log('🔊 New master tab - unmuting audio');
+        mainAudio.muted = false;
+        
+        // Try to play audio if it's not already playing
+        if (audioCore.isPaused()) {
+          console.log('▶️ Starting playback in new master tab');
+          audioCore.play().catch(error => {
+            if (error.name !== 'AbortError') {
+              console.log('❌ Audio play failed in new master tab:', error.message);
+            }
+          });
+        }
+      }
+    }
+  }, [masterSession, currentBeat, isPlaying, broadcastPlay, audioCore]);
+
   // Effect to sync display players when they're rendered or view changes
   useEffect(() => {
     // Simple sync when view changes

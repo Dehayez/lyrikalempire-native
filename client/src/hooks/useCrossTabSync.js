@@ -15,7 +15,7 @@ export const useCrossTabSync = ({
   setCurrentBeat,
   currentTime
 }) => {
-  const { socket, emitAudioPlay, emitAudioPause, emitAudioSeek, emitBeatChange, emitStateRequest, emitStateResponse } = useWebSocket();
+  const { socket, emitAudioPlay, emitAudioPause, emitAudioSeek, emitBeatChange, emitStateRequest, emitStateResponse, emitMasterClosed } = useWebSocket();
   const isProcessingRemoteEvent = useRef(false);
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
@@ -58,6 +58,53 @@ export const useCrossTabSync = ({
       }
     }
   }, [isPlaying, currentBeat, masterSession]);
+
+  // Handle master tab close event
+  useEffect(() => {
+    // Only add this listener if this is the master tab
+    const isCurrentTabMaster = masterSession === sessionId.current;
+    
+    if (!isCurrentTabMaster) return;
+    
+    const handleBeforeUnload = () => {
+      console.log('👋 Master tab closing - pausing audio and notifying other tabs');
+      
+      // Pause audio immediately
+      if (isPlaying && audioCore) {
+        audioCore.pause();
+      }
+      
+      // Broadcast master closed event to other tabs
+      if (currentBeat && socket && socket.connected) {
+        const browserName = getShortBrowserName();
+        
+        // Notify other tabs that master is closing
+        emitMasterClosed({
+          beatId: currentBeat.id,
+          timestamp: Date.now(),
+          currentTime: audioCore.getCurrentTime(),
+          sessionId: sessionId.current,
+          sessionName: browserName
+        });
+        
+        // Also emit a pause event
+        emitAudioPause({
+          beatId: currentBeat.id,
+          timestamp: Date.now(),
+          currentTime: audioCore.getCurrentTime(),
+          sessionId: null, // Clear master session to allow other tabs to become master
+          sessionName: browserName,
+          masterClosed: true // Signal that master tab is closing
+        });
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [masterSession, sessionId, isPlaying, currentBeat, audioCore, socket, emitMasterClosed, emitAudioPause]);
 
   // Request current state when socket connects
   useEffect(() => {
@@ -211,8 +258,11 @@ export const useCrossTabSync = ({
         isProcessingRemoteEvent.current = true;
         setIsPlaying(false);
         
-        // Don't change the master session when pausing
-        // This ensures the same tab remains master when playback resumes
+        // Check if this pause is due to master tab closing
+        if (data.masterClosed) {
+          console.log('👑 Master tab closed - clearing master session');
+          setMasterSession(null); // Clear master session so a new tab can become master
+        }
         
         audioCore.pause();
         isProcessingRemoteEvent.current = false;
@@ -364,6 +414,23 @@ export const useCrossTabSync = ({
       }
     };
 
+    const handleMasterClosed = (data) => {
+      console.log('👋 Received master-closed event:', data);
+      
+      // If the closing master is our current master, clear the master session
+      if (masterSession === data.sessionId) {
+        console.log('👑 Master tab closed - clearing master session');
+        setMasterSession(null);
+        
+        // If we have a current beat and it matches, pause audio
+        if (currentBeat && data.beatId === currentBeat.id) {
+          console.log('⏸️ Pausing audio due to master tab closing');
+          setIsPlaying(false);
+          audioCore.pause();
+        }
+      }
+    };
+
     // Log all event registrations
     console.log('📡 Registering socket event handlers');
     
@@ -372,6 +439,7 @@ export const useCrossTabSync = ({
     socket.on('audio-pause', handleRemotePause);
     socket.on('audio-seek', handleRemoteSeek);
     socket.on('beat-change', handleRemoteBeatChange);
+    socket.on('master-closed', handleMasterClosed);
     
     // Add explicit debug for state request/response events
     socket.on('request-state', (data) => {
@@ -391,6 +459,7 @@ export const useCrossTabSync = ({
       socket.off('audio-pause', handleRemotePause);
       socket.off('audio-seek', handleRemoteSeek);
       socket.off('beat-change', handleRemoteBeatChange);
+      socket.off('master-closed', handleMasterClosed);
       socket.off('request-state');
       socket.off('state-response');
     };

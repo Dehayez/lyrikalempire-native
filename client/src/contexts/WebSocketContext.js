@@ -79,6 +79,15 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
+  const emitMasterClosed = (data) => {
+    if (socket && isConnected) {
+      console.log('👋 Emitting master-closed event:', data);
+      socket.emit('master-closed', data);
+    } else {
+      console.log('⚠️ Cannot emit master-closed - socket not ready', { socket: !!socket, isConnected });
+    }
+  };
+
   const value = {
     socket,
     isConnected,
@@ -88,6 +97,7 @@ export const WebSocketProvider = ({ children }) => {
     emitBeatChange,
     emitStateRequest,
     emitStateResponse,
+    emitMasterClosed
   };
 
   return (

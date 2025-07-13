@@ -95,10 +95,19 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('state-response', data);
   });
   
+  socket.on('master-closed', (data) => {
+    console.log(`Socket ${socket.id} emitted master-closed`);
+    // Broadcast to all clients including sender
+    io.emit('master-closed', data);
+  });
+  
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);
   });
 });
+
+// The endpoint below is no longer needed since we're using WebSockets for the master-closed event
+// Remove the /audio-pause-sync endpoint
 
 const PORT = process.env.PORT || 4000;
 
