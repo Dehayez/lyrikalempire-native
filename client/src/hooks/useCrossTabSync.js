@@ -15,17 +15,37 @@ export const useCrossTabSync = ({
   setCurrentBeat,
   currentTime
 }) => {
-  const { socket, emitAudioPlay, emitAudioPause, emitAudioSeek, emitBeatChange } = useWebSocket();
+  const { socket, emitAudioPlay, emitAudioPause, emitAudioSeek, emitBeatChange, emitStateRequest, emitStateResponse } = useWebSocket();
   const isProcessingRemoteEvent = useRef(false);
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
 
   // Set this session as master when it starts playing
   useEffect(() => {
-    if (isPlaying && currentBeat && !masterSession) {
+    if (isPlaying && currentBeat) {
+      // Always set as master if currently playing, regardless of existing masterSession
       setMasterSession(sessionId.current);
     }
-  }, [isPlaying, currentBeat, masterSession]);
+  }, [isPlaying, currentBeat]);
+
+  // Request current state when socket connects
+  useEffect(() => {
+    if (socket && socket.connected) {
+      // Add a small delay to ensure all components are initialized
+      const timer = setTimeout(() => {
+        console.log('🔄 New tab requesting state from other tabs (initial)');
+        emitStateRequest();
+        
+        // Try again after a longer delay to ensure everything is loaded
+        setTimeout(() => {
+          console.log('🔄 New tab requesting state from other tabs (retry)');
+          emitStateRequest();
+        }, 2000);
+      }, 500); // 500ms delay
+      
+      return () => clearTimeout(timer);
+    }
+  }, [socket, emitStateRequest]);
 
   // Emit play event to other tabs
   const broadcastPlay = useCallback(() => {
@@ -78,7 +98,25 @@ export const useCrossTabSync = ({
 
   // Listen for events from other tabs
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {
+      console.log('⚠️ Socket not available for event listeners');
+      return;
+    }
+    
+    console.log('🔄 Setting up socket event listeners', { 
+      socketConnected: socket.connected, 
+      socketId: socket.id,
+      currentBeat: currentBeat?.title || 'none',
+      isPlaying
+    });
+
+    // Listen for socket connection and request state
+    const handleConnect = () => {
+      console.log('🔌 Socket connected, requesting state...');
+      setTimeout(() => {
+        emitStateRequest();
+      }, 100);
+    };
 
     const handleRemotePlay = (data) => {
       // Update master session info
@@ -139,18 +177,129 @@ export const useCrossTabSync = ({
       }
     };
 
+    const handleStateRequest = () => {
+      console.log('📨 Received state request. Master:', masterSession === sessionId.current, 'Beat:', !!currentBeat, 'Playing:', isPlaying, 'AudioReady:', audioCore.isReady(), 'SessionId:', sessionId.current);
+      
+      // Debug audio state
+      if (currentBeat) {
+        console.log('🎵 Current beat details:', { 
+          title: currentBeat.title, 
+          id: currentBeat.id,
+          audioSrc: currentBeat.audio,
+          audioPlayerSrc: audioCore.playerRef.current?.audio?.current?.src || 'no src'
+        });
+      }
+      
+      // If this tab has current state and is playing, respond with it
+      // Don't just rely on masterSession since it might not be set correctly
+      if (currentBeat && isPlaying) {
+        const browserName = getShortBrowserName();
+        const stateData = {
+          beatId: currentBeat.id,
+          beat: currentBeat,
+          isPlaying: isPlaying,
+          currentTime: audioCore.getCurrentTime(),
+          sessionId: sessionId.current,
+          sessionName: browserName,
+          timestamp: Date.now()
+        };
+        console.log('📤 Sending state response:', stateData);
+        emitStateResponse(stateData);
+      } else {
+        console.log('❌ Not responding to state request - no beat or not playing. Details:', {
+          hasBeat: !!currentBeat,
+          isPlaying,
+          masterSession,
+          currentSessionId: sessionId.current
+        });
+      }
+    };
+
+    const handleStateResponse = (data) => {
+      console.log('📥 Received state response:', data);
+      console.log('Current state - Master:', masterSession, 'Playing:', isPlaying, 'Beat:', currentBeat?.title);
+      
+      // Only accept state if we don't have a master session yet or if we're not playing
+      if (!masterSession || !isPlaying) {
+        console.log('✅ Accepting state response and syncing...');
+        isProcessingRemoteEvent.current = true;
+        
+        // Set the master session
+        setMasterSession(data.sessionId);
+        
+        // Set the current beat if different
+        if (!currentBeat || currentBeat.id !== data.beatId) {
+          console.log('🎵 Setting new beat:', data.beat.title);
+          setCurrentBeat(data.beat);
+        }
+        
+        // Set playing state
+        if (data.isPlaying) {
+          console.log('▶️ Setting playing state to true');
+          setIsPlaying(true);
+          
+          // Set current time
+          if (data.currentTime) {
+            console.log('⏰ Setting current time to:', data.currentTime);
+            audioCore.setCurrentTime(data.currentTime);
+          }
+          
+          // Try to play audio (may fail due to autoplay restrictions)
+          setTimeout(() => {
+            if (audioCore.isReady() && audioCore.getReadyState() >= 2) {
+              console.log('🔊 Attempting to play audio...');
+              audioCore.play().then(() => {
+                console.log('✅ Audio playing successfully');
+              }).catch((error) => {
+                console.log('❌ Autoplay failed (expected):', error.message);
+              });
+            } else {
+              console.log('⚠️ Audio not ready for playback');
+            }
+            isProcessingRemoteEvent.current = false;
+          }, 100);
+        } else {
+          console.log('⏸️ Setting playing state to false');
+          setIsPlaying(false);
+          audioCore.pause();
+          isProcessingRemoteEvent.current = false;
+        }
+      } else {
+        console.log('❌ Ignoring state response - already have master or playing');
+      }
+    };
+
+    // Log all event registrations
+    console.log('📡 Registering socket event handlers');
+    
+    socket.on('connect', handleConnect);
     socket.on('audio-play', handleRemotePlay);
     socket.on('audio-pause', handleRemotePause);
     socket.on('audio-seek', handleRemoteSeek);
     socket.on('beat-change', handleRemoteBeatChange);
+    
+    // Add explicit debug for state request/response events
+    socket.on('request-state', (data) => {
+      console.log('🔔 request-state event received', data);
+      handleStateRequest(data);
+    });
+    
+    socket.on('state-response', (data) => {
+      console.log('🔔 state-response event received', data);
+      handleStateResponse(data);
+    });
 
     return () => {
+      console.log('🧹 Cleaning up socket event handlers');
+      socket.off('connect', handleConnect);
       socket.off('audio-play', handleRemotePlay);
       socket.off('audio-pause', handleRemotePause);
       socket.off('audio-seek', handleRemoteSeek);
       socket.off('beat-change', handleRemoteBeatChange);
+      socket.off('request-state');
+      socket.off('state-response');
     };
-  }, [socket, currentBeat, isPlaying, audioCore, setIsPlaying, setCurrentBeat]);
+  }, [socket, currentBeat, isPlaying, audioCore, setIsPlaying, setCurrentBeat, masterSession, sessionId, emitStateResponse, emitStateRequest]);
 
   return {
     broadcastPlay,

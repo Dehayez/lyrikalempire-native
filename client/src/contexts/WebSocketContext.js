@@ -63,6 +63,22 @@ export const WebSocketProvider = ({ children }) => {
     }
   };
 
+  const emitStateRequest = () => {
+    if (socket && isConnected) {
+      console.log('🚀 Emitting state request', { socketId: socket.id, isConnected });
+      socket.emit('request-state');
+    } else {
+      console.log('⚠️ Cannot emit state request - socket not ready', { socket: !!socket, isConnected });
+    }
+  };
+
+  const emitStateResponse = (data) => {
+    if (socket && isConnected) {
+      console.log('🚀 Emitting state response:', data);
+      socket.emit('state-response', data);
+    }
+  };
+
   const value = {
     socket,
     isConnected,
@@ -70,6 +86,8 @@ export const WebSocketProvider = ({ children }) => {
     emitAudioPause,
     emitAudioSeek,
     emitBeatChange,
+    emitStateRequest,
+    emitStateResponse,
   };
 
   return (
