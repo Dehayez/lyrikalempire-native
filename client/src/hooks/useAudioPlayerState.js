@@ -24,7 +24,7 @@ export const useAudioPlayerState = ({
   const lastUrlRefreshRef = useRef(0);
 
   // State
-  const [artistName, setArtistName] = useState('Unknown Artist');
+  const [artistName, setArtistName] = useState('\u00A0'); // Non-breaking space
   const [activeContextMenu, setActiveContextMenu] = useState(false);
   const [contextMenuX, setContextMenuX] = useState(0);
   const [contextMenuY, setContextMenuY] = useState(0);
@@ -64,13 +64,14 @@ export const useAudioPlayerState = ({
         // Fetch artist name
         const user = await getUserById(currentBeat.user_id);
         if (user) {
-          const name = user.name || 'Unknown Artist';
-          setArtistName(name);
-          artistCache.current.set(currentBeat.user_id, name);
+          // Check for both name and username properties
+          const artistName = user.name || user.username || '\u00A0'; 
+          setArtistName(artistName);
+          artistCache.current.set(currentBeat.user_id, artistName);
         }
       } catch (error) {
         console.error('Error loading artist name:', error);
-        setArtistName('Unknown Artist');
+        setArtistName('\u00A0');
       }
     };
 
