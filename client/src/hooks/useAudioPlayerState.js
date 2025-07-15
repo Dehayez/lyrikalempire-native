@@ -43,11 +43,6 @@ export const useAudioPlayerState = ({
   });
   const [isFullPageVisible, setIsFullPageVisible] = useState(false);
 
-  // Log Safari detection
-  useEffect(() => {
-    console.log('useAudioPlayerState - Safari detection:', isSafari);
-  }, [isSafari]);
-
   // Sync waveform with localStorage
   useLocalStorageSync({
     waveform,
@@ -108,7 +103,6 @@ export const useAudioPlayerState = ({
 
         // For Safari, just use the signed URL directly
         if (isSafari) {
-          console.log('Safari: Using signed URL directly for audio playback');
           setAudioSrc(signedUrl);
           
           // Store the URL in the cache for future reference
@@ -159,11 +153,8 @@ export const useAudioPlayerState = ({
     // Don't refresh too frequently unless forced
     const now = Date.now();
     if (!force && now - lastUrlRefreshRef.current < 10000) {
-      console.log('Skipping URL refresh - too soon since last refresh');
       return;
     }
-    
-    console.log('Refreshing audio source URL');
     
     try {
       setIsLoadingAudio(true);
@@ -174,7 +165,6 @@ export const useAudioPlayerState = ({
       
       // For Safari, just use the fresh URL directly
       if (isSafari) {
-        console.log('Safari: Using fresh URL directly');
         setAudioSrc(freshSignedUrl);
         
         // Update the URL in the cache for future use

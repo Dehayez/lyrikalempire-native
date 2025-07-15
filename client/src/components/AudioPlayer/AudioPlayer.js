@@ -67,11 +67,6 @@ const AudioPlayer = ({
   const retryDelayRef = useRef(1000);
   const urlRetryTimerRef = useRef(null);
 
-  // Log Safari detection
-  useEffect(() => {
-    console.log('AudioPlayer component - Safari detection:', isSafari);
-  }, [isSafari]);
-
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
 
@@ -347,12 +342,10 @@ const AudioPlayer = ({
   // Retry loading audio with a fresh URL
   const retryWithFreshUrl = useCallback(() => {
     if (!currentBeat || retryCountRef.current >= maxRetries) {
-      console.log('Maximum retry attempts reached or no current beat');
       return;
     }
     
     retryCountRef.current += 1;
-    console.log(`Retrying with fresh URL (attempt ${retryCountRef.current}/${maxRetries})`);
     
     // Exponential backoff for retries
     retryDelayRef.current = Math.min(retryDelayRef.current * 2, 8000);
@@ -365,7 +358,6 @@ const AudioPlayer = ({
     // Set a new timer for retry
     urlRetryTimerRef.current = setTimeout(() => {
       if (refreshAudioSrc) {
-        console.log('Refreshing audio source URL');
         refreshAudioSrc(true); // Force refresh the URL
       }
     }, retryDelayRef.current);
@@ -431,13 +423,8 @@ const AudioPlayer = ({
     if (isSafari && isPlaying && audioCore.isPaused()) {
       // Add a small delay for Safari to properly initialize the audio
       setTimeout(() => {
-        console.log('Safari: Manually triggering play after canplay event');
         audioCore.play().catch(error => {
           console.error('Safari: Error playing audio on canplay event:', error);
-          // If play fails, try again with user interaction simulation
-          if (error.name === 'NotAllowedError') {
-            console.log('Safari: Play was blocked, will retry on next user interaction');
-          }
         });
       }, 100);
     }
@@ -471,7 +458,6 @@ const AudioPlayer = ({
       
       // For network errors or CORS issues in Safari, retry with fresh URL
       if ((error.code === 2 || error.code === 4) && !hasLoadedRef.current) {
-        console.log('Safari: Network or format error detected, will retry with fresh URL');
         retryWithFreshUrl();
       }
     }
@@ -497,10 +483,8 @@ const AudioPlayer = ({
         // Testing direct fetch of audio URL
         fetch(audio.src, { method: 'HEAD' })
           .then(response => {
-            console.log('Direct fetch successful:', response.status);
             if (response.status === 404 && !hasLoadedRef.current) {
               // If direct fetch returns 404, definitely retry with fresh URL
-              console.log('Direct fetch returned 404, retrying with fresh URL');
               retryWithFreshUrl();
             }
           })

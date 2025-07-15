@@ -30,13 +30,6 @@ export const useOs = () => {
     const isChrome = userAgent.indexOf('chrome') !== -1 && userAgent.indexOf('edge') === -1;
     const isFirefox = userAgent.indexOf('firefox') !== -1;
     const isEdge = userAgent.indexOf('edge') !== -1 || userAgent.indexOf('edg') !== -1;
-
-    console.log('Browser detection from useOs hook:');
-    console.log('User Agent:', userAgent);
-    console.log('Is Safari:', isSafari);
-    console.log('Is Chrome:', isChrome);
-    console.log('Is Firefox:', isFirefox);
-    console.log('Is Edge:', isEdge);
     
     setOs({
       isMac,

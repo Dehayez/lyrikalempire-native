@@ -15,33 +15,11 @@ const loadIDB = async () => {
 // Detect Safari browser
 const isSafari = () => {
   const ua = navigator.userAgent.toLowerCase();
-  const isSafariBrowser = ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
-  console.log('Browser detection - User Agent:', ua);
-  
-  if (isSafariBrowser) {
-    console.log('Browser detected as Safari');
-  } else {
-    console.log('Browser is not Safari');
-    if (ua.indexOf('chrome') !== -1) {
-      console.log('Browser appears to be Chrome or Chromium-based');
-    } else if (ua.indexOf('firefox') !== -1) {
-      console.log('Browser appears to be Firefox');
-    } else if (ua.indexOf('edge') !== -1) {
-      console.log('Browser appears to be Edge');
-    }
-  }
-  
-  return isSafariBrowser;
+  return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
 };
 
-// Safari browser detection - call immediately to log results
+// Safari browser detection
 const isSafariBrowser = isSafari();
-console.log('Safari detection result:', isSafariBrowser);
-
-// Force console log to be visible
-setTimeout(() => {
-  console.log('Delayed Safari detection check:', isSafariBrowser);
-}, 1000);
 
 class AudioCacheService {
   constructor() {
@@ -54,7 +32,6 @@ class AudioCacheService {
     this.version = 1;
     this.storeName = 'audioFiles';
     this.isSafariBrowser = isSafariBrowser;
-    console.log('AudioCacheService initialized with isSafari:', this.isSafariBrowser);
     
     // Store original URLs for Safari
     this.originalUrls = new Map();
@@ -100,7 +77,6 @@ class AudioCacheService {
       
       // For Safari, return the original URL if available
       if (this.isSafariBrowser && this.originalUrls.has(cacheKey)) {
-        console.log('Safari: Using original URL from cache for', cacheKey);
         return this.originalUrls.get(cacheKey);
       }
       
@@ -156,7 +132,6 @@ class AudioCacheService {
     try {
       // Store the original URL for Safari
       if (this.isSafariBrowser && originalUrl) {
-        console.log('Safari: Storing original URL for', cacheKey);
         this.originalUrls.set(cacheKey, originalUrl);
         
         // Still store the blob in IndexedDB for potential offline use
@@ -409,7 +384,6 @@ class AudioCacheService {
       
       // Consider URLs failed in the last 30 seconds as still failing
       if (now - failedTime < 30000) {
-        console.log('URL recently failed, skipping fetch attempt:', urlPath);
         return true;
       }
       
@@ -441,7 +415,6 @@ class AudioCacheService {
       
       // Check if URL has recently failed
       if (this.hasUrlFailed(signedUrl)) {
-        console.log('Safari: Using original URL due to recent failure:', cacheKey);
         // Still store the URL for future use
         this.originalUrls.set(cacheKey, signedUrl);
         return signedUrl;
@@ -449,7 +422,6 @@ class AudioCacheService {
 
       // For Safari, store the original URL and don't use blob URLs
       if (this.isSafariBrowser) {
-        console.log('Safari: Storing original URL for preload:', cacheKey);
         this.originalUrls.set(cacheKey, signedUrl);
         
         // For Safari, we'll just use the original URL and skip caching attempts
