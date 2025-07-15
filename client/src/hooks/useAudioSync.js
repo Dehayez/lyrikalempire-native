@@ -1,7 +1,16 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { syncAllPlayers as syncAllPlayersUtil, getShortBrowserName } from '../utils';
 import { useCrossTabSync } from './useCrossTabSync';
 import { useWebSocket } from '../contexts';
+
+// Detect Safari browser
+const isSafari = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
+};
+
+// Safari browser detection
+const isSafariBrowser = isSafari();
 
 export const useAudioSync = ({
   audioCore,
@@ -27,6 +36,10 @@ export const useAudioSync = ({
   // Get WebSocket context directly
   const { emitStateRequest: wsEmitStateRequest } = useWebSocket();
   
+  // Refs for Safari-specific handling
+  const timeUpdateThrottleRef = useRef(false);
+  const lastTimeUpdateRef = useRef(0);
+  
   // Cross-tab synchronization
   const { 
     broadcastPlay, 
@@ -48,6 +61,15 @@ export const useAudioSync = ({
   
   // Sync all players with main audio element
   const syncAllPlayers = useCallback((forceUpdate = false) => {
+    // For Safari, throttle non-forced updates to prevent infinite loops
+    if (isSafariBrowser && !forceUpdate) {
+      const now = Date.now();
+      if (now - lastTimeUpdateRef.current < 100) { // 100ms throttle
+        return;
+      }
+      lastTimeUpdateRef.current = now;
+    }
+    
     syncAllPlayersUtil({
       playerRef: audioCore.playerRef,
       setCurrentTimeState,
@@ -188,6 +210,16 @@ export const useAudioSync = ({
     }
 
     const handleTimeUpdate = () => {
+      // For Safari, throttle timeupdate events to prevent infinite loops
+      if (isSafariBrowser) {
+        if (timeUpdateThrottleRef.current) return;
+        
+        timeUpdateThrottleRef.current = true;
+        setTimeout(() => {
+          timeUpdateThrottleRef.current = false;
+        }, 100); // 100ms throttle
+      }
+      
       // Update interaction state with current time
       audioInteractions.updateCurrentTime(audioCore.getCurrentTime());
       syncAllPlayers();
@@ -337,70 +369,24 @@ export const useAudioSync = ({
     syncAllPlayers(true);
   }, [shouldShowFullPagePlayer, shouldShowMobilePlayer, isFullPageVisible, syncAllPlayers]);
 
-  // Apply current beat and playing state to auto-manage audio lifecycle
+  // Handle visibility change to sync when tab becomes visible
   useEffect(() => {
-    const audio = audioCore.playerRef.current?.audio?.current;
-    if (!audio) return;
-
-    // Add a small delay to prevent race conditions during initialization
-    const timeoutId = setTimeout(() => {
-      if (currentBeat?.audio && isPlaying && audioCore.isReady()) {
-        // Check if audio source is available (handles both blob URLs and signed URLs)
-        const currentSrc = audio.src;
-        const hasValidSrc = currentSrc && currentSrc !== '';
-        
-        if (hasValidSrc && audioCore.isPaused()) {
-          audioCore.play().catch(error => {
-            // Silently handle errors
-          });
-        }
-      } else if (!isPlaying && !audioCore.isPaused()) {
-        // Always allow pausing regardless of src
-        audioCore.pause();
-      }
-    }, 100); // 100ms delay to let initialization settle
-
-    return () => clearTimeout(timeoutId);
-  }, [currentBeat, isPlaying, audioCore]);
-
-  // Add periodic time sync for non-master tabs
-  useEffect(() => {
-    // Skip for master tab - it controls the time
-    if (isCurrentSessionMaster || !currentBeat) return;
-    
-    // Function to request time sync
-    const requestTimeSync = () => {
-      // Only request sync if we're playing and not the master
-      if (isPlaying && !isCurrentSessionMaster) {
-        if (typeof wsEmitStateRequest === 'function') {
-          wsEmitStateRequest();
-        }
-      }
-    };
-    
-    // Set up periodic sync (every 5 seconds)
-    const syncInterval = setInterval(requestTimeSync, 5000);
-    
-    // Also sync when tab becomes visible
     const handleVisibilityChange = () => {
-      if (!document.hidden && isPlaying && !isCurrentSessionMaster) {
-        if (typeof wsEmitStateRequest === 'function') {
-          wsEmitStateRequest();
-        } else {
-          // Try requestTimeSync as fallback
-          requestTimeSync();
-        }
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible, force sync all players
+        syncAllPlayers(true);
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
-      clearInterval(syncInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isCurrentSessionMaster, isPlaying, currentBeat, wsEmitStateRequest]);
+  }, [syncAllPlayers]);
 
+  // Determine session name
+  const sessionName = getShortBrowserName();
 
   return {
     syncAllPlayers,
@@ -410,6 +396,6 @@ export const useAudioSync = ({
     masterSession,
     currentSessionId,
     isCurrentSessionMaster,
-    sessionName: masterSession ? getShortBrowserName() : null
+    sessionName
   };
 }; 

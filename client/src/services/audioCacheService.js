@@ -12,6 +12,37 @@ const loadIDB = async () => {
   }
 };
 
+// Detect Safari browser
+const isSafari = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  const isSafariBrowser = ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
+  console.log('Browser detection - User Agent:', ua);
+  
+  if (isSafariBrowser) {
+    console.log('Browser detected as Safari');
+  } else {
+    console.log('Browser is not Safari');
+    if (ua.indexOf('chrome') !== -1) {
+      console.log('Browser appears to be Chrome or Chromium-based');
+    } else if (ua.indexOf('firefox') !== -1) {
+      console.log('Browser appears to be Firefox');
+    } else if (ua.indexOf('edge') !== -1) {
+      console.log('Browser appears to be Edge');
+    }
+  }
+  
+  return isSafariBrowser;
+};
+
+// Safari browser detection - call immediately to log results
+const isSafariBrowser = isSafari();
+console.log('Safari detection result:', isSafariBrowser);
+
+// Force console log to be visible
+setTimeout(() => {
+  console.log('Delayed Safari detection check:', isSafariBrowser);
+}, 1000);
+
 class AudioCacheService {
   constructor() {
     this.db = null;
@@ -22,6 +53,11 @@ class AudioCacheService {
     this.dbName = 'LyrikalAudioCache';
     this.version = 1;
     this.storeName = 'audioFiles';
+    this.isSafariBrowser = isSafariBrowser;
+    console.log('AudioCacheService initialized with isSafari:', this.isSafariBrowser);
+    
+    // Store original URLs for Safari
+    this.originalUrls = new Map();
     
     this.init();
   }
@@ -59,10 +95,22 @@ class AudioCacheService {
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
       
+      // For Safari, return the original URL if available
+      if (this.isSafariBrowser && this.originalUrls.has(cacheKey)) {
+        console.log('Safari: Using original URL from cache for', cacheKey);
+        return this.originalUrls.get(cacheKey);
+      }
+      
       // Check memory cache first
       const memoryEntry = this.memoryCache.get(cacheKey);
       if (memoryEntry) {
         memoryEntry.lastAccessed = Date.now();
+        
+        // For Safari, don't use blob URLs
+        if (this.isSafariBrowser) {
+          return null; // Will force using original URL
+        }
+        
         return memoryEntry.objectUrl;
       }
 
@@ -74,6 +122,11 @@ class AudioCacheService {
             // Update last accessed time
             entry.lastAccessed = Date.now();
             await this.db.put(this.storeName, entry);
+            
+            // For Safari, don't create blob URLs
+            if (this.isSafariBrowser) {
+              return null; // Will force using original URL
+            }
             
             // Create object URL and add to memory cache
             const objectUrl = URL.createObjectURL(entry.blob);
@@ -93,11 +146,19 @@ class AudioCacheService {
   }
 
   // Store audio in cache
-  async storeAudio(userId, fileName, audioBlob) {
+  async storeAudio(userId, fileName, audioBlob, originalUrl) {
     const cacheKey = this.getCacheKey(userId, fileName);
     const now = Date.now();
     
     try {
+      // Store the original URL for Safari
+      if (this.isSafariBrowser && originalUrl) {
+        console.log('Safari: Storing original URL for', cacheKey);
+        this.originalUrls.set(cacheKey, originalUrl);
+        
+        // Still store the blob in IndexedDB for potential offline use
+      }
+      
       // Store in IndexedDB
       if (this.db) {
         const entry = {
@@ -113,7 +174,12 @@ class AudioCacheService {
         await this.db.put(this.storeName, entry);
       }
 
-      // Create object URL and add to memory cache
+      // For Safari, return the original URL instead of creating a blob URL
+      if (this.isSafariBrowser) {
+        return originalUrl || null;
+      }
+
+      // Create object URL and add to memory cache for non-Safari browsers
       const objectUrl = URL.createObjectURL(audioBlob);
       this.addToMemoryCache(cacheKey, objectUrl, audioBlob.size);
       
@@ -125,6 +191,11 @@ class AudioCacheService {
 
   // Add to memory cache with size management
   addToMemoryCache(key, objectUrl, size) {
+    // Don't use memory cache for Safari
+    if (this.isSafariBrowser) {
+      return;
+    }
+    
     // Clean up existing entry if present
     if (this.memoryCache.has(key)) {
       const existing = this.memoryCache.get(key);
@@ -206,6 +277,11 @@ class AudioCacheService {
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
       
+      // Check original URLs for Safari
+      if (this.isSafariBrowser && this.originalUrls.has(cacheKey)) {
+        return true;
+      }
+      
       // Check memory cache
       if (this.memoryCache.has(cacheKey)) {
         return true;
@@ -235,6 +311,9 @@ class AudioCacheService {
     }
     this.memoryCache.clear();
     this.currentMemorySize = 0;
+    
+    // Clear original URLs map for Safari
+    this.originalUrls.clear();
 
     // Clear IndexedDB
     if (this.db) {
@@ -300,6 +379,11 @@ class AudioCacheService {
           this.currentMemorySize -= memoryEntry.size;
           this.memoryCache.delete(entry.id);
         }
+        
+        // Remove from original URLs map for Safari
+        if (this.originalUrls.has(entry.id)) {
+          this.originalUrls.delete(entry.id);
+        }
       }
     } catch (error) {
       // Silently handle error
@@ -313,19 +397,45 @@ class AudioCacheService {
       
       // Check if already cached
       if (await this.isAudioCached(userId, fileName)) {
-        return await this.getAudio(userId, fileName);
+        return await this.getAudio(userId, fileName) || signedUrl;
       }
 
-      // Fetch audio blob
-      const response = await fetch(signedUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch audio: ${response.status}`);
+      // For Safari, store the original URL and don't use blob URLs
+      if (this.isSafariBrowser) {
+        console.log('Safari: Storing original URL for preload:', cacheKey);
+        this.originalUrls.set(cacheKey, signedUrl);
+        
+        // Still fetch and store the blob for potential offline use
+        try {
+          const response = await fetch(signedUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch audio: ${response.status}`);
+          }
+          
+          const audioBlob = await response.blob();
+          
+          // Store in cache but return the original URL
+          await this.storeAudio(userId, fileName, audioBlob, signedUrl);
+          
+          return signedUrl;
+        } catch (error) {
+          console.error('Safari: Error caching audio blob:', error);
+          return signedUrl;
+        }
+      } else {
+        // Normal flow for other browsers
+        // Fetch audio blob
+        const response = await fetch(signedUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch audio: ${response.status}`);
+        }
+        
+        const audioBlob = await response.blob();
+        return await this.storeAudio(userId, fileName, audioBlob, signedUrl);
       }
-      
-      const audioBlob = await response.blob();
-      return await this.storeAudio(userId, fileName, audioBlob);
     } catch (error) {
-      throw error;
+      console.error('Error in preloadAudio:', error);
+      return signedUrl; // Fallback to original URL on error
     }
   }
 
@@ -337,6 +447,9 @@ class AudioCacheService {
     }
     this.memoryCache.clear();
     this.currentMemorySize = 0;
+    
+    // Clear original URLs map
+    this.originalUrls.clear();
 
     // Close database
     if (this.db) {

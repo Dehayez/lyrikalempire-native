@@ -4,7 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import { IoPersonSharp } from "react-icons/io5";
 
 import { isMobileOrTablet, getInitialState, isAuthPage } from './utils';
-import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache } from './hooks';
+import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache, useOs } from './hooks';
 import { useBeat, useUser, useWebSocket } from './contexts';
 import ProtectedRoute from './routes/ProtectedRoute';
 import userService from './services/userService';
@@ -29,6 +29,7 @@ function App() {
   const { emitBeatChange } = useWebSocket();
   const { isDraggingOver, droppedFiles, clearDroppedFiles } = useDragAndDrop(setRefreshBeats, user.id);
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
+  const { isSafari } = useOs();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [viewState, setViewState] = useState(() => getInitialState('lastView', 'queue'));

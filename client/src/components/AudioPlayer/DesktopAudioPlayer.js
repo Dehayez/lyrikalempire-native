@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PiWaveform } from "react-icons/pi";
 import { LiaMicrophoneAltSolid } from "react-icons/lia";
@@ -9,15 +9,12 @@ import { NextButton, PlayPauseButton, PrevButton, VolumeSlider, ShuffleButton, R
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
 
-const DesktopAudioPlayer = ({
-  playerRef,
-  audioSrc,
+const DesktopAudioPlayer = forwardRef(({
   currentBeat,
   isPlaying,
   handlePlayPause,
   handlePrevClick,
   onNext,
-  preventDefaultAudioEvents,
   artistName,
   shuffle,
   setShuffle,
@@ -29,9 +26,14 @@ const DesktopAudioPlayer = ({
   handleVolumeChange,
   waveform,
   waveformRef,
-  syncAllPlayers,
-  lyricsModal
-}) => {
+  isLoadingAudio,
+  isCachedAudio,
+  toggleFullPagePlayer,
+  progress,
+  currentTime,
+  duration,
+  lyricsModal = false // Add default value
+}, ref) => {
   return (
     <div className="audio-player audio-player--desktop audio">
       <div className='audio-player__text audio-player__text--desktop' style={{ flex: '1' }}>
@@ -40,15 +42,9 @@ const DesktopAudioPlayer = ({
       </div>
       <div style={{ flex: '3' }}>
         <H5AudioPlayer
-          ref={playerRef}
+          ref={ref}
           className="smooth-progress-bar smooth-progress-bar--desktop"
-          autoPlayAfterSrcChange={false}
-          src={audioSrc}
-          {...preventDefaultAudioEvents}
           customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
-          onLoadedMetadata={() => {
-            requestAnimationFrame(() => syncAllPlayers(true));
-          }}
           customControlsSection={[
             <>
               <ShuffleButton shuffle={shuffle} setShuffle={setShuffle} />
@@ -83,6 +79,9 @@ const DesktopAudioPlayer = ({
       </div>
     </div>
   );
-};
+});
+
+// Add display name for better debugging
+DesktopAudioPlayer.displayName = 'DesktopAudioPlayer';
 
 export default DesktopAudioPlayer; 

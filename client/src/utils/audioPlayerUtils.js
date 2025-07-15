@@ -1,6 +1,15 @@
 import React from 'react';
 import { slideIn, slideOut } from './';
 
+// Detect Safari browser
+const isSafari = () => {
+  const ua = navigator.userAgent.toLowerCase();
+  return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
+};
+
+// Safari browser detection
+const isSafariBrowser = isSafari();
+
 export const formatTime = (time) => {
   if (isNaN(time)) return '0:00';
   const minutes = Math.floor(time / 60);
@@ -75,6 +84,10 @@ export const toggleFullPagePlayer = ({
   }
 };
 
+// Track the last sync time to throttle updates in Safari
+let lastSyncTime = 0;
+const SAFARI_SYNC_THROTTLE = 100; // ms
+
 export const syncAllPlayers = ({
   playerRef,
   setCurrentTimeState,
@@ -93,17 +106,30 @@ export const syncAllPlayers = ({
   const mainAudio = playerRef.current?.audio.current;
   if (!mainAudio) return;
 
+  // Throttle updates in Safari to prevent maximum update depth exceeded
+  const now = Date.now();
+  if (isSafariBrowser && !forceUpdate && now - lastSyncTime < SAFARI_SYNC_THROTTLE) {
+    return;
+  }
+  lastSyncTime = now;
+
   const currentTime = mainAudio.currentTime || 0;
   const duration = mainAudio.duration || 0;
   
-  // Update state
-  setCurrentTimeState(currentTime);
-  setDuration(duration);
-  setProgress(duration ? currentTime / duration : 0);
+  // Update state - use requestAnimationFrame to avoid state update loops in Safari
+  requestAnimationFrame(() => {
+    setCurrentTimeState(currentTime);
+    setDuration(duration);
+    setProgress(duration ? currentTime / duration : 0);
+  });
 
-  // Update waveform
-  if (wavesurfer.current && duration) {
-    wavesurfer.current.seekTo(currentTime / duration);
+  // Update waveform - only if we have a valid wavesurfer instance and duration
+  if (wavesurfer.current && duration && wavesurfer.current.getDuration) {
+    try {
+      wavesurfer.current.seekTo(currentTime / duration);
+    } catch (error) {
+      // Silently handle waveform errors
+    }
   }
 
   // Force update display players by manipulating their progress bars directly

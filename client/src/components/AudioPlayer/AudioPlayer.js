@@ -8,7 +8,8 @@ import {
   useWaveform,
   useFullPagePlayer,
   useMediaSession,
-  useAudioSync
+  useAudioSync,
+  useOs
 } from '../../hooks';
 import { usePlaylist } from '../../contexts';
 
@@ -39,6 +40,15 @@ const AudioPlayer = ({
     return null;
   }
 
+  // Get browser info
+  const { isSafari } = useOs();
+  
+  // Create refs for the audio players
+  const mobilePlayerRef = useRef(null);
+  const desktopPlayerRef = useRef(null);
+  const fullPagePlayerRef = useRef(null);
+  const fullPageProgressRef = useRef(null);
+  
   // Store onSessionUpdate in a ref to prevent it from causing re-renders
   const onSessionUpdateRef = useRef(onSessionUpdate);
   
@@ -46,6 +56,17 @@ const AudioPlayer = ({
   useEffect(() => {
     onSessionUpdateRef.current = onSessionUpdate;
   }, [onSessionUpdate]);
+
+  // Refs for error handling and Safari-specific issues
+  const errorCountRef = useRef(0);
+  const lastErrorTimeRef = useRef(0);
+  const isErrorHandlingRef = useRef(false);
+  const hasLoadedRef = useRef(false);
+
+  // Log Safari detection
+  useEffect(() => {
+    console.log('AudioPlayer component - Safari detection:', isSafari);
+  }, [isSafari]);
 
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
@@ -99,9 +120,6 @@ const AudioPlayer = ({
     waveformRefFullPage,
     fullPageOverlayRef,
     wavesurfer,
-    mobilePlayerRef,
-    desktopPlayerRef,
-    fullPageProgressRef,
     
     // State
     artistName,
@@ -146,9 +164,14 @@ const AudioPlayer = ({
     markBeatAsCached
   });
 
+  // Reset hasLoaded when audio source changes
+  useEffect(() => {
+    hasLoadedRef.current = false;
+  }, [audioSrc]);
+
   // Get full page drag dismiss functionality
   const {
-    dismissRef: fullPagePlayerRef,
+    dismissRef,
     handleDragStart,
     handleDragMove,
     handleDragEnd,
@@ -161,6 +184,13 @@ const AudioPlayer = ({
         });
       }
     });
+
+  // Sync the dismissRef with our fullPagePlayerRef
+  useEffect(() => {
+    if (dismissRef.current !== fullPagePlayerRef.current) {
+      dismissRef.current = fullPagePlayerRef.current;
+    }
+  }, [dismissRef]);
 
   // Get full page player functionality  
   const { toggleFullPagePlayer } = useFullPagePlayer({
@@ -266,6 +296,146 @@ const AudioPlayer = ({
     isFullPageVisible
   });
 
+  // Safari-specific error handling
+  const handleSafariError = useCallback((error) => {
+    // Only handle errors in Safari
+    if (!isSafari) return;
+    
+    // Prevent error handling recursion
+    if (isErrorHandlingRef.current) return;
+    
+    const now = Date.now();
+    
+    // Reset error count if it's been more than 5 seconds since the last error
+    if (now - lastErrorTimeRef.current > 5000) {
+      errorCountRef.current = 0;
+    }
+    
+    // Update last error time
+    lastErrorTimeRef.current = now;
+    
+    // Increment error count
+    errorCountRef.current += 1;
+    
+    // If we're getting too many errors, pause playback to prevent infinite loops
+    if (errorCountRef.current > 3) {
+      isErrorHandlingRef.current = true;
+      
+      // Pause playback
+      setIsPlaying(false);
+      
+      // Reset error handling state after a delay
+      setTimeout(() => {
+        errorCountRef.current = 0;
+        isErrorHandlingRef.current = false;
+      }, 1000);
+    }
+  }, [isSafari, setIsPlaying]);
+
+  // Handle adding to playlist
+  const handleAddToPlaylist = useCallback((playlistId) => {
+    // Implementation
+  }, [currentBeat]);
+
+  // Handle removing from playlist
+  const handleRemoveFromPlaylist = useCallback(() => {
+    // Implementation
+  }, [currentBeat]);
+
+  // Handle context menu items
+  const contextMenuItems = [
+    {
+      icon: <IoAddSharp />,
+      label: 'Add to Playlist',
+      subItems: playlists.map(playlist => ({
+        label: playlist.name,
+        onClick: () => handleAddToPlaylist(playlist.id)
+      }))
+    }
+  ];
+
+  // Add remove from playlist option if in a playlist view
+  if (playedPlaylistTitle) {
+    contextMenuItems.push({
+      icon: <IoRemoveCircleOutline />,
+      label: `Remove from ${playedPlaylistTitle}`,
+      onClick: handleRemoveFromPlaylist
+    });
+  }
+
+  // Add to queue option
+  contextMenuItems.push({
+    icon: <Queue02 />,
+    label: 'Add to Queue',
+    onClick: () => {/* Implementation */}
+  });
+
+  // Custom handlers for audio events
+  const handleCanPlay = useCallback((e) => {
+    // Mark as loaded to prevent duplicate play attempts
+    hasLoadedRef.current = true;
+    
+    // Call the original handler
+    handleAudioReady(e);
+    
+    // For Safari, we need to manually trigger play if autoPlay is true
+    if (isSafari && isPlaying && audioCore.isPaused()) {
+      audioCore.play().catch(error => {
+        console.error('Safari: Error playing audio on canplay event:', error);
+      });
+    }
+  }, [handleAudioReady, isSafari, isPlaying, audioCore]);
+
+  // Custom error handler with better logging
+  const handleError = useCallback((e) => {
+    const audio = e.target;
+    const error = audio?.error;
+    
+    // Skip errors for empty src (during initialization)
+    if (!audioSrc || audioSrc === '') {
+      return;
+    }
+    
+    // Handle Safari-specific errors
+    if (isSafari && error) {
+      handleSafariError(error);
+      
+      // For Safari, log detailed error info
+      console.error('Safari audio error:', {
+        errorCode: error.code,
+        errorMessage: error.message,
+        audioSrc: audio.src,
+        currentBeat: currentBeat?.title,
+        networkState: audio.networkState,
+        readyState: audio.readyState
+      });
+    }
+    
+    if (error) {
+      const errorTypes = {
+        1: 'MEDIA_ERR_ABORTED - The fetching of the audio was aborted',
+        2: 'MEDIA_ERR_NETWORK - A network error occurred while fetching the audio',
+        3: 'MEDIA_ERR_DECODE - A decoding error occurred',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The audio format is not supported'
+      };
+      
+      const errorType = errorTypes[error.code] || `Unknown error code: ${error.code}`;
+      console.error(`Audio error: ${errorType}`, error);
+      
+      // Test if it's a network/CORS issue by trying to fetch the URL directly
+      if (error.code === 2 && audio.src) {
+        // Testing direct fetch of audio URL
+        fetch(audio.src, { method: 'HEAD' })
+          .then(response => {
+            console.log('Direct fetch successful:', response.status);
+          })
+          .catch(fetchError => {
+            console.error('Direct fetch failed:', fetchError);
+          });
+      }
+    }
+  }, [audioSrc, currentBeat, handleSafariError, isSafari]);
+
   return (
     <>
       {/* Main audio player */}
@@ -275,174 +445,117 @@ const AudioPlayer = ({
         autoPlayAfterSrcChange={false}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        onCanPlay={handleAudioReady}
-        onError={(e) => {
-          // Enhanced error handling for debugging
-          const audio = e.target;
-          const error = audio?.error;
-          
-          // Skip errors for empty src (during initialization)
-          if (!audioSrc || audioSrc === '') {
-            return;
-          }
-          
-          if (error) {
-            const errorTypes = {
-              1: 'MEDIA_ERR_ABORTED - The fetching of the audio was aborted',
-              2: 'MEDIA_ERR_NETWORK - A network error occurred while fetching the audio',
-              3: 'MEDIA_ERR_DECODE - A decoding error occurred',
-              4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The audio format is not supported'
-            };
-            
-            const errorType = errorTypes[error.code] || `Unknown error code: ${error.code}`;
-            
-            // Audio MediaError Details
-            // Error Type: errorType
-            // Error Code: error.code
-            // Error Message: error.message
-            // Audio Source: audio.src
-            // Network State: audio.networkState
-            // Ready State: audio.readyState
-            // Current Beat: currentBeat
-            
-            // Test if it's a network/CORS issue by trying to fetch the URL directly
-            if (error.code === 2 && audio.src) {
-              // Testing direct fetch of audio URL
-              fetch(audio.src, { method: 'HEAD' })
-                .then(response => {
-                  // Direct fetch successful
-                })
-                .catch(fetchError => {
-                  // Direct fetch failed
-                });
-            }
-          } else {
-            // Audio error without error details
-          }
-        }}
-        style={{ display: 'none' }}
+        onCanPlay={handleCanPlay}
+        onError={handleError}
+        {...preventDefaultAudioEvents}
+        className="audio-player__main-player"
+        style={{ display: 'none' }} // Hide the main player
       />
 
-      {/* Mobile full page player */}
-      {shouldShowFullPagePlayer && (
-        <FullPageAudioPlayer
-          fullPagePlayerRef={fullPagePlayerRef}
-          fullPageOverlayRef={fullPageOverlayRef}
-          playerRef={fullPageProgressRef}
-          audioSrc={audioSrc}
+      {/* Mobile player */}
+      {shouldShowMobilePlayer && (
+        <MobileAudioPlayer
+          ref={mobilePlayerRef}
           currentBeat={currentBeat}
-          onUpdateBeat={onUpdateBeat}
+          artistName={artistName}
           isPlaying={isPlaying}
           handlePlayPause={handlePlayPause}
           handlePrevClick={handlePrevClick}
           onNext={onNext}
-          preventDefaultAudioEvents={preventDefaultAudioEvents}
+          toggleFullPagePlayer={toggleFullPagePlayer}
+          progress={progress}
+          currentTime={currentTimeState}
+          duration={duration}
+          handleTouchStart={handleTouchStart}
+          handleTouchMove={handleTouchMove}
+          handleTouchEnd={handleTouchEnd}
+          dragPosition={dragPosition}
+          isLoadingAudio={isLoadingAudio}
+          isCachedAudio={isCachedAudio}
+          lyricsModal={lyricsModal}
+        />
+      )}
+
+      {/* Desktop player */}
+      {!isMobileOrTablet() && (
+        <DesktopAudioPlayer
+          ref={desktopPlayerRef}
+          currentBeat={currentBeat}
           artistName={artistName}
+          isPlaying={isPlaying}
+          handlePlayPause={handlePlayPause}
+          handlePrevClick={handlePrevClick}
+          onNext={onNext}
+          toggleFullPagePlayer={toggleFullPagePlayer}
+          progress={progress}
+          currentTime={currentTimeState}
+          duration={duration}
+          volume={volume}
+          handleVolumeChange={handleVolumeChange}
+          toggleLyricsModal={toggleLyricsModal}
+          handleEllipsisClick={handleEllipsisClick}
+          toggleWaveform={toggleWaveform}
+          waveform={waveform}
+          waveformRef={waveformRefDesktop}
+          isLoadingAudio={isLoadingAudio}
+          isCachedAudio={isCachedAudio}
           shuffle={shuffle}
           setShuffle={setShuffle}
           repeat={repeat}
           setRepeat={setRepeat}
-          toggleWaveform={toggleWaveform}
-          toggleLyricsModal={toggleLyricsModal}
-          waveform={waveform}
-          waveformRef={waveformRefFullPage}
-          syncAllPlayers={syncAllPlayers}
           lyricsModal={lyricsModal}
-          isFullPageVisible={isFullPageVisible}
+        />
+      )}
+
+      {/* Full page player */}
+      {shouldShowFullPagePlayer && (
+        <FullPageAudioPlayer
+          ref={fullPagePlayerRef}
+          fullPageProgressRef={fullPageProgressRef}
+          fullPageOverlayRef={fullPageOverlayRef}
+          currentBeat={currentBeat}
+          artistName={artistName}
+          isPlaying={isPlaying}
+          handlePlayPause={handlePlayPause}
+          handlePrevClick={handlePrevClick}
+          onNext={onNext}
+          progress={progress}
+          currentTime={currentTimeState}
+          duration={duration}
+          volume={volume}
+          handleVolumeChange={handleVolumeChange}
           toggleFullPagePlayer={toggleFullPagePlayer}
+          isFullPageVisible={isFullPageVisible}
           handleDragStart={handleDragStart}
           handleDragMove={handleDragMove}
           handleDragEnd={handleDragEnd}
-          playedPlaylistTitle={playedPlaylistTitle}
+          toggleLyricsModal={toggleLyricsModal}
           handleEllipsisClick={handleEllipsisClick}
+          waveformRef={waveformRefFullPage}
+          waveform={waveform}
+          toggleWaveform={toggleWaveform}
+          isLoadingAudio={isLoadingAudio}
+          isCachedAudio={isCachedAudio}
+          shuffle={shuffle}
+          setShuffle={setShuffle}
+          repeat={repeat}
+          setRepeat={setRepeat}
+          onUpdateBeat={onUpdateBeat}
+          lyricsModal={lyricsModal}
         />
       )}
 
-      {/* Mobile bottom audio player */}
-      {!shouldShowFullPagePlayer && (
-        shouldShowMobilePlayer ? (
-          <MobileAudioPlayer
-            playerRef={mobilePlayerRef}
-            audioSrc={audioSrc}
-            currentBeat={currentBeat}
-            isPlaying={isPlaying}
-            handlePlayPause={handlePlayPause}
-            preventDefaultAudioEvents={preventDefaultAudioEvents}
-            artistName={artistName}
-            toggleFullPagePlayer={toggleFullPagePlayer}
-            isLoadingAudio={isLoadingAudio}
-            isCachedAudio={isCachedAudio}
-            handleTouchStart={handleTouchStart}
-            handleTouchMove={handleTouchMove}
-            handleTouchEnd={handleTouchEnd}
-            dragPosition={dragPosition}
-            lyricsModal={lyricsModal}
-            syncAllPlayers={syncAllPlayers}
-          />
-        ) : (
-          <DesktopAudioPlayer
-            playerRef={desktopPlayerRef}
-            audioSrc={audioSrc}
-            currentBeat={currentBeat}
-            isPlaying={isPlaying}
-            handlePlayPause={handlePlayPause}
-            handlePrevClick={handlePrevClick}
-            onNext={onNext}
-            preventDefaultAudioEvents={preventDefaultAudioEvents}
-            artistName={artistName}
-            shuffle={shuffle}
-            setShuffle={setShuffle}
-            repeat={repeat}
-            setRepeat={setRepeat}
-            toggleWaveform={toggleWaveform}
-            toggleLyricsModal={toggleLyricsModal}
-            volume={volume}
-            handleVolumeChange={handleVolumeChange}
-            waveform={waveform}
-            waveformRef={waveformRefDesktop}
-            syncAllPlayers={syncAllPlayers}
-            lyricsModal={lyricsModal}
-          />
-        )
-      )}
-
+      {/* Context menu */}
       {activeContextMenu && (
         <ContextMenu
-          beat={currentBeat}
-          position={{ top: contextMenuY, left: contextMenuX }}
-          setActiveContextMenu={handleCloseContextMenu}
-          items={[
-            {
-              icon: IoAddSharp,
-              text: 'Add to playlist',
-              subItems: playlists.map((playlist) => ({
-                text: playlist.title,
-                onClick: () => {
-                  // Add to playlist functionality
-                }
-              }))
-            },
-            {
-              icon: Queue02,
-              text: 'Add to queue',
-              onClick: () => {
-                // Add to queue functionality
-              }
-            },
-            {
-              icon: IoRemoveCircleOutline,
-              text: 'Remove from queue',
-              onClick: () => {
-                // Remove from queue functionality
-              }
-            }
-          ]}
+          x={contextMenuX}
+          y={contextMenuY}
+          onClose={handleCloseContextMenu}
+          items={contextMenuItems}
         />
       )}
-
-
     </>
   );
-};
+}
 
 export default AudioPlayer;

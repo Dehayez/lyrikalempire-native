@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PiWaveform } from "react-icons/pi";
 import { LiaMicrophoneAltSolid } from "react-icons/lia";
@@ -13,18 +13,15 @@ import BeatEditInputs from './BeatEditInputs';
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
 
-const FullPageAudioPlayer = ({
-  fullPagePlayerRef,
+const FullPageAudioPlayer = forwardRef(({
   fullPageOverlayRef,
-  playerRef,
-  audioSrc,
+  fullPageProgressRef,
   currentBeat,
   onUpdateBeat,
   isPlaying,
   handlePlayPause,
   handlePrevClick,
   onNext,
-  preventDefaultAudioEvents,
   artistName,
   shuffle,
   setShuffle,
@@ -34,16 +31,21 @@ const FullPageAudioPlayer = ({
   toggleLyricsModal,
   waveform,
   waveformRef,
-  syncAllPlayers,
-  lyricsModal,
+  lyricsModal = false, // Add default value
   isFullPageVisible,
   toggleFullPagePlayer,
   handleDragStart,
   handleDragMove,
   handleDragEnd,
-  playedPlaylistTitle,
-  handleEllipsisClick
-}) => {
+  handleEllipsisClick,
+  isLoadingAudio,
+  isCachedAudio,
+  progress,
+  currentTime,
+  duration,
+  volume,
+  handleVolumeChange
+}, ref) => {
   // Create edit inputs content for the third slide
   const editInputsContent = (
     <div className="audio-player__full-page-edit-content">
@@ -64,7 +66,7 @@ const FullPageAudioPlayer = ({
         className={`audio-player--mobile audio-player__full-page-overlay ${isFullPageVisible ? 'visible' : ''}`}
       />
       <div
-        ref={fullPagePlayerRef}
+        ref={ref}
         className="audio-player audio-player__full-page"
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
@@ -81,7 +83,7 @@ const FullPageAudioPlayer = ({
             <IoChevronDownSharp />
           </IconButton>
           <p className="audio-player__full-page-title">
-            {playedPlaylistTitle || 'All Tracks'}
+            Now Playing
           </p>
           <IconButton
             className="audio-player__ellipsis-button"
@@ -110,15 +112,9 @@ const FullPageAudioPlayer = ({
           </div>
           
           <H5AudioPlayer
-            ref={playerRef}
+            ref={fullPageProgressRef}
             className="smooth-progress-bar smooth-progress-bar--full-page"
-            autoPlayAfterSrcChange={false}
-            src={audioSrc}
-            {...preventDefaultAudioEvents}
             customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
-            onLoadedMetadata={() => {
-              requestAnimationFrame(() => syncAllPlayers(true));
-            }}
             customControlsSection={[
               <>
                 <IconButton
@@ -150,6 +146,9 @@ const FullPageAudioPlayer = ({
       </div>
     </>
   );
-};
+});
+
+// Add display name for better debugging
+FullPageAudioPlayer.displayName = 'FullPageAudioPlayer';
 
 export default FullPageAudioPlayer; 
