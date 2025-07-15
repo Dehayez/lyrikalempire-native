@@ -59,6 +59,9 @@ class AudioCacheService {
     // Store original URLs for Safari
     this.originalUrls = new Map();
     
+    // Track failed URLs to avoid repeated failures
+    this.failedUrls = new Map();
+    
     this.init();
   }
 
@@ -314,6 +317,9 @@ class AudioCacheService {
     
     // Clear original URLs map for Safari
     this.originalUrls.clear();
+    
+    // Clear failed URLs tracking
+    this.failedUrls.clear();
 
     // Clear IndexedDB
     if (this.db) {
@@ -390,6 +396,39 @@ class AudioCacheService {
     }
   }
 
+  // Check if URL has failed recently
+  hasUrlFailed(url) {
+    if (!url) return false;
+    
+    // Extract the file path part without the query parameters
+    const urlPath = url.split('?')[0];
+    
+    if (this.failedUrls.has(urlPath)) {
+      const failedTime = this.failedUrls.get(urlPath);
+      const now = Date.now();
+      
+      // Consider URLs failed in the last 30 seconds as still failing
+      if (now - failedTime < 30000) {
+        console.log('URL recently failed, skipping fetch attempt:', urlPath);
+        return true;
+      }
+      
+      // Clear old failure after 30 seconds
+      this.failedUrls.delete(urlPath);
+    }
+    
+    return false;
+  }
+
+  // Mark URL as failed
+  markUrlAsFailed(url) {
+    if (!url) return;
+    
+    // Extract the file path part without the query parameters
+    const urlPath = url.split('?')[0];
+    this.failedUrls.set(urlPath, Date.now());
+  }
+
   // Preload audio for a beat
   async preloadAudio(userId, fileName, signedUrl) {
     try {
@@ -399,42 +438,50 @@ class AudioCacheService {
       if (await this.isAudioCached(userId, fileName)) {
         return await this.getAudio(userId, fileName) || signedUrl;
       }
+      
+      // Check if URL has recently failed
+      if (this.hasUrlFailed(signedUrl)) {
+        console.log('Safari: Using original URL due to recent failure:', cacheKey);
+        // Still store the URL for future use
+        this.originalUrls.set(cacheKey, signedUrl);
+        return signedUrl;
+      }
 
       // For Safari, store the original URL and don't use blob URLs
       if (this.isSafariBrowser) {
         console.log('Safari: Storing original URL for preload:', cacheKey);
         this.originalUrls.set(cacheKey, signedUrl);
         
-        // Still fetch and store the blob for potential offline use
+        // For Safari, we'll just use the original URL and skip caching attempts
+        // This avoids the empty blob issues with no-cors mode
+        return signedUrl;
+      } else {
+        // Normal flow for other browsers
         try {
+          // Fetch audio blob
           const response = await fetch(signedUrl);
           if (!response.ok) {
+            this.markUrlAsFailed(signedUrl);
             throw new Error(`Failed to fetch audio: ${response.status}`);
           }
           
           const audioBlob = await response.blob();
           
-          // Store in cache but return the original URL
-          await this.storeAudio(userId, fileName, audioBlob, signedUrl);
+          if (audioBlob.size === 0) {
+            this.markUrlAsFailed(signedUrl);
+            throw new Error('Empty audio blob received');
+          }
           
-          return signedUrl;
+          return await this.storeAudio(userId, fileName, audioBlob, signedUrl);
         } catch (error) {
-          console.error('Safari: Error caching audio blob:', error);
-          return signedUrl;
+          console.error('Error in preloadAudio:', error);
+          this.markUrlAsFailed(signedUrl);
+          return signedUrl; // Fallback to original URL on error
         }
-      } else {
-        // Normal flow for other browsers
-        // Fetch audio blob
-        const response = await fetch(signedUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch audio: ${response.status}`);
-        }
-        
-        const audioBlob = await response.blob();
-        return await this.storeAudio(userId, fileName, audioBlob, signedUrl);
       }
     } catch (error) {
       console.error('Error in preloadAudio:', error);
+      this.markUrlAsFailed(signedUrl);
       return signedUrl; // Fallback to original URL on error
     }
   }
@@ -450,6 +497,9 @@ class AudioCacheService {
     
     // Clear original URLs map
     this.originalUrls.clear();
+    
+    // Clear failed URLs tracking
+    this.failedUrls.clear();
 
     // Close database
     if (this.db) {

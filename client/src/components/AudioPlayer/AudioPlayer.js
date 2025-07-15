@@ -62,6 +62,10 @@ const AudioPlayer = ({
   const lastErrorTimeRef = useRef(0);
   const isErrorHandlingRef = useRef(false);
   const hasLoadedRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
+  const retryDelayRef = useRef(1000);
+  const urlRetryTimerRef = useRef(null);
 
   // Log Safari detection
   useEffect(() => {
@@ -153,7 +157,8 @@ const AudioPlayer = ({
     toggleWaveform,
     handleEllipsisClick,
     handleCloseContextMenu,
-    handleAudioReady
+    handleAudioReady,
+    refreshAudioSrc
   } = useAudioPlayerState({
     currentBeat,
     setCurrentBeat,
@@ -167,6 +172,13 @@ const AudioPlayer = ({
   // Reset hasLoaded when audio source changes
   useEffect(() => {
     hasLoadedRef.current = false;
+    retryCountRef.current = 0;
+    
+    // Clear any pending retry timers
+    if (urlRetryTimerRef.current) {
+      clearTimeout(urlRetryTimerRef.current);
+      urlRetryTimerRef.current = null;
+    }
   }, [audioSrc]);
 
   // Get full page drag dismiss functionality
@@ -332,6 +344,33 @@ const AudioPlayer = ({
     }
   }, [isSafari, setIsPlaying]);
 
+  // Retry loading audio with a fresh URL
+  const retryWithFreshUrl = useCallback(() => {
+    if (!currentBeat || retryCountRef.current >= maxRetries) {
+      console.log('Maximum retry attempts reached or no current beat');
+      return;
+    }
+    
+    retryCountRef.current += 1;
+    console.log(`Retrying with fresh URL (attempt ${retryCountRef.current}/${maxRetries})`);
+    
+    // Exponential backoff for retries
+    retryDelayRef.current = Math.min(retryDelayRef.current * 2, 8000);
+    
+    // Clear any existing timer
+    if (urlRetryTimerRef.current) {
+      clearTimeout(urlRetryTimerRef.current);
+    }
+    
+    // Set a new timer for retry
+    urlRetryTimerRef.current = setTimeout(() => {
+      if (refreshAudioSrc) {
+        console.log('Refreshing audio source URL');
+        refreshAudioSrc(true); // Force refresh the URL
+      }
+    }, retryDelayRef.current);
+  }, [currentBeat, refreshAudioSrc]);
+
   // Handle adding to playlist
   const handleAddToPlaylist = useCallback((playlistId) => {
     // Implementation
@@ -375,14 +414,32 @@ const AudioPlayer = ({
     // Mark as loaded to prevent duplicate play attempts
     hasLoadedRef.current = true;
     
+    // Reset retry counters on successful load
+    retryCountRef.current = 0;
+    retryDelayRef.current = 1000;
+    
+    // Clear any pending retry timers
+    if (urlRetryTimerRef.current) {
+      clearTimeout(urlRetryTimerRef.current);
+      urlRetryTimerRef.current = null;
+    }
+    
     // Call the original handler
     handleAudioReady(e);
     
     // For Safari, we need to manually trigger play if autoPlay is true
     if (isSafari && isPlaying && audioCore.isPaused()) {
-      audioCore.play().catch(error => {
-        console.error('Safari: Error playing audio on canplay event:', error);
-      });
+      // Add a small delay for Safari to properly initialize the audio
+      setTimeout(() => {
+        console.log('Safari: Manually triggering play after canplay event');
+        audioCore.play().catch(error => {
+          console.error('Safari: Error playing audio on canplay event:', error);
+          // If play fails, try again with user interaction simulation
+          if (error.name === 'NotAllowedError') {
+            console.log('Safari: Play was blocked, will retry on next user interaction');
+          }
+        });
+      }, 100);
     }
   }, [handleAudioReady, isSafari, isPlaying, audioCore]);
 
@@ -407,8 +464,16 @@ const AudioPlayer = ({
         audioSrc: audio.src,
         currentBeat: currentBeat?.title,
         networkState: audio.networkState,
-        readyState: audio.readyState
+        readyState: audio.readyState,
+        hasLoadedRef: hasLoadedRef.current,
+        retryCount: retryCountRef.current
       });
+      
+      // For network errors or CORS issues in Safari, retry with fresh URL
+      if ((error.code === 2 || error.code === 4) && !hasLoadedRef.current) {
+        console.log('Safari: Network or format error detected, will retry with fresh URL');
+        retryWithFreshUrl();
+      }
     }
     
     if (error) {
@@ -422,19 +487,42 @@ const AudioPlayer = ({
       const errorType = errorTypes[error.code] || `Unknown error code: ${error.code}`;
       console.error(`Audio error: ${errorType}`, error);
       
+      // For non-Safari browsers, also retry on network errors
+      if (!isSafari && error.code === 2 && !hasLoadedRef.current) {
+        retryWithFreshUrl();
+      }
+      
       // Test if it's a network/CORS issue by trying to fetch the URL directly
       if (error.code === 2 && audio.src) {
         // Testing direct fetch of audio URL
         fetch(audio.src, { method: 'HEAD' })
           .then(response => {
             console.log('Direct fetch successful:', response.status);
+            if (response.status === 404 && !hasLoadedRef.current) {
+              // If direct fetch returns 404, definitely retry with fresh URL
+              console.log('Direct fetch returned 404, retrying with fresh URL');
+              retryWithFreshUrl();
+            }
           })
           .catch(fetchError => {
             console.error('Direct fetch failed:', fetchError);
+            // If direct fetch fails, try with fresh URL
+            if (!hasLoadedRef.current) {
+              retryWithFreshUrl();
+            }
           });
       }
     }
-  }, [audioSrc, currentBeat, handleSafariError, isSafari]);
+  }, [audioSrc, currentBeat, handleSafariError, isSafari, retryWithFreshUrl]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (urlRetryTimerRef.current) {
+        clearTimeout(urlRetryTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -477,7 +565,7 @@ const AudioPlayer = ({
       )}
 
       {/* Desktop player */}
-      {!isMobileOrTablet() && (
+      {!shouldShowMobilePlayer && (
         <DesktopAudioPlayer
           ref={desktopPlayerRef}
           currentBeat={currentBeat}
@@ -486,7 +574,6 @@ const AudioPlayer = ({
           handlePlayPause={handlePlayPause}
           handlePrevClick={handlePrevClick}
           onNext={onNext}
-          toggleFullPagePlayer={toggleFullPagePlayer}
           progress={progress}
           currentTime={currentTimeState}
           duration={duration}
@@ -494,9 +581,9 @@ const AudioPlayer = ({
           handleVolumeChange={handleVolumeChange}
           toggleLyricsModal={toggleLyricsModal}
           handleEllipsisClick={handleEllipsisClick}
-          toggleWaveform={toggleWaveform}
-          waveform={waveform}
           waveformRef={waveformRefDesktop}
+          waveform={waveform}
+          toggleWaveform={toggleWaveform}
           isLoadingAudio={isLoadingAudio}
           isCachedAudio={isCachedAudio}
           shuffle={shuffle}
@@ -507,7 +594,6 @@ const AudioPlayer = ({
         />
       )}
 
-      {/* Full page player */}
       {shouldShowFullPagePlayer && (
         <FullPageAudioPlayer
           ref={fullPagePlayerRef}
@@ -556,6 +642,6 @@ const AudioPlayer = ({
       )}
     </>
   );
-}
+};
 
 export default AudioPlayer;

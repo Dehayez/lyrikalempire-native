@@ -21,6 +21,7 @@ export const useAudioPlayerState = ({
   const wavesurfer = useRef(null);
   const cacheInProgressRef = useRef(false);
   const originalUrlRef = useRef('');
+  const lastUrlRefreshRef = useRef(0);
 
   // State
   const [artistName, setArtistName] = useState('Unknown Artist');
@@ -47,191 +48,208 @@ export const useAudioPlayerState = ({
     console.log('useAudioPlayerState - Safari detection:', isSafari);
   }, [isSafari]);
 
-  // Sync local storage
-  useLocalStorageSync({ waveform, isFullPage });
+  // Sync waveform with localStorage
+  useLocalStorageSync({
+    waveform,
+    isFullPage,
+  });
 
-  // Get derived state
-  const shouldShowFullPagePlayer = isFullPage || isFullPageVisible;
-  const shouldShowMobilePlayer = isMobileOrTablet();
-
-  // Get artist name from cache or fetch
+  // Load artist name when current beat changes
   useEffect(() => {
-    const fetchArtistName = async () => {
-      if (currentBeat?.user_id) {
+    if (!currentBeat) return;
+
+    const loadArtistName = async () => {
+      try {
         // Check cache first
         if (artistCache.current.has(currentBeat.user_id)) {
           setArtistName(artistCache.current.get(currentBeat.user_id));
           return;
         }
 
-        try {
-          const user = await getUserById(currentBeat.user_id);
-          const username = user?.username || 'Unknown Artist';
-          
-          // Cache the result
-          artistCache.current.set(currentBeat.user_id, username);
-          setArtistName(username);
-        } catch (error) {
-          // Could not fetch artist name. Using fallback.
-          setArtistName('Unknown Artist');
+        // Fetch artist name
+        const user = await getUserById(currentBeat.user_id);
+        if (user) {
+          const name = user.name || 'Unknown Artist';
+          setArtistName(name);
+          artistCache.current.set(currentBeat.user_id, name);
         }
+      } catch (error) {
+        console.error('Error loading artist name:', error);
+        setArtistName('Unknown Artist');
       }
     };
 
-    fetchArtistName();
-  }, [currentBeat?.user_id]);
+    loadArtistName();
+  }, [currentBeat]);
 
-  // Handle audio source changes with caching
+  // Load audio when current beat changes
   useEffect(() => {
-    const updateAudioSource = async () => {
-      if (currentBeat?.audio && currentBeat?.user_id) {
-        // First, clear the current audio source to prevent old audio from playing
-        setAudioSrc('');
+    if (!currentBeat) {
+      setAudioSrc('');
+      return;
+    }
+
+    const loadAudio = async () => {
+      try {
         setIsLoadingAudio(true);
-        setIsCachedAudio(false);
-        // Reset cache in progress flag
-        cacheInProgressRef.current = false;
-        
-        try {
-          // Get signed URL first - we'll need it for Safari
-          const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
-          originalUrlRef.current = signedUrl;
+        cacheInProgressRef.current = true;
+
+        // Check if audio is cached
+        const isCached = await audioCacheService.isAudioCached(
+          currentBeat.user_id,
+          currentBeat.audio
+        );
+
+        setIsCachedAudio(isCached);
+
+        // Get signed URL for audio file
+        const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        originalUrlRef.current = signedUrl;
+
+        // For Safari, just use the signed URL directly
+        if (isSafari) {
+          console.log('Safari: Using signed URL directly for audio playback');
+          setAudioSrc(signedUrl);
           
-          // For Safari, we'll always use the signed URL to avoid WebKitBlobResource errors
-          if (isSafari) {
-            console.log('Safari: Using signed URL directly');
-            setAudioSrc(signedUrl);
-            setIsCachedAudio(false);
-            setAutoPlay(!isFirstRender);
-            setIsFirstRender(false);
-            
-            // Still try to cache in the background for offline use
-            audioCacheService.preloadAudio(
-              currentBeat.user_id, 
-              currentBeat.audio, 
-              signedUrl
-            ).then(() => {
-              // Just mark as cached, but keep using the original URL
-              if (markBeatAsCached) {
-                markBeatAsCached(currentBeat);
-              }
-            }).catch((cacheError) => {
-              console.error('Safari: Error caching in background:', cacheError);
-            });
-            
-            return;
-          }
+          // Store the URL in the cache for future reference
+          audioCacheService.originalUrls.set(
+            audioCacheService.getCacheKey(currentBeat.user_id, currentBeat.audio),
+            signedUrl
+          );
           
-          // For non-Safari browsers, check if audio is already cached
-          const cachedAudio = await audioCacheService.getAudio(currentBeat.user_id, currentBeat.audio);
+          // Update last URL refresh time
+          lastUrlRefreshRef.current = Date.now();
+        } else {
+          // For other browsers, store in cache or retrieve from cache
+          const audioUrl = await audioCacheService.preloadAudio(
+            currentBeat.user_id,
+            currentBeat.audio,
+            signedUrl
+          );
           
-          if (cachedAudio) {
-            // Use cached audio immediately - no API call needed
-            setAudioSrc(cachedAudio);
-            setIsCachedAudio(true);
-            setAutoPlay(!isFirstRender);
-            setIsFirstRender(false);
-            
-            // Update the cache indicators state
-            if (markBeatAsCached) {
-              markBeatAsCached(currentBeat);
-            }
-          } else {
-            // Not cached, use signed URL and start caching process
-            setAudioSrc(signedUrl);
-            setIsCachedAudio(false);
-            setAutoPlay(!isFirstRender);
-            setIsFirstRender(false);
-            
-            // Set flag to indicate caching is in progress
-            cacheInProgressRef.current = true;
-            
-            // Try to preload and cache the audio in background (non-blocking)
-            audioCacheService.preloadAudio(
-              currentBeat.user_id, 
-              currentBeat.audio, 
-              signedUrl
-            ).then((cachedObjectUrl) => {
-              // Only update to cached version if we're still on the same beat and caching is in progress
-              if (currentBeat?.audio === currentBeat.audio && 
-                  currentBeat?.user_id === currentBeat.user_id &&
-                  cacheInProgressRef.current) {
-                
-                // Check if we're already playing
-                const audioElement = document.querySelector('audio');
-                const isCurrentlyPlaying = audioElement && !audioElement.paused;
-                
-                if (!isCurrentlyPlaying) {
-                  setAudioSrc(cachedObjectUrl);
-                  setIsCachedAudio(true);
-                }
-                
-                // Update the cache indicators state regardless
-                if (markBeatAsCached) {
-                  markBeatAsCached(currentBeat);
-                }
-              }
-            }).catch((cacheError) => {
-              // Silently fail caching - we're already using the direct URL
-              console.error('Error caching audio:', cacheError);
-              cacheInProgressRef.current = false;
-            });
-          }
+          // Update last URL refresh time
+          lastUrlRefreshRef.current = Date.now();
           
-        } catch (error) {
-          // Error loading audio
-          console.error('Error loading audio:', error);
-          setAudioSrc('');
-          setIsCachedAudio(false);
-          cacheInProgressRef.current = false;
-        } finally {
-          setIsLoadingAudio(false);
+          // Set audio source
+          setAudioSrc(audioUrl);
         }
-      } else {
-        // Clear audio source if no beat
+
+        setAutoPlay(true);
+
+        // Mark as cached if it wasn't before
+        if (!isCached) {
+          markBeatAsCached(currentBeat.id);
+        }
+      } catch (error) {
+        console.error('Error loading audio:', error);
         setAudioSrc('');
-        setIsCachedAudio(false);
+      } finally {
         setIsLoadingAudio(false);
         cacheInProgressRef.current = false;
-        originalUrlRef.current = '';
       }
     };
 
-    updateAudioSource();
-  }, [currentBeat?.audio, currentBeat?.user_id, isFirstRender, markBeatAsCached, isSafari]);
+    loadAudio();
+  }, [currentBeat, markBeatAsCached, isSafari]);
 
-  // Clean up audio resources when component unmounts or beat changes
-  useEffect(() => {
-    return () => {
-      // Cancel any in-progress caching operations
-      cacheInProgressRef.current = false;
-      originalUrlRef.current = '';
-    };
-  }, [currentBeat?.id]);
+  // Method to refresh the audio source URL
+  const refreshAudioSrc = useCallback(async (force = false) => {
+    if (!currentBeat) return;
+    
+    // Don't refresh too frequently unless forced
+    const now = Date.now();
+    if (!force && now - lastUrlRefreshRef.current < 10000) {
+      console.log('Skipping URL refresh - too soon since last refresh');
+      return;
+    }
+    
+    console.log('Refreshing audio source URL');
+    
+    try {
+      setIsLoadingAudio(true);
+      
+      // Get a fresh signed URL
+      const freshSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+      originalUrlRef.current = freshSignedUrl;
+      
+      // For Safari, just use the fresh URL directly
+      if (isSafari) {
+        console.log('Safari: Using fresh URL directly');
+        setAudioSrc(freshSignedUrl);
+        
+        // Update the URL in the cache for future use
+        audioCacheService.originalUrls.set(
+          audioCacheService.getCacheKey(currentBeat.user_id, currentBeat.audio),
+          freshSignedUrl
+        );
+      } else {
+        // For other browsers, try to cache it
+        const audioUrl = await audioCacheService.preloadAudio(
+          currentBeat.user_id,
+          currentBeat.audio,
+          freshSignedUrl
+        );
+        
+        setAudioSrc(audioUrl);
+      }
+      
+      // Update last refresh time
+      lastUrlRefreshRef.current = now;
+      
+    } catch (error) {
+      console.error('Error refreshing audio URL:', error);
+      // If we can't refresh, just use the original URL directly as fallback
+      if (originalUrlRef.current) {
+        setAudioSrc(originalUrlRef.current);
+      }
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  }, [currentBeat, isSafari]);
 
-  // Handlers
+  // Handle audio ready event
+  const handleAudioReady = useCallback((e) => {
+    // If we have a cached audio file, mark the beat as cached
+    if (currentBeat && !isCachedAudio) {
+      markBeatAsCached(currentBeat.id);
+      setIsCachedAudio(true);
+    }
+  }, [currentBeat, isCachedAudio, markBeatAsCached]);
+
+  // Toggle lyrics modal
   const toggleLyricsModal = useCallback(() => {
     setLyricsModal(!lyricsModal);
+    if (lyricsModal) {
+      // We're closing the lyrics modal
+      setIsReturningFromLyrics(true);
+      // Reset after a short delay
+      setTimeout(() => {
+        setIsReturningFromLyrics(false);
+      }, 500);
+    }
   }, [lyricsModal, setLyricsModal]);
 
+  // Toggle waveform
   const toggleWaveform = useCallback(() => {
     setWaveform(!waveform);
   }, [waveform]);
 
-  const handleEllipsisClick = useCallback((event) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenuX(rect.left);
-    setContextMenuY(rect.bottom);
+  // Handle ellipsis click for context menu
+  const handleEllipsisClick = useCallback((e) => {
+    e.stopPropagation();
     setActiveContextMenu(true);
+    setContextMenuX(e.clientX);
+    setContextMenuY(e.clientY);
   }, []);
 
+  // Handle close context menu
   const handleCloseContextMenu = useCallback(() => {
     setActiveContextMenu(false);
   }, []);
 
-  const handleAudioReady = useCallback(() => {
-    // Audio is ready, can perform any setup here
-  }, []);
+  // Derived state
+  const shouldShowFullPagePlayer = isFullPage && isFullPageVisible;
+  const shouldShowMobilePlayer = isMobileOrTablet();
 
   return {
     // Refs
@@ -239,7 +257,7 @@ export const useAudioPlayerState = ({
     waveformRefFullPage,
     fullPageOverlayRef,
     wavesurfer,
-    
+
     // State
     artistName,
     activeContextMenu,
@@ -262,16 +280,17 @@ export const useAudioPlayerState = ({
     setIsFullPage,
     isFullPageVisible,
     setIsFullPageVisible,
-    
+
     // Derived state
     shouldShowFullPagePlayer,
     shouldShowMobilePlayer,
-    
+
     // Handlers
     toggleLyricsModal,
     toggleWaveform,
     handleEllipsisClick,
     handleCloseContextMenu,
-    handleAudioReady
+    handleAudioReady,
+    refreshAudioSrc
   };
 }; 
