@@ -22,6 +22,7 @@ export const useAudioPlayerState = ({
   const cacheInProgressRef = useRef(false);
   const originalUrlRef = useRef('');
   const lastUrlRefreshRef = useRef(0);
+  const artistLoadRetryCount = useRef(0);
 
   // State
   const [artistName, setArtistName] = useState('\u00A0'); // Non-breaking space
@@ -31,7 +32,6 @@ export const useAudioPlayerState = ({
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTimeState, setCurrentTimeState] = useState(0);
-  const [isFirstRender, setIsFirstRender] = useState(true);
   const [isReturningFromLyrics, setIsReturningFromLyrics] = useState(false);
   const [audioSrc, setAudioSrc] = useState('');
   const [autoPlay, setAutoPlay] = useState(false);
@@ -68,10 +68,18 @@ export const useAudioPlayerState = ({
           const artistName = user.name || user.username || '\u00A0'; 
           setArtistName(artistName);
           artistCache.current.set(currentBeat.user_id, artistName);
+          artistLoadRetryCount.current = 0; // Reset retry count on success
         }
       } catch (error) {
         console.error('Error loading artist name:', error);
         setArtistName('\u00A0');
+        
+        // Retry logic for artist name loading
+        if (artistLoadRetryCount.current < 3) {
+          artistLoadRetryCount.current += 1;
+          console.log(`Retrying artist name load (${artistLoadRetryCount.current}/3)...`);
+          setTimeout(loadArtistName, 2000 * artistLoadRetryCount.current); // Exponential backoff
+        }
       }
     };
 

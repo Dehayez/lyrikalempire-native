@@ -54,6 +54,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
 
   const draggableRef = useRef(null);
   const modalRef = useRef(null);
+  const lyricsRetryCount = useRef(0);
 
   const [lyrics, setLyrics] = useState('');
   const [lyricsId, setLyricsId] = useState(null);
@@ -65,6 +66,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     return JSON.parse(localStorage.getItem('modalPosition')) || { x: 0, y: 0 };
   });
   const [preFullscreenState, setPreFullscreenState] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCancel = useCallback(() => setLyricsModal(false), [setLyricsModal]);
 
@@ -74,6 +76,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     if (!beatId) return;
 
     const fetchLyrics = async () => {
+      setIsLoading(true);
       try {
         // Use lyrics from beat prop if available, otherwise fallback to API
         if (beat && beat.lyrics && beat.lyrics.length > 0) {
@@ -82,6 +85,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
             const [lyricData] = await getLyricsById(lyricsAssoc.lyrics_id);
             setLyrics(lyricData?.lyrics || '');
             setLyricsId(lyricsAssoc.lyrics_id);
+            lyricsRetryCount.current = 0; // Reset retry counter on success
           } else {
             setLyrics('');
             setLyricsId(null);
@@ -93,6 +97,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
             const [lyricData] = await getLyricsById(assoc.lyrics_id);
             setLyrics(lyricData?.lyrics || '');
             setLyricsId(assoc.lyrics_id);
+            lyricsRetryCount.current = 0; // Reset retry counter on success
           } else {
             setLyrics('');
             setLyricsId(null);
@@ -100,6 +105,15 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
         }
       } catch (err) {
         console.error('Failed to fetch lyrics:', err);
+        
+        // Retry logic for lyrics fetching
+        if (lyricsRetryCount.current < 3) {
+          lyricsRetryCount.current += 1;
+          console.log(`Retrying lyrics fetch (${lyricsRetryCount.current}/3)...`);
+          setTimeout(fetchLyrics, 2000 * lyricsRetryCount.current); // Exponential backoff
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -198,7 +212,11 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
         <IoCloseSharp />
       </IconButton>
       <h2 className="modal__title">{title}</h2>
-      <FormTextarea id="lyrics-modal__textarea" value={lyrics} onChange={handleLyricsChange} />
+      {isLoading ? (
+        <div className="lyrics-modal__loading">Loading lyrics...</div>
+      ) : (
+        <FormTextarea id="lyrics-modal__textarea" value={lyrics} onChange={handleLyricsChange} />
+      )}
     </div>
   );
 
