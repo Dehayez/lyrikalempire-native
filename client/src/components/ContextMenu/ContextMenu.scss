@@ -128,6 +128,7 @@
     .context-menu__button {
         padding: 0 16px;
         border-radius: 0;
+        position: relative;
 
         &:hover {
             background-color: transparent;
@@ -135,6 +136,55 @@
 
         &:active {
             background-color: $color-black;
+        }
+    }
+
+    .context-menu__subitem-icon {
+        position: absolute;
+        right: 16px;
+        background: none;
+        border: none;
+        color: $color-gray-light;
+        padding: 0;
+        
+        &:hover {
+            color: $color-white;
+        }
+    }
+
+    .context-menu__nested-list {
+        position: static;
+        background-color: $color-black;
+        margin: 8px 0 0 32px;
+        border-radius: 8px;
+        padding: 4px 0;
+
+        &-item {
+            color: $color-white;
+            padding: 12px 16px;
+            border-radius: 0;
+            transition: background-color 0.2s;
+            cursor: pointer;
+
+            &:hover {
+                background-color: transparent;
+            }
+
+            &:active {
+                background-color: $color-black;
+            }
+
+            &:first-child {
+                border-radius: 8px 8px 0 0;
+            }
+
+            &:last-child {
+                border-radius: 0 0 8px 8px;
+            }
+
+            &:only-child {
+                border-radius: 8px;
+            }
         }
     }
 }

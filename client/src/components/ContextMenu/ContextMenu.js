@@ -20,11 +20,34 @@ const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [artistName, setArtistName] = useState(' ');
+  const [showSubItems, setShowSubItems] = useState(null);
 
   const handleClick = (e, onClick) => {
     e.stopPropagation();
-    onClick();
-    hideContextMenu();
+    if (typeof onClick === 'function') {
+      onClick();
+      hideContextMenu();
+    }
+  };
+
+  const handleItemClick = (e, item, index) => {
+    e.stopPropagation();
+    
+    if (item.subItems && item.subItems.length > 0) {
+      // If item has subItems, show them instead of executing onClick
+      setShowSubItems(showSubItems === index ? null : index);
+    } else if (typeof item.onClick === 'function') {
+      // If item has onClick function, execute it
+      handleClick(e, item.onClick);
+    }
+  };
+
+  const handleSubItemClick = (e, subItem) => {
+    e.stopPropagation();
+    if (typeof subItem.onClick === 'function') {
+      subItem.onClick();
+      hideContextMenu();
+    }
   };
 
   const showContextMenu = () => {
@@ -96,10 +119,24 @@ const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
             <div 
               key={index} 
               className={`context-menu__button context-menu__button--${item.buttonClass}`} 
-              onClick={(e) => handleClick(e, item.onClick)}
+              onClick={(e) => handleItemClick(e, item, index)}
             >
               {item.icon && <item.icon className={`context-menu__icon context-menu__icon--${item.iconClass}`} />}
               <p className="context-menu__text">{item.text}</p>
+              {item.subItems && (
+                <button className="icon-button context-menu__subitem-icon">
+                  <IoChevronForwardSharp fontSize={16} />
+                </button>
+              )}
+              {item.subItems && showSubItems === index && (
+                <div className={`context-menu__nested-list ${position.left + 300 > window.innerWidth ? 'context-menu__nested-list--left' : ''}`}>
+                  {item.subItems.map((subItem, subIndex) => (
+                    <div key={subIndex} className="context-menu__nested-list-item" onClick={(e) => handleSubItemClick(e, subItem)}>
+                      {subItem.text}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

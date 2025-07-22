@@ -471,6 +471,7 @@ function App() {
             onUpdateBeat={handleUpdateBeat}
             markBeatAsCached={markBeatAsCached}
             onSessionUpdate={handleSessionUpdate}
+            addToCustomQueue={addToCustomQueue}
           />
         }
        {!isAuthRoute && isMobileOrTablet() && (

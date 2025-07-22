@@ -33,7 +33,8 @@ const AudioPlayer = ({
   lyricsModal, setLyricsModal,
   onUpdateBeat,
   markBeatAsCached,
-  onSessionUpdate
+  onSessionUpdate,
+  addToCustomQueue
 }) => {
   // Guard clause: Don't render if there's no current beat
   if (!currentBeat) {
@@ -408,13 +409,60 @@ const AudioPlayer = ({
 
   // Handle adding to playlist
   const handleAddToPlaylist = useCallback((playlistId) => {
-    // Implementation
-  }, [currentBeat]);
+    if (currentBeat && playlistId) {
+      // Import the addBeatsToPlaylist service
+      import('../../services/playlistService').then(({ addBeatsToPlaylist }) => {
+        addBeatsToPlaylist(playlistId, [currentBeat.id])
+          .then(() => {
+            // Show success message
+            import('react-toastify').then(({ toast }) => {
+              const playlist = playlists.find(p => p.id === playlistId);
+              toast.success(`Added "${currentBeat.title}" to "${playlist?.title || 'playlist'}"`);
+            });
+          })
+          .catch((error) => {
+            console.error('Error adding beat to playlist:', error);
+            import('react-toastify').then(({ toast }) => {
+              toast.error('Failed to add track to playlist');
+            });
+          });
+      });
+    }
+  }, [currentBeat, playlists]);
 
   // Handle removing from playlist
   const handleRemoveFromPlaylist = useCallback(() => {
-    // Implementation
-  }, [currentBeat]);
+    if (currentBeat && playedPlaylistTitle) {
+      // Find the playlist by title
+      const playlist = playlists.find(p => p.title === playedPlaylistTitle);
+      if (playlist) {
+        import('../../services/playlistService').then(({ removeBeatFromPlaylist }) => {
+          removeBeatFromPlaylist(playlist.id, currentBeat.id)
+            .then(() => {
+              import('react-toastify').then(({ toast }) => {
+                toast.success(`Removed "${currentBeat.title}" from "${playedPlaylistTitle}"`);
+              });
+            })
+            .catch((error) => {
+              console.error('Error removing beat from playlist:', error);
+              import('react-toastify').then(({ toast }) => {
+                toast.error('Failed to remove track from playlist');
+              });
+            });
+        });
+      }
+    }
+  }, [currentBeat, playedPlaylistTitle, playlists]);
+
+  // Handle adding to queue
+  const handleAddToQueue = useCallback(() => {
+    if (currentBeat && addToCustomQueue) {
+      addToCustomQueue(currentBeat);
+      import('react-toastify').then(({ toast }) => {
+        toast.success(`Added "${currentBeat.title}" to queue`);
+      });
+    }
+  }, [currentBeat, addToCustomQueue]);
 
   // Handle context menu items
   const contextMenuItems = [
@@ -447,7 +495,7 @@ const AudioPlayer = ({
     iconClass: 'add-queue',
     text: 'Add to Queue',
     buttonClass: 'add-queue',
-    onClick: () => {/* Implementation */}
+    onClick: handleAddToQueue
   });
 
   // Custom handlers for audio events
