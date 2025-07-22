@@ -19,6 +19,7 @@ export const useCrossTabSync = ({
   const isProcessingRemoteEvent = useRef(false);
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
+  const [masterSessionName, setMasterSessionName] = useState(null);
   const wasHidden = useRef(false);
   
   // Function to determine if this tab should be the master
@@ -73,6 +74,7 @@ export const useCrossTabSync = ({
       // Only set as master if no master exists yet
       if (!masterSession) {
         setMasterSession(sessionId.current);
+        setMasterSessionName(getShortBrowserName()); // Set our own browser name as master
       }
     }
   }, [isPlaying, currentBeat, masterSession]);
@@ -146,6 +148,7 @@ export const useCrossTabSync = ({
       // and this tab should become master
       if (shouldBecomeMaster()) {
         setMasterSession(sessionId.current);
+        setMasterSessionName(getShortBrowserName()); // Set our own browser name as master
       }
       
       const browserName = getShortBrowserName();
@@ -212,6 +215,7 @@ export const useCrossTabSync = ({
       // or if the incoming session matches the existing master
       if (!masterSession) {
         setMasterSession(data.sessionId);
+        setMasterSessionName(data.sessionName); // Store the master's browser name
       }
       
       if (currentBeat && data.beatId === currentBeat.id) {
@@ -260,6 +264,7 @@ export const useCrossTabSync = ({
         // Check if this pause is due to master tab closing
         if (data.masterClosed) {
           setMasterSession(null); // Clear master session so a new tab can become master
+          setMasterSessionName(null); // Clear master session name
         }
         
         audioCore.pause();
@@ -329,6 +334,7 @@ export const useCrossTabSync = ({
         // Set the master session to the RESPONDING session's ID
         // This ensures the original playing tab remains master
         setMasterSession(data.sessionId);
+        setMasterSessionName(data.sessionName); // Store the master's browser name
         
         // Set the current beat if different
         if (!currentBeat || currentBeat.id !== data.beatId) {
@@ -373,6 +379,7 @@ export const useCrossTabSync = ({
       // If the closing master is our current master, clear the master session
       if (masterSession === data.sessionId) {
         setMasterSession(null);
+        setMasterSessionName(null); // Clear master session name
         
         // If we have a current beat and it matches, pause audio
         if (currentBeat && data.beatId === currentBeat.id) {
@@ -447,7 +454,7 @@ export const useCrossTabSync = ({
     masterSession,
     currentSessionId: sessionId.current,
     isCurrentSessionMaster: isCurrentTabMaster,
-    sessionName: getShortBrowserName(),
+    sessionName: masterSessionName || getShortBrowserName(), // Return master's browser name if available
     emitStateRequest  // Add this to expose the function to useAudioSync
   };
 }; 

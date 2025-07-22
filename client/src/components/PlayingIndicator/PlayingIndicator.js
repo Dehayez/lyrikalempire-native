@@ -28,18 +28,9 @@ const PlayingIndicator = ({
     return null;
   }
 
-  const getSessionDisplayName = (sessionId) => {
-    if (!sessionId) return 'Unknown Browser';
-    // If we have a sessionName from WebSocket, use it
-    if (sessionName) {
-      return sessionName;
-    }
-
-    const browserName = getShortBrowserName();
-    return browserName || 'Unknown Browser';
-  };
-
-  const masterDisplayName = getSessionDisplayName(masterSession);
+  // Use the sessionName passed from the parent component
+  // This is the name of the master browser session, not the current browser
+  const masterDisplayName = sessionName || 'Other Browser';
 
   return (
     <div className="playing-indicator">

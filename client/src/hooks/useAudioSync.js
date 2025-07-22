@@ -48,7 +48,8 @@ export const useAudioSync = ({
     broadcastBeatChange,
     masterSession,
     currentSessionId,
-    isCurrentSessionMaster
+    isCurrentSessionMaster,
+    sessionName
     // We're not using emitStateRequest from useCrossTabSync anymore
   } = useCrossTabSync({
     currentBeat,
@@ -384,9 +385,6 @@ export const useAudioSync = ({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [syncAllPlayers]);
-
-  // Determine session name
-  const sessionName = getShortBrowserName();
 
   return {
     syncAllPlayers,
