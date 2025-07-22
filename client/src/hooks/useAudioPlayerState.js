@@ -153,7 +153,7 @@ export const useAudioPlayerState = ({
     };
 
     loadAudio();
-  }, [currentBeat, markBeatAsCached, isSafari]);
+  }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari]); // Only depend on audio-related properties
 
   // Method to refresh the audio source URL
   const refreshAudioSrc = useCallback(async (force = false) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { IoPersonSharp } from "react-icons/io5";
@@ -8,6 +8,7 @@ import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels
 import { useBeat, useUser, useWebSocket } from './contexts';
 import ProtectedRoute from './routes/ProtectedRoute';
 import userService from './services/userService';
+import { updateBeat as updateBeatService } from './services/beatService';
 
 import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, KeywordsPage, FeaturesPage, LoginPage, RegisterPage, ConfirmEmailPage, RequestPasswordResetPage, ResetPasswordPage, ProfilePage } from './pages';
 import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queue, Playlists, RightSidePanel, LeftSidePanel, History, PlaylistDetail, LyricsModal, IconButton, PlayingIndicator } from './components';
@@ -91,6 +92,15 @@ function App() {
     }
   }, [currentBeat, queue, preloadQueue]);
 
+  // Clean up timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      if (updateBeatTimeoutRef.current) {
+        clearTimeout(updateBeatTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const {
     isLeftPanelVisible,
     isRightPanelVisible,
@@ -161,14 +171,39 @@ function App() {
   });
 
   
-  const updateBeat = (id, newData) => {
+  const updateBeatTimeoutRef = useRef(null);
+  
+  const handleUpdateBeat = (id, newData) => {
+    // First, update the local state immediately for UI responsiveness
     setBeats(currentBeats =>
       currentBeats.map(beat => beat.id === id ? { ...beat, ...newData } : beat)
     );
-    // Also update currentBeat if it matches the updated beat
+    
+    // Always update currentBeat if it matches the updated beat for display purposes
     if (currentBeat && currentBeat.id === id) {
       setCurrentBeat(prevBeat => ({ ...prevBeat, ...newData }));
     }
+    
+    // Clear any existing timeout
+    if (updateBeatTimeoutRef.current) {
+      clearTimeout(updateBeatTimeoutRef.current);
+    }
+    
+    // Delay the API update to prevent audio restart
+    updateBeatTimeoutRef.current = setTimeout(async () => {
+      try {
+        // Get the latest beat data after state updates
+        const beatToUpdate = beats.find(beat => beat.id === id);
+        if (beatToUpdate) {
+          // Apply the new data
+          const updatedBeatData = { ...beatToUpdate, ...newData };
+          // Make the API call to the service
+          await updateBeatService(id, updatedBeatData);
+        }
+      } catch (error) {
+        console.error('Error updating beat:', error);
+      }
+    }, 1000); // 1 second delay
   };
 
   const onUpdate = (id, field, value) => {
@@ -320,7 +355,7 @@ function App() {
                       currentBeat={currentBeat} 
                       addToCustomQueue={addToCustomQueue}
                       onBeatClick={handleBeatClick} 
-                      onUpdateBeat={updateBeat}
+                      onUpdateBeat={handleUpdateBeat}
                       onUpdate={onUpdate}
                       isBeatCachedSync={isBeatCachedSync}
                     />
@@ -433,7 +468,7 @@ function App() {
             setRepeat={setRepeat}
             lyricsModal={lyricsModal}
             setLyricsModal={setLyricsModal}
-            onUpdateBeat={updateBeat}
+            onUpdateBeat={handleUpdateBeat}
             markBeatAsCached={markBeatAsCached}
             onSessionUpdate={handleSessionUpdate}
           />

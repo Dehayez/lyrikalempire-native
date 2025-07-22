@@ -1,12 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useData } from '../../contexts';
-import { useBeatActions } from '../../hooks';
 import { FormInput, SelectInput, SelectableInput } from '../Inputs';
 import './BeatEditInputs.scss';
 
 const BeatEditInputs = ({ currentBeat, onUpdateBeat }) => {
   const { genres, moods, keywords, features } = useData();
-  const { handleUpdate } = useBeatActions();
   const [title, setTitle] = useState(currentBeat.title || '');
   const [bpm, setBpm] = useState(currentBeat.bpm || '');
   const [tierlist, setTierlist] = useState(currentBeat.tierlist || '');
@@ -31,8 +29,8 @@ const BeatEditInputs = ({ currentBeat, onUpdateBeat }) => {
 
   const handleTitleBlur = useCallback(() => {
     // Use state value instead of input value to avoid timing issues
-    handleUpdate(currentBeat.id, 'title', title);
-  }, [currentBeat.id, handleUpdate, title]);
+    handleInputChange('title', title);
+  }, [handleInputChange, title]);
 
   const handleBpmChange = useCallback((e) => {
     const newBpm = e.target.value;
@@ -43,10 +41,10 @@ const BeatEditInputs = ({ currentBeat, onUpdateBeat }) => {
   const handleBpmBlur = useCallback((e) => {
     const value = e.target.value;
     if (value === '') {
-      handleUpdate(currentBeat.id, 'bpm', null);
       handleInputChange('bpm', null);
       return;
     }
+    
     let bpm = parseFloat(value.replace(',', '.'));
     bpm = Math.round(bpm);
     if (isNaN(bpm) || bpm <= 0 || bpm > 240) {
@@ -54,17 +52,17 @@ const BeatEditInputs = ({ currentBeat, onUpdateBeat }) => {
       e.target.focus();
     } else {
       e.target.value = bpm;
-      handleUpdate(currentBeat.id, 'bpm', bpm);
       handleInputChange('bpm', bpm);
     }
-  }, [currentBeat.id, handleUpdate, handleInputChange]);
+  }, [handleInputChange]);
 
   const handleTierlistChange = useCallback((e) => {
     const newTierlist = e.target.value;
     setTierlist(newTierlist);
+    
+    // Update local state immediately for UI responsiveness
     handleInputChange('tierlist', newTierlist);
-    handleUpdate(currentBeat.id, 'tierlist', newTierlist);
-  }, [handleInputChange, currentBeat.id, handleUpdate]);
+  }, [handleInputChange]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Enter") {
