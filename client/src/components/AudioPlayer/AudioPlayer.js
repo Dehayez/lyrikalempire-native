@@ -717,7 +717,7 @@ const AudioPlayer = ({
         <ContextMenu
           position={{ top: contextMenuY, left: contextMenuX }}
           beat={currentBeat}
-          setActiveContextMenu={() => setActiveContextMenu(null)}
+          setActiveContextMenu={handleCloseContextMenu}
           items={contextMenuItems}
         />
       )}
