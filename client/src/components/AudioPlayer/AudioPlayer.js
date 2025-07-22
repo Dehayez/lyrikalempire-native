@@ -164,6 +164,49 @@ const AudioPlayer = ({
     markBeatAsCached
   });
 
+  // Update MediaSession metadata when currentBeat changes
+  useEffect(() => {
+    if (!currentBeat || !('mediaSession' in navigator)) return;
+    
+    // Set metadata for MediaSession API (shows in lock screen, notifications)
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentBeat.title || 'Unknown Title',
+      artist: currentBeat.artist || artistName || 'Unknown Artist',
+      album: currentBeat.album || 'Lyrikal Empire',
+      artwork: [
+        {
+          src: currentBeat.artwork || '/placeholder.png',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ]
+    });
+    
+    // Set position state if supported (shows progress in notifications)
+    if (navigator.mediaSession.setPositionState) {
+      navigator.mediaSession.setPositionState({
+        duration: getDuration() || 0,
+        playbackRate: 1.0,
+        position: getCurrentTime() || 0
+      });
+    }
+  }, [currentBeat, artistName, getDuration, getCurrentTime]);
+
+  // Update position state periodically while playing
+  useEffect(() => {
+    if (!isPlaying || !('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    
+    const updateInterval = setInterval(() => {
+      navigator.mediaSession.setPositionState({
+        duration: getDuration() || 0,
+        playbackRate: 1.0,
+        position: getCurrentTime() || 0
+      });
+    }, 1000);
+    
+    return () => clearInterval(updateInterval);
+  }, [isPlaying, getDuration, getCurrentTime]);
+
   // Reset hasLoaded when audio source changes
   useEffect(() => {
     hasLoadedRef.current = false;

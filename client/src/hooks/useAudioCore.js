@@ -1,7 +1,33 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 export const useAudioCore = () => {
   const playerRef = useRef();
+
+  // Configure audio for background playback
+  useEffect(() => {
+    const audio = playerRef.current?.audio?.current;
+    if (audio) {
+      // Enable background audio playback
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.setActionHandler('play', () => play());
+        navigator.mediaSession.setActionHandler('pause', () => pause());
+      }
+      
+      // Set audio attributes for iOS/Safari background playback
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      audio.setAttribute('preload', 'auto');
+      
+      // This is crucial for iOS background playback
+      audio.setAttribute('controls', '');
+      
+      // Set audio to continue playing when screen is locked or app is in background
+      if (audio.hasOwnProperty('webkitAudioDecodedByteCount')) {
+        // Safari-specific
+        audio.setAttribute('x-webkit-airplay', 'allow');
+      }
+    }
+  }, []);
 
   // Core audio control functions
   const play = useCallback(() => {

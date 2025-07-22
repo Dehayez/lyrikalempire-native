@@ -9,6 +9,24 @@ $indicator-half-size: math.div($indicator-size, 2);
   --indicator-half-size: #{$indicator-half-size};
 }
 
+// Hide native audio controls but keep them accessible for background playback
+audio::-webkit-media-controls {
+  display: none !important;
+}
+
+audio::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+audio {
+  &[controls] {
+    position: absolute;
+    z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
 .audio-player {
   position: relative;
   display: flex;
@@ -259,6 +277,22 @@ $indicator-half-size: math.div($indicator-size, 2);
   }
 }
 
+// Ensure main player is accessible to system media controls
+.audio-player__main-player {
+  &[style*="display: none"] {
+    display: block !important;
+    position: absolute;
+    opacity: 0.001; // Nearly invisible but still active
+    pointer-events: none;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 .smooth-progress-bar--mobile {
   position: absolute;
   top: -12px;
@@ -456,4 +490,26 @@ $indicator-half-size: math.div($indicator-size, 2);
   flex: 1;
   position: relative;
 
+}
+
+.rhap_progress-container {
+  &:hover {
+    .rhap_progress-indicator {
+      opacity: 1;
+    }
+  }
+  
+  &.rhap_progress-dragging {
+    cursor: grabbing;
+    
+    .rhap_progress-indicator {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+}
+
+.rhap_progress-indicator {
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
