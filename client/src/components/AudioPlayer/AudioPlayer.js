@@ -419,10 +419,12 @@ const AudioPlayer = ({
   // Handle context menu items
   const contextMenuItems = [
     {
-      icon: <IoAddSharp />,
-      label: 'Add to Playlist',
+      icon: IoAddSharp,
+      iconClass: 'add-playlist',
+      text: 'Add to Playlist',
+      buttonClass: 'add-playlist',
       subItems: playlists.map(playlist => ({
-        label: playlist.name,
+        text: playlist.title,
         onClick: () => handleAddToPlaylist(playlist.id)
       }))
     }
@@ -431,16 +433,20 @@ const AudioPlayer = ({
   // Add remove from playlist option if in a playlist view
   if (playedPlaylistTitle) {
     contextMenuItems.push({
-      icon: <IoRemoveCircleOutline />,
-      label: `Remove from ${playedPlaylistTitle}`,
+      icon: IoRemoveCircleOutline,
+      iconClass: 'remove-playlist',
+      text: `Remove from ${playedPlaylistTitle}`,
+      buttonClass: 'remove-playlist',
       onClick: handleRemoveFromPlaylist
     });
   }
 
   // Add to queue option
   contextMenuItems.push({
-    icon: <Queue02 />,
-    label: 'Add to Queue',
+    icon: Queue02,
+    iconClass: 'add-queue',
+    text: 'Add to Queue',
+    buttonClass: 'add-queue',
     onClick: () => {/* Implementation */}
   });
 
@@ -661,9 +667,9 @@ const AudioPlayer = ({
       {/* Context menu */}
       {activeContextMenu && (
         <ContextMenu
-          x={contextMenuX}
-          y={contextMenuY}
-          onClose={handleCloseContextMenu}
+          position={{ top: contextMenuY, left: contextMenuX }}
+          beat={currentBeat}
+          setActiveContextMenu={() => setActiveContextMenu(null)}
           items={contextMenuItems}
         />
       )}
