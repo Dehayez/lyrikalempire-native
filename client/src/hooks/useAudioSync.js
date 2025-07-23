@@ -185,14 +185,26 @@ export const useAudioSync = ({
     }
   }, [audioCore, broadcastPlay, broadcastPause, isCurrentSessionMaster, setIsPlaying, masterSession, currentSessionId]);
 
-  // Handle when song ends - trigger next track or repeat
+  // Handle when song ends - trigger next track or repeat (Safari-aware)
   const handleEnded = useCallback(() => {
     // Only the master tab should handle the ended event
     if (isCurrentSessionMaster) {
       if (repeat === 'Repeat One') {
+        // For repeat, Safari should allow this since it's the same track
+        if (audioCore.prepareForNewTrack) {
+          audioCore.prepareForNewTrack();
+        }
         audioCore.setCurrentTime(0);
-        audioCore.play();
+        audioCore.play().catch(error => {
+          console.log('🍎 [SAFARI] Repeat play failed:', error.name);
+          // If Safari blocks repeat, user will need to manually play
+        });
       } else {
+        // For next track, Safari will likely block autoplay
+        console.log('🍎 [SAFARI] Track ended - attempting next track');
+        if (audioCore.prepareForNewTrack) {
+          audioCore.prepareForNewTrack();
+        }
         onNext();
       }
     }

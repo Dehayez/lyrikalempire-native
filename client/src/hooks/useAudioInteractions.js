@@ -19,12 +19,23 @@ export const useAudioInteractions = ({
   // Sync with localStorage
   useLocalStorageSync({ shuffle, repeat, currentBeat, volume, currentTime });
 
-  // Volume control
+  // Volume control with Safari handling
   const handleVolumeChange = useCallback((e) => {
     const newVolume = parseFloat(e.target.value);
+    const audio = audioCore.playerRef.current?.audio?.current;
+    
+    // Always update our state
     setVolume(newVolume);
-    audioCore.setVolume(newVolume);
     localStorage.setItem('volume', newVolume.toString());
+    
+    // Try to set audio volume, but Safari might ignore it
+    audioCore.setVolume(newVolume);
+    
+    // Check if Safari actually honored the volume change
+    if (audio && Math.abs(audio.volume - newVolume) > 0.01) {
+      console.log('🍎 [SAFARI] Volume control not available - using system volume');
+      // In Safari, users need to use the system volume controls
+    }
   }, [audioCore]);
 
   // Touch gesture handling
