@@ -207,13 +207,27 @@ const createBeat = async (req, res) => {
       throw new Error('No file uploaded');
     }
 
-    const originalNameWithoutExt = path.parse(req.file.originalname).name;
+    // Use the sanitized filename from multer (which already has timestamp and sanitized name)
+    const multerFileBase = path.parse(req.file.filename).name;
     const inputPath = req.file.path;
-    const outputPath = path.join(__dirname, '../uploads', `${path.parse(req.file.originalname).name}-${Date.now()}.aac`);
+    const outputPath = path.join(__dirname, '../uploads', `${multerFileBase}.aac`);
+    
+    console.log('🎵 [SERVER] Creating beat with sanitized filename:', {
+      original: req.file.originalname,
+      multerFilename: req.file.filename,
+      multerFileBase: multerFileBase
+    });
     await convertToAAC(inputPath, outputPath);
 
+    // Create proper file object for uploadToBackblaze with sanitized filename
+    const fileForUpload = {
+      path: outputPath,
+      filename: `${multerFileBase}.aac`,
+      originalname: `${multerFileBase}.aac`
+    };
+
     // Upload the converted file to Backblaze
-    const audioFileName = await uploadToBackblaze({ path: outputPath, originalname: `${originalNameWithoutExt}.aac` }, user_id);
+    const audioFileName = await uploadToBackblaze(fileForUpload, user_id);
 
     // Delete the temporary file
     fs.unlinkSync(outputPath);
@@ -365,13 +379,28 @@ const replaceAudio = async (req, res) => {
       return res.status(400).json({ error: 'Uploaded file not found on server.' });
     }
 
-    const outputPath = path.join(__dirname, '../uploads', `${newAudioFile.filename}.aac`);
+    // Use multer's sanitized filename (preserves timestamp and sanitization)
+    const multerFileBase = path.parse(newAudioFile.filename).name;
+    const outputPath = path.join(__dirname, '../uploads', `${multerFileBase}.aac`);
+
+    console.log('🔄 [SERVER] Replace audio with sanitized filename:', {
+      original: newAudioFile.originalname,
+      multerFilename: newAudioFile.filename,
+      multerFileBase: multerFileBase
+    });
 
     // Convert the audio file to AAC format
     await convertToAAC(inputPath, outputPath);
 
+    // Create proper file object for uploadToBackblaze
+    const fileForUpload = {
+      path: outputPath,
+      filename: `${multerFileBase}.aac`,
+      originalname: `${multerFileBase}.aac`
+    };
+
     // Upload the converted file to Backblaze
-    const newFileUrl = await uploadToBackblaze({ path: outputPath, originalname: `${newAudioFile.filename}.aac` }, userId);
+    const newFileUrl = await uploadToBackblaze(fileForUpload, userId);
 
     // Delete the temporary files
     fs.unlinkSync(inputPath);
