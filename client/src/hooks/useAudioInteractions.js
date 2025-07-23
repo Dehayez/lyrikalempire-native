@@ -126,6 +126,8 @@ export const useAudioInteractions = ({
     
     // Function to handle progress bar drag start
     const handleProgressMouseDown = (e) => {
+      if (!e.currentTarget) return; // Safety check
+      
       // Add dragging class for styling
       e.currentTarget.classList.add('rhap_progress-dragging');
       
@@ -140,6 +142,8 @@ export const useAudioInteractions = ({
       
       // Function to handle mouse move during drag
       const handleProgressMouseMove = (moveEvent) => {
+        if (!e.currentTarget) return; // Safety check
+        
         const newRect = e.currentTarget.getBoundingClientRect();
         const newRelativePos = Math.max(0, Math.min(1, (moveEvent.clientX - newRect.left) / newRect.width));
         const newDragTime = newRelativePos * duration;
@@ -153,6 +157,8 @@ export const useAudioInteractions = ({
       
       // Function to handle mouse up at end of drag
       const handleProgressMouseUp = (upEvent) => {
+        if (!e.currentTarget) return; // Safety check
+        
         // Remove dragging class
         e.currentTarget.classList.remove('rhap_progress-dragging');
         
@@ -183,6 +189,8 @@ export const useAudioInteractions = ({
     
     // Function to handle touch start on progress bar
     const handleProgressTouchStart = (e) => {
+      if (!e.currentTarget) return; // Safety check
+      
       // Add dragging class for styling
       e.currentTarget.classList.add('rhap_progress-dragging');
       
@@ -198,6 +206,8 @@ export const useAudioInteractions = ({
       
       // Function to handle touch move during drag
       const handleProgressTouchMove = (moveEvent) => {
+        if (!e.currentTarget) return; // Safety check
+        
         const newRect = e.currentTarget.getBoundingClientRect();
         const touch = moveEvent.touches[0];
         const newRelativePos = Math.max(0, Math.min(1, (touch.clientX - newRect.left) / newRect.width));
@@ -212,6 +222,8 @@ export const useAudioInteractions = ({
       
       // Function to handle touch end at end of drag
       const handleProgressTouchEnd = (endEvent) => {
+        if (!e.currentTarget) return; // Safety check
+        
         // Remove dragging class
         e.currentTarget.classList.remove('rhap_progress-dragging');
         
