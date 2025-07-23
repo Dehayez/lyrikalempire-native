@@ -15,7 +15,6 @@ import PlayPauseButton from './PlayPauseButton';
 import { ContextMenu } from '../ContextMenu';
 import { Highlight } from '../Highlight';
 import { SelectableInput } from '../Inputs';
-import { CacheIndicator } from '../CacheIndicator';
 
 import './BeatRow.scss';
 
@@ -576,11 +575,6 @@ const BeatRow = ({
       {!(isMobileOrTablet() && mode === 'lock') && (
         <td className='beat-row__data beat-row__duration'>
           <div className="beat-row__duration-content">
-            <CacheIndicator 
-              isCached={isBeatCachedSync ? isBeatCachedSync(beat) : false} 
-              size="small" 
-              className="beat-row__cache-indicator"
-            />
             <span className="beat-row__duration-text">
               {formatDuration(beat.duration)}
             </span>

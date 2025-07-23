@@ -3,7 +3,7 @@ export * from './AudioPlayer';
 export * from './BeatList';
 export * from './Breadcrumb';
 export * from './Buttons';
-export * from './CacheIndicator';
+
 export * from './Charts';
 export * from './ConfirmModal';
 export * from './ContextMenu';
