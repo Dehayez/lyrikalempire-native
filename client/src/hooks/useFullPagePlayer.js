@@ -23,11 +23,16 @@ export const useFullPagePlayer = ({
       setIsFullPage(true);
       setIsReturningFromLyrics(false); // Reset flag when manually opening
 
+      // Use multiple requestAnimationFrame calls to ensure element is in DOM
       requestAnimationFrame(() => {
         setIsFullPageVisible(true);
-        if (fullPagePlayerRef.current) {
-          slideIn(fullPagePlayerRef.current);
-        }
+        
+        // Wait an additional frame to ensure the component has rendered
+        requestAnimationFrame(() => {
+          if (fullPagePlayerRef.current) {
+            slideIn(fullPagePlayerRef.current);
+          }
+        });
       });
     } else {
       slideOut(fullPagePlayerRef.current, fullPageOverlayRef.current, () => {
@@ -59,17 +64,21 @@ export const useFullPagePlayer = ({
       // Re-open full page player when lyrics modal closes (if it was open before)
       requestAnimationFrame(() => {
         setIsFullPageVisible(true);
-        if (fullPagePlayerRef.current) {
-          // Only slide in if we're not returning from lyrics modal
-          if (!isReturningFromLyrics) {
-            slideIn(fullPagePlayerRef.current);
-          } else {
-            // Just show without animation and reset the flag
-            fullPagePlayerRef.current.style.transform = 'translateY(0)';
-            fullPagePlayerRef.current.style.opacity = '1';
-            setIsReturningFromLyrics(false);
+        
+        // Wait an additional frame to ensure the component has rendered
+        requestAnimationFrame(() => {
+          if (fullPagePlayerRef.current) {
+            // Only slide in if we're not returning from lyrics modal
+            if (!isReturningFromLyrics) {
+              slideIn(fullPagePlayerRef.current);
+            } else {
+              // Just show without animation and reset the flag
+              fullPagePlayerRef.current.style.transform = 'translateY(0)';
+              fullPagePlayerRef.current.style.opacity = '1';
+              setIsReturningFromLyrics(false);
+            }
           }
-        }
+        });
       });
     }
   }, [

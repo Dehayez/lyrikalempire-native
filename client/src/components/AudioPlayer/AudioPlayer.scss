@@ -119,6 +119,8 @@ audio {
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
+    transform: translateY(100%); // Start off-screen for slide animation
+    will-change: transform; // Optimize for animations
 
      .rhap_progress-section {
       padding: 28px 0;
