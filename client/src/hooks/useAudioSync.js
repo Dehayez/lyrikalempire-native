@@ -187,26 +187,38 @@ export const useAudioSync = ({
 
   // Handle when song ends - trigger next track or repeat (Safari-aware)
   const handleEnded = useCallback(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('🔍 [DEBUG] Track ended:', {
+      isMobile,
+      isSafari,
+      isCurrentSessionMaster,
+      repeat
+    });
+    
     // Only the master tab should handle the ended event
     if (isCurrentSessionMaster) {
       if (repeat === 'Repeat One') {
+        console.log('🔍 [DEBUG] Repeating current track');
         // For repeat, Safari should allow this since it's the same track
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
         audioCore.setCurrentTime(0);
         audioCore.play().catch(error => {
-          console.log('🍎 [SAFARI] Repeat play failed:', error.name);
-          // If Safari blocks repeat, user will need to manually play
+          console.log('🔍 [DEBUG] Repeat play failed:', error.name);
         });
       } else {
-        // For next track, Safari will likely block autoplay
-        console.log('🍎 [SAFARI] Track ended - attempting next track');
+        // For next track - try basic functionality
+        console.log('🔍 [DEBUG] Track ended - going to next track');
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
         onNext();
       }
+    } else {
+      console.log('🔍 [DEBUG] Not master session - ignoring track end');
     }
   }, [onNext, repeat, audioCore, isCurrentSessionMaster]);
 
@@ -244,34 +256,70 @@ export const useAudioSync = ({
     };
 
     const handleLoadedData = () => {
+      console.log('🔍 [DEBUG] Audio loaded data event');
       syncAllPlayers(true);
       
       // Check if we should start playback now that the audio data is loaded
       if (currentBeat?.audio && isPlaying) {
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        console.log('🔍 [DEBUG] Attempting auto-play on loaded data:', {
+          hasValidSrc,
+          audioIsPaused: audioCore.isPaused(),
+          isCurrentSessionMaster,
+          isMobile,
+          isSafari,
+          currentBeat: currentBeat?.title
+        });
         
         // Only play audio in the master tab
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          // Simple attempt - let Safari handle restrictions naturally
           audioCore.play().catch(error => {
-            // Silently handle errors
+            console.log('🔍 [DEBUG] Auto-play failed on loaded data:', {
+              errorName: error.name,
+              errorMessage: error.message,
+              isMobile,
+              isSafari
+            });
           });
         }
       }
     };
 
     const handleCanPlay = () => {
+      console.log('🔍 [DEBUG] Audio can play event');
       syncAllPlayers(true);
       
       // Check if we should start playback now that the audio is ready
       if (currentBeat?.audio && isPlaying) {
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        console.log('🔍 [DEBUG] Attempting auto-play on can play:', {
+          hasValidSrc,
+          audioIsPaused: audioCore.isPaused(),
+          isCurrentSessionMaster,
+          isMobile,
+          isSafari,
+          currentBeat: currentBeat?.title
+        });
         
         // Only play audio in the master tab
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          // Simple attempt - let Safari handle restrictions naturally
           audioCore.play().catch(error => {
-            // Silently handle errors
+            console.log('🔍 [DEBUG] Auto-play failed on can play:', {
+              errorName: error.name,
+              errorMessage: error.message,
+              isMobile,
+              isSafari
+            });
           });
         }
       }
@@ -303,78 +351,66 @@ export const useAudioSync = ({
       }
     };
 
-    // Add manual seeking detection for progress bars since onSeek might not be supported
-    const addProgressClickListeners = () => {
+    // Add ended event listener with basic functionality
+    const handleEndedWithRetry = () => {
+      // Add a small delay to ensure the event is properly processed
       setTimeout(() => {
-        const progressContainers = document.querySelectorAll('.rhap_progress-container');
-        
-        progressContainers.forEach((container, index) => {
-          const clickHandler = (e) => {
-            const progress = e.offsetX / container.offsetWidth;
-            const duration = audioCore.getDuration();
-            const newTime = progress * duration;
-            
-            audioCore.setCurrentTime(newTime);
-            audioInteractions.updateCurrentTime(newTime);
-            broadcastSeek(newTime);
-            syncAllPlayers(true);
-          };
-          
-          container.addEventListener('click', clickHandler);
-        });
-      }, 500); // Wait for DOM to be ready
+        handleEnded();
+      }, 100);
     };
 
-    // Add all event listeners
+    // Attach event listeners
     mainAudio.addEventListener('timeupdate', handleTimeUpdate);
     mainAudio.addEventListener('loadedmetadata', handleLoadedMetadata);
     mainAudio.addEventListener('loadeddata', handleLoadedData);
     mainAudio.addEventListener('canplay', handleCanPlay);
     mainAudio.addEventListener('play', handlePlay);
     mainAudio.addEventListener('pause', handlePause);
-    mainAudio.addEventListener('ended', handleEnded);
     mainAudio.addEventListener('volumechange', handleVolumeChange);
-    
-    // Add progress bar click listeners
-    addProgressClickListeners();
-    
-    // Initial sync - force update even when paused
-    const initialSync = () => {
-      if (audioCore.getReadyState() >= 1) {
-        syncAllPlayers(true);
-      }
-    };
-    
-    initialSync();
-    
-    // Also try after a short delay in case metadata isn't loaded yet
-    const timeoutId = setTimeout(initialSync, 200);
+    mainAudio.addEventListener('ended', handleEndedWithRetry);
 
-    // Re-run this effect when master session changes
-    const checkMasterStatus = () => {
-      if (!isCurrentSessionMaster && mainAudio) {
-        mainAudio.muted = true;
-      } else if (isCurrentSessionMaster && mainAudio) {
-        mainAudio.muted = false;
-      }
-    };
-    
-    // Add listener for master session changes
-    const masterCheckInterval = setInterval(checkMasterStatus, 1000);
-    
     return () => {
-      clearTimeout(timeoutId);
-      clearInterval(masterCheckInterval);
+      // Clean up event listeners
       mainAudio.removeEventListener('timeupdate', handleTimeUpdate);
       mainAudio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       mainAudio.removeEventListener('loadeddata', handleLoadedData);
       mainAudio.removeEventListener('canplay', handleCanPlay);
       mainAudio.removeEventListener('play', handlePlay);
       mainAudio.removeEventListener('pause', handlePause);
-      mainAudio.removeEventListener('ended', handleEnded);
       mainAudio.removeEventListener('volumechange', handleVolumeChange);
+      mainAudio.removeEventListener('ended', handleEndedWithRetry);
     };
-  }, [audioCore, audioInteractions, setIsPlaying, syncAllPlayers, handleEnded, currentBeat, isPlaying]);
+  }, [
+    audioCore,
+    audioInteractions,
+    syncAllPlayers,
+    currentBeat,
+    isPlaying,
+    isCurrentSessionMaster,
+    broadcastPlay,
+    broadcastPause,
+    handleEnded,
+    setIsPlaying
+  ]);
+
+  // Listen for custom Safari interaction events - keep this simple
+  useEffect(() => {
+    const handleSafariInteraction = (event) => {
+      const { type, shouldPlay, timestamp } = event.detail;
+      console.log('🔍 [DEBUG] Custom Safari interaction event received:', { type, shouldPlay, timestamp });
+      
+      // For play-pause events, ensure the audio core is prepared
+      if (type === 'play-pause' && audioCore.prepareForNewTrack) {
+        audioCore.prepareForNewTrack();
+      }
+    };
+
+    document.addEventListener('safari-user-interaction', handleSafariInteraction);
+    
+    return () => {
+      document.removeEventListener('safari-user-interaction', handleSafariInteraction);
+    };
+  }, [audioCore]);
 
   // Effect to sync display players when they're rendered or view changes
   useEffect(() => {

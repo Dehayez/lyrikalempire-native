@@ -23,35 +23,69 @@ export const useAudioPlayer = ({
     audioCore
   });
 
-  // Simplified beat management functions
+  // Simplified beat management functions with debug logging
   const handlePlay = useCallback((beat, play, beats) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('🔍 [DEBUG] handlePlay called:', {
+      beatTitle: beat?.title,
+      play,
+      isMobile,
+      isSafari,
+      isNewBeat: beat?.id !== currentBeat?.id,
+      currentBeatTitle: currentBeat?.title
+    });
+    
     if (!beat) {
+      console.log('🔍 [DEBUG] No beat - stopping playback');
       setCurrentBeat(null);
       setIsPlaying(false);
     } else if (currentBeat?.id === beat.id) {
       // Same beat - just toggle play/pause
+      console.log('🔍 [DEBUG] Same beat - toggling play/pause');
       if (audioCore.prepareForNewTrack) {
         audioCore.prepareForNewTrack(); // Prepare Safari for user interaction
       }
       setIsPlaying(play);
     } else {
       // Different beat - prepare Safari for new track
+      console.log('🔍 [DEBUG] Different beat - changing track:', {
+        from: currentBeat?.title,
+        to: beat.title,
+        requestedPlay: play
+      });
+      
       if (audioCore.prepareForNewTrack) {
         audioCore.prepareForNewTrack();
       }
       
       // For new beats, first pause the current audio to prevent overlap
       if (audioCore.playerRef.current?.audio?.current) {
+        console.log('🔍 [DEBUG] Pausing current audio before track change');
         audioCore.pause();
       }
       
-      console.log('🍎 [SAFARI] Changing to new beat:', beat.title);
+      console.log('🔍 [DEBUG] Setting new current beat and play state');
       setCurrentBeat(beat);
-      setTimeout(() => setIsPlaying(true), 0);
+      setTimeout(() => {
+        console.log('🔍 [DEBUG] Setting isPlaying to:', play);
+        setIsPlaying(play);
+      }, 50);
     }
   }, [currentBeat?.id, setCurrentBeat, setIsPlaying, audioCore]);
 
   const handleNext = useCallback((beats) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('🔍 [DEBUG] handleNext called:', {
+      isMobile,
+      isSafari,
+      currentBeat: currentBeat?.title,
+      beatsLength: beats?.length
+    });
+    
     // Prepare Safari for user-initiated next track
     if (audioCore.prepareForNewTrack) {
       audioCore.prepareForNewTrack();
@@ -66,11 +100,28 @@ export const useAudioPlayer = ({
       nextIndex = (beats.findIndex(b => b.id === currentBeat.id) + 1) % beats.length;
     }
     
-    console.log('🍎 [SAFARI] User requested next track');
-    handlePlay(beats[nextIndex], true, beats);
+    const nextBeat = beats[nextIndex];
+    console.log('🔍 [DEBUG] Next track selected:', {
+      nextBeat: nextBeat?.title,
+      nextIndex,
+      shuffle
+    });
+    
+    // Always try to play the next track - basic functionality
+    handlePlay(nextBeat, true, beats);
   }, [shuffle, currentBeat?.id, handlePlay, audioCore]);
 
   const handlePrev = useCallback((beats) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('🔍 [DEBUG] handlePrev called:', {
+      isMobile,
+      isSafari,
+      currentBeat: currentBeat?.title,
+      beatsLength: beats?.length
+    });
+    
     // Prepare Safari for user-initiated previous track
     if (audioCore.prepareForNewTrack) {
       audioCore.prepareForNewTrack();
@@ -78,22 +129,29 @@ export const useAudioPlayer = ({
     
     const currentIndex = beats.findIndex(b => b.id === currentBeat.id);
     const prevIndex = (currentIndex - 1 + beats.length) % beats.length;
+    const prevBeat = beats[prevIndex];
     
-    console.log('🍎 [SAFARI] User requested previous track');
-    handlePlay(beats[prevIndex], true, beats);
+    console.log('🔍 [DEBUG] Previous track selected:', {
+      prevBeat: prevBeat?.title,
+      prevIndex,
+      currentIndex
+    });
+    
+    // Always try to play the previous track - basic functionality
+    handlePlay(prevBeat, true, beats);
   }, [currentBeat?.id, handlePlay, audioCore]);
 
   // Destructure audioInteractions to exclude the conflicting setCurrentTime
   const { setCurrentTimeState, ...audioInteractionsWithoutSetCurrentTime } = audioInteractions;
   
   return {
-    // Audio core functionality
+    // Audio core functionality - use original functions
     ...audioCore,
     
     // User interactions (excluding setCurrentTime to avoid conflict)
     ...audioInteractionsWithoutSetCurrentTime,
     
-    // High-level beat management
+    // High-level beat management with debug logging
     handlePlay,
     handleNext,
     handlePrev

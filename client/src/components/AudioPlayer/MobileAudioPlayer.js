@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useCallback } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PlayPauseButton } from './AudioControls';
 
@@ -22,6 +22,26 @@ const MobileAudioPlayer = forwardRef(({
   duration,
   lyricsModal = false // Add default value
 }, ref) => {
+  
+  // Enhanced logging for mobile play/pause
+  const handleMobilePlayPause = useCallback((shouldPlay) => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    console.log('🔍 [DEBUG] Mobile play/pause button tapped:', {
+      shouldPlay,
+      isPlaying,
+      currentBeat: currentBeat?.title,
+      isMobile,
+      isSafari
+    });
+    
+    // Always call the original handler - let the audio core handle any restrictions
+    if (handlePlayPause) {
+      handlePlayPause(shouldPlay);
+    }
+  }, [handlePlayPause, isPlaying, currentBeat]);
+
   return (
     <div
       className={`audio-player audio-player--mobile ${lyricsModal ? 'audio-player--lyrics-modal-open' : ''}`}
@@ -44,7 +64,11 @@ const MobileAudioPlayer = forwardRef(({
         </div>
         <p className="audio-player__artist">{artistName}</p>
       </div>
-      <PlayPauseButton isPlaying={isPlaying} setIsPlaying={handlePlayPause} className="small" />
+      <PlayPauseButton 
+        isPlaying={isPlaying} 
+        setIsPlaying={handleMobilePlayPause} 
+        className="small" 
+      />
     </div>
   );
 });
