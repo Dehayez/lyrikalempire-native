@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { audioCacheService, getSignedUrl } from '../services';
-import { initializeCacheCleanup, getCacheStatistics } from '../utils/audioCacheUtils';
+import { audioCacheService, getSignedUrl } from '../../services';
+import { initializeCacheCleanup, getCacheStatistics } from '../../utils/audioCacheUtils';
 
 export const useAudioCache = () => {
   const [cacheStats, setCacheStats] = useState(null);
@@ -17,40 +17,54 @@ export const useAudioCache = () => {
     }
   }, []);
 
-  // Get cache statistics
+  // Update cache statistics
   const updateCacheStats = useCallback(async () => {
     try {
       const stats = await getCacheStatistics();
       setCacheStats(stats);
     } catch (error) {
-      // Error updating cache stats
+      console.warn('Error updating cache stats:', error);
     }
   }, []);
 
-  // Check if a beat is cached
+  // Generate cache key for a beat
+  const getBeatCacheKey = useCallback((beat) => {
+    if (!beat?.audio || !beat?.user_id) return null;
+    return `${beat.user_id}_${beat.audio}`;
+  }, []);
+
+  // Check if a beat is cached (async)
   const isBeatCached = useCallback(async (beat) => {
     if (!beat?.audio || !beat?.user_id) return false;
     
     try {
       const cached = await audioCacheService.isAudioCached(beat.user_id, beat.audio);
-      const cacheKey = `${beat.user_id}_${beat.audio}`;
+      const cacheKey = getBeatCacheKey(beat);
       
-      if (cached) {
-        setCachedBeats(prev => new Set([...prev, cacheKey]));
-      } else {
-        setCachedBeats(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(cacheKey);
-          return newSet;
-        });
+      if (cacheKey) {
+        if (cached) {
+          setCachedBeats(prev => new Set([...prev, cacheKey]));
+        } else {
+          setCachedBeats(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(cacheKey);
+            return newSet;
+          });
+        }
       }
       
       return cached;
     } catch (error) {
-      // Error checking if beat is cached
+      console.warn('Error checking if beat is cached:', error);
       return false;
     }
-  }, []);
+  }, [getBeatCacheKey]);
+
+  // Check if a beat is cached (synchronous using cached state)
+  const isBeatCachedSync = useCallback((beat) => {
+    const cacheKey = getBeatCacheKey(beat);
+    return cacheKey ? cachedBeats.has(cacheKey) : false;
+  }, [cachedBeats, getBeatCacheKey]);
 
   // Preload a single beat
   const preloadBeat = useCallback(async (beat) => {
@@ -66,15 +80,17 @@ export const useAudioCache = () => {
       await audioCacheService.preloadAudio(beat.user_id, beat.audio, signedUrl);
       
       // Update cached beats set
-      const cacheKey = `${beat.user_id}_${beat.audio}`;
-      setCachedBeats(prev => new Set([...prev, cacheKey]));
+      const cacheKey = getBeatCacheKey(beat);
+      if (cacheKey) {
+        setCachedBeats(prev => new Set([...prev, cacheKey]));
+      }
       
       return true;
     } catch (error) {
-      // Error preloading beat
+      console.warn('Error preloading beat:', error);
       return false;
     }
-  }, []);
+  }, [getBeatCacheKey]);
 
   // Preload multiple beats with progress tracking
   const preloadBeats = useCallback(async (beats, maxConcurrent = 3) => {
@@ -113,7 +129,7 @@ export const useAudioCache = () => {
       await updateCacheStats();
       return results;
     } catch (error) {
-      // Error preloading beats
+      console.warn('Error preloading beats:', error);
       return [];
     } finally {
       setIsPreloading(false);
@@ -140,12 +156,12 @@ export const useAudioCache = () => {
       await updateCacheStats();
       return true;
     } catch (error) {
-      // Error clearing cache
+      console.warn('Error clearing cache:', error);
       return false;
     }
   }, [updateCacheStats]);
 
-  // Check cache status for a list of beats
+  // Check cache status for multiple beats
   const checkBeatsCacheStatus = useCallback(async (beats) => {
     if (!beats || beats.length === 0) return;
     
@@ -153,41 +169,13 @@ export const useAudioCache = () => {
     await Promise.allSettled(promises);
   }, [isBeatCached]);
 
-  // Get cache key for a beat
-  const getBeatCacheKey = useCallback((beat) => {
-    if (!beat?.audio || !beat?.user_id) return null;
-    return `${beat.user_id}_${beat.audio}`;
-  }, []);
-
-  // Check if a beat is cached (synchronous check using cached state)
-  const isBeatCachedSync = useCallback((beat) => {
-    const cacheKey = getBeatCacheKey(beat);
-    const isCached = cacheKey ? cachedBeats.has(cacheKey) : false;
-    return isCached;
-  }, [cachedBeats, getBeatCacheKey]);
-
   // Mark a beat as cached (for external cache updates)
   const markBeatAsCached = useCallback((beat) => {
     const cacheKey = getBeatCacheKey(beat);
     if (cacheKey) {
-      setCachedBeats(prev => {
-        const newSet = new Set([...prev, cacheKey]);
-        return newSet;
-      });
-    } else {
-      // Could not generate cache key for beat
+      setCachedBeats(prev => new Set([...prev, cacheKey]));
     }
   }, [getBeatCacheKey]);
-
-  // Initialize cache status for beats on mount
-  useEffect(() => {
-    const initializeCacheStatus = async () => {
-      // This will be called when the hook is first used
-      // It will check and update the cache status for any beats that are passed to it
-    };
-    
-    initializeCacheStatus();
-  }, []);
 
   return {
     // State
@@ -196,15 +184,19 @@ export const useAudioCache = () => {
     preloadProgress,
     cachedBeats,
     
-    // Actions
+    // Cache operations
     preloadBeat,
     preloadBeats,
     preloadQueue,
     clearCache,
     updateCacheStats,
+    
+    // Cache checking
     isBeatCached,
     isBeatCachedSync,
     checkBeatsCacheStatus,
+    
+    // Utilities
     getBeatCacheKey,
     markBeatAsCached
   };

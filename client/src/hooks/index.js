@@ -5,17 +5,21 @@ export { useBpmHandlers } from './useBpmHandlers';
 export { useSort } from './useSort';
 export { useDragAndDrop } from './useDragAndDrop';
 export { useLocalStorageSync } from './useLocalStorageSync';
-export { useAudioPlayer } from './useAudioPlayer';
-export { useAudioCache } from './useAudioCache';
 export { usePanels } from './usePanels';
 export { useDragToDismiss } from './useDragToDismiss';
-export { useAudioPlayerState } from './useAudioPlayerState';
 export { useWaveform } from './useWaveform';
-export { useFullPagePlayer } from './useFullPagePlayer';
 export { useMediaSession } from './useMediaSession';
-export { useAudioCore } from './useAudioCore';
-export { useAudioInteractions } from './useAudioInteractions';
-export { useAudioSync } from './useAudioSync';
 export { useCrossTabSync } from './useCrossTabSync';
 export { default as useOs } from './useOs';
 export { useSwipeGestures } from './useSwipeGestures';
+
+// Audio Player Hooks - organized in audioPlayer folder
+export {
+  useAudioPlayer,
+  useAudioCore,
+  useAudioInteractions,
+  useAudioPlayerState,
+  useAudioSync,
+  useAudioCache,
+  useFullPagePlayer
+} from './audioPlayer';

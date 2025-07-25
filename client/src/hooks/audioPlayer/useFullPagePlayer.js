@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { isMobileOrTablet, slideIn, slideOut } from '../utils';
+import { isMobileOrTablet, slideIn, slideOut } from '../../utils';
 
 export const useFullPagePlayer = ({
   isFullPage,
@@ -12,7 +12,7 @@ export const useFullPagePlayer = ({
   isReturningFromLyrics,
   setIsReturningFromLyrics
 }) => {
-  // Toggle full page player visibility
+  // Toggle full page player visibility - simplified approach like original
   const toggleFullPagePlayer = useCallback(() => {
     // Don't allow opening full page player when lyrics modal is open on mobile
     if (isMobileOrTablet() && lyricsModal) {
@@ -21,15 +21,15 @@ export const useFullPagePlayer = ({
 
     if (!isFullPage) {
       setIsFullPage(true);
-      setIsReturningFromLyrics(false); // Reset flag when manually opening
+      setIsReturningFromLyrics(false);
 
-      // Use multiple requestAnimationFrame calls to ensure element is in DOM
+      // Use the original simple approach
       requestAnimationFrame(() => {
         setIsFullPageVisible(true);
         
-        // Wait an additional frame to ensure the component has rendered
         requestAnimationFrame(() => {
           if (fullPagePlayerRef.current) {
+            // Use the original slideIn function - no custom overrides
             slideIn(fullPagePlayerRef.current);
           }
         });
@@ -38,7 +38,7 @@ export const useFullPagePlayer = ({
       slideOut(fullPagePlayerRef.current, fullPageOverlayRef.current, () => {
         setIsFullPage(false);
         setIsFullPageVisible(false);
-        setIsReturningFromLyrics(false); // Reset flag when closing
+        setIsReturningFromLyrics(false);
       });
     }
   }, [
@@ -53,26 +53,26 @@ export const useFullPagePlayer = ({
 
   // Handle lyrics modal and full page player interaction
   useEffect(() => {
-    if (isMobileOrTablet() && lyricsModal && isFullPage) {
-      // Mark that we're going to return from lyrics modal
+    const isMobile = isMobileOrTablet();
+    
+    if (isMobile && lyricsModal && isFullPage) {
+      // Close full page player when lyrics modal opens
       setIsReturningFromLyrics(true);
-      // Smoothly close the full page player
       slideOut(fullPagePlayerRef.current, fullPageOverlayRef.current, () => {
         setIsFullPageVisible(false);
       });
-    } else if (isMobileOrTablet() && !lyricsModal && isFullPage && !isFullPageVisible) {
-      // Re-open full page player when lyrics modal closes (if it was open before)
+    } else if (isMobile && !lyricsModal && isFullPage && !isFullPageVisible) {
+      // Re-open full page player when lyrics modal closes
       requestAnimationFrame(() => {
         setIsFullPageVisible(true);
         
-        // Wait an additional frame to ensure the component has rendered
         requestAnimationFrame(() => {
           if (fullPagePlayerRef.current) {
-            // Only slide in if we're not returning from lyrics modal
             if (!isReturningFromLyrics) {
+              // Use original slideIn function
               slideIn(fullPagePlayerRef.current);
             } else {
-              // Just show without animation and reset the flag
+              // Show without animation - minimal style changes
               fullPagePlayerRef.current.style.transform = 'translateY(0)';
               fullPagePlayerRef.current.style.opacity = '1';
               setIsReturningFromLyrics(false);

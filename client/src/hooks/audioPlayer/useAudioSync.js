@@ -1,15 +1,16 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { syncAllPlayers as syncAllPlayersUtil, getShortBrowserName } from '../utils';
-import { useCrossTabSync } from './useCrossTabSync';
-import { useWebSocket } from '../contexts';
+import { syncAllPlayers as syncAllPlayersUtil, getShortBrowserName } from '../../utils';
+import { useCrossTabSync } from '../useCrossTabSync';
+import { useWebSocket } from '../../contexts';
 
-// Detect Safari browser
+// Browser detection
 const isSafari = () => {
   const ua = navigator.userAgent.toLowerCase();
   return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1;
 };
 
-// Safari browser detection
+const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
 const isSafariBrowser = isSafari();
 
 export const useAudioSync = ({
@@ -33,7 +34,6 @@ export const useAudioSync = ({
   isPlaying,
   setCurrentBeat
 }) => {
-  // Get WebSocket context directly
   const { emitStateRequest: wsEmitStateRequest } = useWebSocket();
   
   // Refs for Safari-specific handling
@@ -50,7 +50,6 @@ export const useAudioSync = ({
     currentSessionId,
     isCurrentSessionMaster,
     sessionName
-    // We're not using emitStateRequest from useCrossTabSync anymore
   } = useCrossTabSync({
     currentBeat,
     isPlaying,
@@ -62,10 +61,10 @@ export const useAudioSync = ({
   
   // Sync all players with main audio element
   const syncAllPlayers = useCallback((forceUpdate = false) => {
-    // For Safari, throttle non-forced updates to prevent infinite loops
+    // For Safari, throttle non-forced updates
     if (isSafariBrowser && !forceUpdate) {
       const now = Date.now();
-      if (now - lastTimeUpdateRef.current < 100) { // 100ms throttle
+      if (now - lastTimeUpdateRef.current < 100) {
         return;
       }
       lastTimeUpdateRef.current = now;
@@ -112,16 +111,12 @@ export const useAudioSync = ({
     }
   }, [audioCore, syncAllPlayers]);
 
-  // Handle seeking while dragging (onSeek event)
+  // Handle seeking while dragging
   const handleSeek = useCallback((e) => {
     const newTime = e.target.currentTime;
-    // Immediately update the main audio player
     audioCore.setCurrentTime(newTime);
-    // Update the progress state for immediate visual feedback
     audioInteractions.updateCurrentTime(newTime);
-    // Broadcast seek to other tabs
     broadcastSeek(newTime);
-    // Sync all players
     syncAllPlayers();
   }, [audioCore, audioInteractions, syncAllPlayers, broadcastSeek]);
 
@@ -144,7 +139,6 @@ export const useAudioSync = ({
     onSeek: (e) => {
       handleSeek(e);
     },
-    // Allow timeupdate for progress updates but don't let it conflict
     onTimeUpdate: (e) => {
       // Only update if this is not the main audio player
       if (e.target !== audioCore.playerRef.current?.audio?.current) {
@@ -155,25 +149,21 @@ export const useAudioSync = ({
 
   // Handle play/pause from UI
   const handlePlayPause = useCallback((play) => {
-    // If we're trying to play and there's no master session, this tab should become master
-    // But only if the user is explicitly playing from this tab
+    // If trying to play and there's no master session, this tab becomes master
     if (play && !masterSession) {
-      // This tab will become master when broadcastPlay is called
       audioCore.togglePlayPause(play);
       setIsPlaying(play);
-      // Broadcast play event which will set this tab as master if there's no master yet
       broadcastPlay();
       return;
     }
     
-    // Normal case - check if this tab is the master
     const isCurrentTabMaster = isCurrentSessionMaster;
     
     if (isCurrentTabMaster) {
       // Only actually play/pause audio in the master tab
       audioCore.togglePlayPause(play);
     } else {
-      // For non-master tabs, just update the UI state without playing audio
+      // For non-master tabs, just update the UI state
       setIsPlaying(play);
     }
     
@@ -183,42 +173,26 @@ export const useAudioSync = ({
     } else {
       broadcastPause();
     }
-  }, [audioCore, broadcastPlay, broadcastPause, isCurrentSessionMaster, setIsPlaying, masterSession, currentSessionId]);
+  }, [audioCore, broadcastPlay, broadcastPause, isCurrentSessionMaster, setIsPlaying, masterSession]);
 
-  // Handle when song ends - trigger next track or repeat (Safari-aware)
+  // Handle when song ends
   const handleEnded = useCallback(() => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    
-    console.log('🔍 [DEBUG] Track ended:', {
-      isMobile,
-      isSafari,
-      isCurrentSessionMaster,
-      repeat
-    });
-    
     // Only the master tab should handle the ended event
     if (isCurrentSessionMaster) {
       if (repeat === 'Repeat One') {
-        console.log('🔍 [DEBUG] Repeating current track');
-        // For repeat, Safari should allow this since it's the same track
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
         audioCore.setCurrentTime(0);
         audioCore.play().catch(error => {
-          console.log('🔍 [DEBUG] Repeat play failed:', error.name);
+          console.warn('Repeat play failed:', error);
         });
       } else {
-        // For next track - try basic functionality
-        console.log('🔍 [DEBUG] Track ended - going to next track');
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
         onNext();
       }
-    } else {
-      console.log('🔍 [DEBUG] Not master session - ignoring track end');
     }
   }, [onNext, repeat, audioCore, isCurrentSessionMaster]);
 
@@ -235,91 +209,51 @@ export const useAudioSync = ({
     }
 
     const handleTimeUpdate = () => {
-      // For Safari, throttle timeupdate events to prevent infinite loops
+      // For Safari, throttle timeupdate events
       if (isSafariBrowser) {
         if (timeUpdateThrottleRef.current) return;
         
         timeUpdateThrottleRef.current = true;
         setTimeout(() => {
           timeUpdateThrottleRef.current = false;
-        }, 100); // 100ms throttle
+        }, 100);
       }
       
-      // Update interaction state with current time
       audioInteractions.updateCurrentTime(audioCore.getCurrentTime());
       syncAllPlayers();
     };
 
     const handleLoadedMetadata = () => {
-      // Wait a bit for the audio to be ready, then sync
       setTimeout(() => syncAllPlayers(true), 100);
     };
 
     const handleLoadedData = () => {
-      console.log('🔍 [DEBUG] Audio loaded data event');
       syncAllPlayers(true);
       
-      // Check if we should start playback now that the audio data is loaded
+      // Check if we should start playback
       if (currentBeat?.audio && isPlaying) {
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
         
-        console.log('🔍 [DEBUG] Attempting auto-play on loaded data:', {
-          hasValidSrc,
-          audioIsPaused: audioCore.isPaused(),
-          isCurrentSessionMaster,
-          isMobile,
-          isSafari,
-          currentBeat: currentBeat?.title
-        });
-        
-        // Only play audio in the master tab
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
-          // Simple attempt - let Safari handle restrictions naturally
           audioCore.play().catch(error => {
-            console.log('🔍 [DEBUG] Auto-play failed on loaded data:', {
-              errorName: error.name,
-              errorMessage: error.message,
-              isMobile,
-              isSafari
-            });
+            console.warn('Auto-play failed on loaded data:', error);
           });
         }
       }
     };
 
     const handleCanPlay = () => {
-      console.log('🔍 [DEBUG] Audio can play event');
       syncAllPlayers(true);
       
-      // Check if we should start playback now that the audio is ready
+      // Check if we should start playback
       if (currentBeat?.audio && isPlaying) {
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
         
-        console.log('🔍 [DEBUG] Attempting auto-play on can play:', {
-          hasValidSrc,
-          audioIsPaused: audioCore.isPaused(),
-          isCurrentSessionMaster,
-          isMobile,
-          isSafari,
-          currentBeat: currentBeat?.title
-        });
-        
-        // Only play audio in the master tab
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
-          // Simple attempt - let Safari handle restrictions naturally
           audioCore.play().catch(error => {
-            console.log('🔍 [DEBUG] Auto-play failed on can play:', {
-              errorName: error.name,
-              errorMessage: error.message,
-              isMobile,
-              isSafari
-            });
+            console.warn('Auto-play failed on can play:', error);
           });
         }
       }
@@ -330,7 +264,6 @@ export const useAudioSync = ({
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
-      // Broadcast to other tabs
       broadcastPlay();
     };
 
@@ -339,7 +272,6 @@ export const useAudioSync = ({
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';
       }
-      // Broadcast to other tabs
       broadcastPause();
     };
 
@@ -351,34 +283,32 @@ export const useAudioSync = ({
       }
     };
 
-    // Add ended event listener with basic functionality
     const handleEndedWithRetry = () => {
-      // Add a small delay to ensure the event is properly processed
       setTimeout(() => {
         handleEnded();
       }, 100);
     };
 
     // Attach event listeners
-    mainAudio.addEventListener('timeupdate', handleTimeUpdate);
-    mainAudio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    mainAudio.addEventListener('loadeddata', handleLoadedData);
-    mainAudio.addEventListener('canplay', handleCanPlay);
-    mainAudio.addEventListener('play', handlePlay);
-    mainAudio.addEventListener('pause', handlePause);
-    mainAudio.addEventListener('volumechange', handleVolumeChange);
-    mainAudio.addEventListener('ended', handleEndedWithRetry);
+    const eventListeners = [
+      ['timeupdate', handleTimeUpdate],
+      ['loadedmetadata', handleLoadedMetadata],
+      ['loadeddata', handleLoadedData],
+      ['canplay', handleCanPlay],
+      ['play', handlePlay],
+      ['pause', handlePause],
+      ['volumechange', handleVolumeChange],
+      ['ended', handleEndedWithRetry]
+    ];
+
+    eventListeners.forEach(([event, handler]) => {
+      mainAudio.addEventListener(event, handler);
+    });
 
     return () => {
-      // Clean up event listeners
-      mainAudio.removeEventListener('timeupdate', handleTimeUpdate);
-      mainAudio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      mainAudio.removeEventListener('loadeddata', handleLoadedData);
-      mainAudio.removeEventListener('canplay', handleCanPlay);
-      mainAudio.removeEventListener('play', handlePlay);
-      mainAudio.removeEventListener('pause', handlePause);
-      mainAudio.removeEventListener('volumechange', handleVolumeChange);
-      mainAudio.removeEventListener('ended', handleEndedWithRetry);
+      eventListeners.forEach(([event, handler]) => {
+        mainAudio.removeEventListener(event, handler);
+      });
     };
   }, [
     audioCore,
@@ -393,13 +323,11 @@ export const useAudioSync = ({
     setIsPlaying
   ]);
 
-  // Listen for custom Safari interaction events - keep this simple
+  // Listen for custom Safari interaction events
   useEffect(() => {
     const handleSafariInteraction = (event) => {
-      const { type, shouldPlay, timestamp } = event.detail;
-      console.log('🔍 [DEBUG] Custom Safari interaction event received:', { type, shouldPlay, timestamp });
+      const { type, shouldPlay } = event.detail;
       
-      // For play-pause events, ensure the audio core is prepared
       if (type === 'play-pause' && audioCore.prepareForNewTrack) {
         audioCore.prepareForNewTrack();
       }
@@ -412,9 +340,8 @@ export const useAudioSync = ({
     };
   }, [audioCore]);
 
-  // Effect to sync display players when they're rendered or view changes
+  // Sync display players when view changes
   useEffect(() => {
-    // Simple sync when view changes
     syncAllPlayers(true);
   }, [shouldShowFullPagePlayer, shouldShowMobilePlayer, isFullPageVisible, syncAllPlayers]);
 
@@ -422,7 +349,6 @@ export const useAudioSync = ({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // When tab becomes visible, force sync all players
         syncAllPlayers(true);
       }
     };
