@@ -193,6 +193,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
 
   const modalContent = (
     <div className="modal-content" ref={modalRef}>
+    {!isMobile && (
       <IconButton 
         className="modal__fullscreen-button" 
         onClick={handleFullscreenToggle}
@@ -202,6 +203,8 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
       >
         {isFullscreen ? <IoContract /> : <IoExpand />}
       </IconButton>
+      
+    )}
       <IconButton 
         className="modal__close-button" 
         onClick={handleCancel}
