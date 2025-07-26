@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePlaylist, useBeat } from '../../contexts';
 import './BeatAnimation.scss';
 
-const BeatAnimation = ({ beat, currentBeat, isPlaying, index }) => {
+const BeatAnimation = ({ beat, currentBeat, isPlaying, index, showPlayButton = true }) => {
   const [delays, setDelays] = useState([0, 0, 0, 0]);
   const [durations, setDurations] = useState([0, 0, 0, 0]);
   const { isSamePlaylist } = usePlaylist();
@@ -21,7 +21,12 @@ const BeatAnimation = ({ beat, currentBeat, isPlaying, index }) => {
         <div className="bar" style={{ animationDelay: `-${delays[2]}s`, animationDuration: `${durations[2]}s` }}></div>
         <div className="bar" style={{ animationDelay: `-${delays[3]}s`, animationDuration: `${durations[3]}s` }}></div>
       </div> : 
-      <div className='beat-row__index-number' style={{ zIndex: 1, minWidth: '30px', color: currentBeat && currentBeat.id === beat.id && isSamePlaylist ? '#FFCC44' : '', opacity: hoveredBeat === beat.id ? 0 : 1 }}>{index + 1}</div>
+      <div className='beat-row__index-number' style={{ 
+        zIndex: 1, 
+        minWidth: '30px', 
+        color: currentBeat && currentBeat.id === beat.id && isSamePlaylist ? '#FFCC44' : '', 
+        opacity: (hoveredBeat === beat.id && showPlayButton) ? 0 : 1 
+      }}>{index + 1}</div>
   );
 };
 

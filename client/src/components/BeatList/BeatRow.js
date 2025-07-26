@@ -445,13 +445,16 @@ const BeatRow = ({
               currentBeat={currentBeat} 
               isPlaying={isPlaying} 
               index={calculateActualIndex(index)}
+              showPlayButton={!isOffline || isBeatCached}
             />
-            <PlayPauseButton 
-              beat={beat} 
-              handlePlayPause={handlePlayPause}
-              currentBeat={currentBeat} 
-              isPlaying={isPlaying} 
-            />
+            {(!isOffline || isBeatCached) && (
+              <PlayPauseButton 
+                beat={beat} 
+                handlePlayPause={handlePlayPause}
+                currentBeat={currentBeat} 
+                isPlaying={isPlaying} 
+              />
+            )}
           </div>
         </td>
       )}
