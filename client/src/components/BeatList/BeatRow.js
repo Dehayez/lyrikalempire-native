@@ -43,6 +43,7 @@ const BeatRow = ({
   setHoverIndex, 
   setHoverPosition,
   isBeatCachedSync,
+  isOffline = false,
 }) => {
   const ref = useRef(null);
   const inputTitleRef = useRef(null);
@@ -153,6 +154,9 @@ const BeatRow = ({
     return deleteMode === 'playlist' ? 'Remove from playlist' : 'Delete this track';
   }, [selectedBeats.length, deleteMode]);
 
+  // Check if beat is cached
+  const isBeatCached = isBeatCachedSync ? isBeatCachedSync(beat) : false;
+
   // Dynamic class names
   const beatRowClasses = useMemo(() => classNames({
     'beat-row': true,
@@ -162,7 +166,8 @@ const BeatRow = ({
     'beat-row--selected': isSelected && !isMiddle && !hasSelectedBefore && !hasSelectedAfter || isDragging,
     'beat-row--playing': currentBeat && beat.id === currentBeat.id && isSamePlaylist,
     'beat-row--edit': mode === 'edit',
-  }), [isSelected, isMiddle, hasSelectedBefore, hasSelectedAfter, isDragging, currentBeat, beat.id, isSamePlaylist, mode]);
+    'beat-row--offline-uncached': isOffline && !isBeatCached,
+  }), [isSelected, isMiddle, hasSelectedBefore, hasSelectedAfter, isDragging, currentBeat, beat.id, isSamePlaylist, mode, isOffline, isBeatCached]);
 
   // API calls and handlers
   const fetchBeats = useCallback(async (playlistId, setBeats) => {

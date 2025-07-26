@@ -117,6 +117,10 @@
   }
 }
 
+.beat-row--offline-uncached {
+  opacity: 0.4;
+}
+
 .beat-row--selected, .beat-row--selected-top, .beat-row--selected-bottom, .beat-row--selected-middle {
   background-color: $color-gray-dark-active;
 

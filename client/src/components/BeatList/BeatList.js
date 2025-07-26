@@ -36,6 +36,7 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats } = useBeat();
   const { user } = useUser();
   const beats = externalBeats || allBeats;
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Virtual scrolling state
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
@@ -390,6 +391,20 @@ const handlePlayPause = useCallback((beat) => {
     }
   }, [beats.length, hasLoadedInitially, isLoadingBeats]);
 
+  // Listen for online/offline events
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       const maxScroll = 50; 
@@ -464,6 +479,7 @@ const handlePlayPause = useCallback((beat) => {
           setHoverIndex={setHoverIndex}
           setHoverPosition={setHoverPosition}
           isBeatCachedSync={isBeatCachedSync}
+          isOffline={isOffline}
         />
         {hoverIndex === absoluteIndex && hoverPosition === 'bottom' && <tr className="drop-line" />}
       </React.Fragment>
