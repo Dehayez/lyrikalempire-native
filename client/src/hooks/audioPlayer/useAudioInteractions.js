@@ -93,8 +93,9 @@ export const useAudioInteractions = ({
       currentTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
     
-    // Update waveform progress during dragging
-    const wavesurferInstance = window.globalWavesurfer; // Access global wavesurfer instance
+    // Update waveform to show drag position - the normal sync is prevented during dragging
+    // so there won't be a conflict between drag position and actual audio currentTime
+    const wavesurferInstance = window.globalWavesurfer;
     if (wavesurferInstance && wavesurferInstance.getDuration) {
       try {
         wavesurferInstance.seekTo(progressPercent);

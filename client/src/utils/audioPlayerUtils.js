@@ -124,7 +124,9 @@ export const syncAllPlayers = ({
   });
 
   // Update waveform - only if we have a valid wavesurfer instance and duration
-  if (wavesurfer.current && duration && wavesurfer.current.getDuration) {
+  // Also check if user is dragging any progress bar to prevent conflicts
+  const isDragging = document.querySelector('.rhap_progress-dragging');
+  if (wavesurfer.current && duration && wavesurfer.current.getDuration && !isDragging) {
     try {
       wavesurfer.current.seekTo(currentTime / duration);
     } catch (error) {
