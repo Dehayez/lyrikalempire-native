@@ -80,6 +80,11 @@ export const useAudioPlayerState = ({
     }
   }, [currentBeat]);
 
+  // Check if we're offline
+  const isOffline = useCallback(() => {
+    return !navigator.onLine;
+  }, []);
+
   // Load audio source
   const loadAudio = useCallback(async () => {
     if (!currentBeat) {
@@ -99,35 +104,81 @@ export const useAudioPlayerState = ({
 
       setIsCachedAudio(isCached);
 
-      // Get signed URL for audio file
-      const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
-      originalUrlRef.current = signedUrl;
-
-      if (isSafari) {
-        // For Safari, use signed URL directly
-        setAudioSrc(signedUrl);
-        
-        audioCacheService.originalUrls.set(
-          audioCacheService.getCacheKey(currentBeat.user_id, currentBeat.audio),
-          signedUrl
-        );
-      } else {
-        // For other browsers, use cache
-        const audioUrl = await audioCacheService.preloadAudio(
+      // If we have cached audio, try to use it first (especially when offline)
+      if (isCached) {
+        const cachedAudioUrl = await audioCacheService.getAudio(
           currentBeat.user_id,
-          currentBeat.audio,
-          signedUrl
+          currentBeat.audio
         );
         
-        setAudioSrc(audioUrl);
+        if (cachedAudioUrl) {
+          setAudioSrc(cachedAudioUrl);
+          setAutoPlay(true);
+          
+          // If offline, stop here and use cached version
+          if (isOffline()) {
+            return;
+          }
+          
+          // If online and not Safari, we can still try to refresh the signed URL in background
+          // but use cached audio immediately for better UX
+          if (!isSafari) {
+            return;
+          }
+        }
       }
 
-      lastUrlRefreshRef.current = Date.now();
-      setAutoPlay(true);
+      // If not cached or cached version failed, try to get fresh signed URL
+      // This will fail gracefully if offline
+      try {
+        const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        originalUrlRef.current = signedUrl;
 
-      // Mark as cached if it wasn't before
-      if (!isCached) {
-        markBeatAsCached(currentBeat.id);
+        if (isSafari) {
+          // For Safari, use signed URL directly but also store for offline use
+          setAudioSrc(signedUrl);
+          
+          audioCacheService.originalUrls.set(
+            audioCacheService.getCacheKey(currentBeat.user_id, currentBeat.audio),
+            signedUrl
+          );
+        } else {
+          // For other browsers, use cache system
+          const audioUrl = await audioCacheService.preloadAudio(
+            currentBeat.user_id,
+            currentBeat.audio,
+            signedUrl
+          );
+          
+          setAudioSrc(audioUrl);
+        }
+
+        lastUrlRefreshRef.current = Date.now();
+        setAutoPlay(true);
+
+        // Mark as cached if it wasn't before
+        if (!isCached) {
+          markBeatAsCached(currentBeat.id);
+        }
+      } catch (networkError) {
+        console.error('Network error loading audio:', networkError);
+        
+        // If we failed to get signed URL but have cached audio, use it
+        if (isCached) {
+          const cachedAudioUrl = await audioCacheService.getAudio(
+            currentBeat.user_id,
+            currentBeat.audio
+          );
+          
+          if (cachedAudioUrl) {
+            setAudioSrc(cachedAudioUrl);
+            setAutoPlay(true);
+            return;
+          }
+        }
+        
+        // If no cached version available, propagate the error
+        throw networkError;
       }
     } catch (error) {
       console.error('Error loading audio:', error);
@@ -136,7 +187,7 @@ export const useAudioPlayerState = ({
       setIsLoadingAudio(false);
       cacheInProgressRef.current = false;
     }
-  }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari]);
+  }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari, isOffline]);
 
   // Refresh audio source URL
   const refreshAudioSrc = useCallback(async (force = false) => {

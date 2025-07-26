@@ -70,13 +70,29 @@ class AudioCacheService {
     return `${userId}_${fileName}`;
   }
 
+  // Check if we're offline
+  isOffline() {
+    return !navigator.onLine;
+  }
+
+  // Get cached audio with offline priority
+  async getCachedAudioOfflineFirst(userId, fileName) {
+    if (this.isOffline()) {
+      // When offline, prioritize cached versions
+      return await this.getAudio(userId, fileName);
+    }
+    // When online, use normal flow
+    return await this.getAudio(userId, fileName);
+  }
+
   // Get audio from cache (memory first, then IndexedDB)
   async getAudio(userId, fileName) {
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
+      const isOffline = !navigator.onLine;
       
-      // For Safari, return the original URL if available
-      if (this.isSafariBrowser && this.originalUrls.has(cacheKey)) {
+      // For Safari, return the original URL if available and online
+      if (this.isSafariBrowser && this.originalUrls.has(cacheKey) && !isOffline) {
         return this.originalUrls.get(cacheKey);
       }
       
@@ -85,9 +101,9 @@ class AudioCacheService {
       if (memoryEntry) {
         memoryEntry.lastAccessed = Date.now();
         
-        // For Safari, don't use blob URLs
-        if (this.isSafariBrowser) {
-          return null; // Will force using original URL
+        // For Safari when offline, use blob URL as fallback
+        if (this.isSafariBrowser && !isOffline) {
+          return null; // Will force using original URL when online
         }
         
         return memoryEntry.objectUrl;
@@ -102,9 +118,9 @@ class AudioCacheService {
             entry.lastAccessed = Date.now();
             await this.db.put(this.storeName, entry);
             
-            // For Safari, don't create blob URLs
-            if (this.isSafariBrowser) {
-              return null; // Will force using original URL
+            // For Safari when offline, create blob URL as fallback
+            if (this.isSafariBrowser && !isOffline) {
+              return null; // Will force using original URL when online
             }
             
             // Create object URL and add to memory cache
@@ -420,12 +436,23 @@ class AudioCacheService {
         return signedUrl;
       }
 
-      // For Safari, store the original URL and don't use blob URLs
+      // For Safari, store the original URL but also try to cache the blob for offline use
       if (this.isSafariBrowser) {
         this.originalUrls.set(cacheKey, signedUrl);
         
-        // For Safari, we'll just use the original URL and skip caching attempts
-        // This avoids the empty blob issues with no-cors mode
+        // Try to cache the blob in background for offline use
+        try {
+          const response = await fetch(signedUrl);
+          if (response.ok) {
+            const audioBlob = await response.blob();
+            if (audioBlob.size > 0) {
+              await this.storeAudio(userId, fileName, audioBlob, signedUrl);
+            }
+          }
+                 } catch (error) {
+           // Silently fail - Safari will use original URL
+         }
+        
         return signedUrl;
       } else {
         // Normal flow for other browsers
