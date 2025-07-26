@@ -179,6 +179,14 @@ export const useAudioSync = ({
 
   // Handle when song ends
   const handleEnded = useCallback(() => {
+    // Immediately reset current time and progress to prevent visual glitches with next song
+    audioCore.setCurrentTime(0);
+    setCurrentTimeState(0);
+    setProgress(0);
+    
+    // Force sync all players with reset values
+    syncAllPlayers(true);
+    
     // Only the master tab should handle the ended event
     if (isCurrentSessionMaster) {
       if (repeat === 'Repeat One') {
@@ -196,7 +204,7 @@ export const useAudioSync = ({
         onNext();
       }
     }
-  }, [onNext, repeat, audioCore, isCurrentSessionMaster]);
+  }, [onNext, repeat, audioCore, isCurrentSessionMaster, setCurrentTimeState, setProgress, syncAllPlayers]);
 
   // Set up main audio player event listeners
   useEffect(() => {
@@ -226,10 +234,22 @@ export const useAudioSync = ({
     };
 
     const handleLoadedMetadata = () => {
+      // Reset progress when new audio metadata loads to prevent carryover from previous song
+      setCurrentTimeState(0);
+      setProgress(0);
+      audioCore.setCurrentTime(0);
+      
       setTimeout(() => syncAllPlayers(true), 100);
     };
 
     const handleLoadedData = () => {
+      // Ensure progress starts at 0 for new audio data
+      if (mainAudio.currentTime > 0) {
+        audioCore.setCurrentTime(0);
+        setCurrentTimeState(0);
+        setProgress(0);
+      }
+      
       syncAllPlayers(true);
       
       // Check if we should start playback
@@ -286,8 +306,17 @@ export const useAudioSync = ({
     };
 
     const handleEndedWithRetry = () => {
+      // Set a flag to prevent progress updates during transition
+      mainAudio.dataset.transitioning = 'true';
+      
       setTimeout(() => {
         handleEnded();
+        // Clear the transition flag after handling
+        setTimeout(() => {
+          if (mainAudio.dataset) {
+            delete mainAudio.dataset.transitioning;
+          }
+        }, 200);
       }, 100);
     };
 
