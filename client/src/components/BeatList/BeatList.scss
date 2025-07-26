@@ -108,6 +108,14 @@
     }
   }
   
+  &__spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+    width: 100%;
+  }
+
   &__search-container {
     position: relative;
     width: max-content;

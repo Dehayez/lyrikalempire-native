@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import classNames from 'classnames';
 import { IoPencil, IoHeadsetSharp } from "react-icons/io5";
 import { toast, Slide } from 'react-toastify';
+import { ClipLoader } from 'react-spinners';
 
 import { usePlaylist, useBeat, useData, useUser } from '../../contexts';
 import { isMobileOrTablet, getInitialState } from '../../utils';
@@ -33,6 +34,7 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   
   const { setPlaylistId } = usePlaylist();
   const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats } = useBeat();
+  const { user } = useUser();
   const beats = externalBeats || allBeats;
 
   // Virtual scrolling state
@@ -170,6 +172,8 @@ const filterOptionsWithCounts = useMemo(() => {
   
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showMessage, setShowMessage] = useState(false);
+  const [isLoadingBeats, setIsLoadingBeats] = useState(true);
+  const [hasLoadedInitially, setHasLoadedInitially] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [beatsToDelete, setBeatsToDelete] = useState([]);
   const [activeContextMenu, setActiveContextMenu] = useState(null);
@@ -342,13 +346,49 @@ const handlePlayPause = useCallback((beat) => {
     }, 50);
 };
 
+  // Handle loading state and determine when to show messages
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowMessage(true);
-    }, 100); 
+    if (user.id) {
+      // Start loading when user is authenticated
+      setIsLoadingBeats(true);
+      setHasLoadedInitially(false);
+      setShowMessage(false);
+      
+      // Set a timer to determine if beats have finished loading
+      const timer = setTimeout(() => {
+        setIsLoadingBeats(false);
+        setHasLoadedInitially(true);
+        
+        // Only show "no tracks" message if beats array is actually empty from database
+        if (beats.length === 0) {
+          setShowMessage(true);
+        }
+      }, 1500); // Give reasonable time for beats to load
 
-    return () => clearTimeout(timer);
-  }, []);
+      return () => clearTimeout(timer);
+    } else {
+      // No user, stop loading and can show message immediately
+      setIsLoadingBeats(false);
+      setHasLoadedInitially(true);
+      setShowMessage(true);
+    }
+  }, [user.id]);
+
+  // When beats actually load, stop showing loading state
+  useEffect(() => {
+    if (user.id && beats.length > 0 && isLoadingBeats) {
+      setIsLoadingBeats(false);
+      setHasLoadedInitially(true);
+      setShowMessage(false);
+    }
+  }, [beats.length, user.id, isLoadingBeats]);
+
+  // Update message visibility when beats change after initial load
+  useEffect(() => {
+    if (hasLoadedInitially && !isLoadingBeats) {
+      setShowMessage(beats.length === 0);
+    }
+  }, [beats.length, hasLoadedInitially, isLoadingBeats]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -515,7 +555,11 @@ const handlePlayPause = useCallback((beat) => {
         ]}
         onFilterChange={handleFilterChange}
       />
-      {beats.length > 0 ? (
+      {isLoadingBeats ? (
+        <div className="beat-list__spinner-container">
+          <ClipLoader size={50} color={"#FFCC44"} loading={true} />
+        </div>
+      ) : beats.length > 0 ? (
         filteredAndSortedBeats.length === 0 ? (
           <div className="placeholder-text">No tracks found</div>
         ) : (
