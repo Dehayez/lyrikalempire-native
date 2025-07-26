@@ -306,17 +306,8 @@ export const useAudioSync = ({
     };
 
     const handleEndedWithRetry = () => {
-      // Set a flag to prevent progress updates during transition
-      mainAudio.dataset.transitioning = 'true';
-      
       setTimeout(() => {
         handleEnded();
-        // Clear the transition flag after handling
-        setTimeout(() => {
-          if (mainAudio.dataset) {
-            delete mainAudio.dataset.transitioning;
-          }
-        }, 200);
       }, 100);
     };
 

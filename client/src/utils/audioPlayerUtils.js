@@ -107,11 +107,6 @@ export const syncAllPlayers = ({
   const mainAudio = playerRef.current?.audio.current;
   if (!mainAudio) return;
 
-  // Skip updates during song transitions to prevent visual glitches
-  if (mainAudio.dataset?.transitioning && !forceUpdate) {
-    return;
-  }
-
   // Throttle updates in Safari to prevent maximum update depth exceeded
   const now = Date.now();
   if (isSafariBrowser && !forceUpdate && now - lastSyncTime < SAFARI_SYNC_THROTTLE) {
