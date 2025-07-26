@@ -23,6 +23,7 @@ export const useWaveform = ({
       if (container && audioSrc && waveform) {
         if (wavesurfer.current) {
           wavesurfer.current.destroy();
+          window.globalWavesurfer = null; // Clean up global reference
         }
 
         wavesurfer.current = WaveSurfer.create({
@@ -39,6 +40,9 @@ export const useWaveform = ({
           barGap: 2,
           barRadius: 0,
         });
+
+        // Make wavesurfer instance globally accessible for drag interactions
+        window.globalWavesurfer = wavesurfer.current;
 
         try {
           const response = await fetch(audioSrc, { signal });
@@ -71,6 +75,7 @@ export const useWaveform = ({
       if (wavesurfer.current) {
         wavesurfer.current.destroy();
         wavesurfer.current = null;
+        window.globalWavesurfer = null; // Clean up global reference
       }
     }
 

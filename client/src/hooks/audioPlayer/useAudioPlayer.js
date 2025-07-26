@@ -4,13 +4,13 @@ import { useAudioInteractions } from './useAudioInteractions';
 
 export const useAudioPlayer = ({ 
   currentBeat, 
-  setCurrentBeat, 
+  setCurrentBeat,
   isPlaying, 
-  setIsPlaying, 
+  setIsPlaying,
   onNext, 
   onPrev, 
   shuffle, 
-  repeat 
+  repeat
 }) => {
   // Use the specialized hooks
   const audioCore = useAudioCore();

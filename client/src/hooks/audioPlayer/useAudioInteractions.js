@@ -92,6 +92,16 @@ export const useAudioInteractions = ({
       const seconds = Math.floor(newTime % 60);
       currentTimeEl.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
     }
+    
+    // Update waveform progress during dragging
+    const wavesurferInstance = window.globalWavesurfer; // Access global wavesurfer instance
+    if (wavesurferInstance && wavesurferInstance.getDuration) {
+      try {
+        wavesurferInstance.seekTo(progressPercent);
+      } catch (error) {
+        // Silently handle waveform errors
+      }
+    }
   }, [audioCore]);
 
   const createProgressHandler = useCallback((eventType) => {
