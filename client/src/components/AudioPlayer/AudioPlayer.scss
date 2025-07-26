@@ -359,16 +359,22 @@ audio {
   }
 }
 
-// Desktop-only hover behavior for progress indicator
+// Desktop-only behavior for progress indicator
 .audio-player--desktop {
   .rhap_progress-container {
+    // Hide indicator by default on desktop
+    .rhap_progress-indicator {
+      opacity: 0 !important;
+      transition: opacity 0.3s ease, transform 0.2s ease !important;
+    }
+
     &:hover {
       .rhap_progress-filled {
         background: #FFCC44 !important;
       }
       
       .rhap_progress-indicator {
-        opacity: 1;
+        opacity: 1 !important;
         transform: scale(1.2); // Slightly enlarge indicator on hover
       }
 
@@ -377,11 +383,32 @@ audio {
       }
     }
     
-    // Improve seeking experience on desktop
+    // Show indicator and yellow progress bar while dragging on desktop
+    &.rhap_progress-dragging {
+      cursor: grabbing;
+      
+      .rhap_progress-filled {
+        background: #FFCC44 !important;
+      }
+      
+      .rhap_progress-indicator {
+        opacity: 1 !important;
+        transform: scale(1.3); // Even larger when actively seeking
+      }
+    }
+    
+    // Improve seeking experience on desktop  
     &:active {
       .rhap_progress-indicator {
-        opacity: 1;
+        opacity: 1 !important;
         transform: scale(1.3); // Even larger when actively seeking
+      }
+    }
+
+    // Ensure indicator is hidden when not hovering and not dragging
+    &:not(:hover):not(.rhap_progress-dragging):not(:active) {
+      .rhap_progress-indicator {
+        opacity: 0 !important;
       }
     }
   }
@@ -491,22 +518,7 @@ audio {
 
 }
 
-.rhap_progress-container {
-  &:hover {
-    .rhap_progress-indicator {
-      opacity: 1;
-    }
-  }
-  
-  &.rhap_progress-dragging {
-    cursor: grabbing;
-    
-    .rhap_progress-indicator {
-      opacity: 1;
-      transform: scale(1.2);
-    }
-  }
-}
+
 
 .rhap_progress-indicator {
   opacity: 0;
