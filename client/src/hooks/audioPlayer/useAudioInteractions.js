@@ -98,34 +98,37 @@ export const useAudioInteractions = ({
     return (e) => {
       if (!e.currentTarget) return;
       
-      e.currentTarget.classList.add('rhap_progress-dragging');
+      // Store the target element reference to use in move/end handlers
+      const targetElement = e.currentTarget;
       
-      const rect = e.currentTarget.getBoundingClientRect();
+      targetElement.classList.add('rhap_progress-dragging');
+      
+      const rect = targetElement.getBoundingClientRect();
       const clientX = eventType === 'mouse' ? e.clientX : e.touches[0].clientX;
       const relativePos = (clientX - rect.left) / rect.width;
       const duration = audioCore.getDuration();
       
-      updateProgressUI(e.currentTarget, relativePos);
+      updateProgressUI(targetElement, relativePos);
       
       const handleMove = (moveEvent) => {
-        if (!e.currentTarget) return;
+        if (!targetElement) return;
         
-        const newRect = e.currentTarget.getBoundingClientRect();
+        const newRect = targetElement.getBoundingClientRect();
         const newClientX = eventType === 'mouse' ? moveEvent.clientX : moveEvent.touches[0].clientX;
         const newRelativePos = Math.max(0, Math.min(1, (newClientX - newRect.left) / newRect.width));
         
-        updateProgressUI(e.currentTarget, newRelativePos);
+        updateProgressUI(targetElement, newRelativePos);
         
         moveEvent.preventDefault();
         moveEvent.stopPropagation();
       };
       
       const handleEnd = (endEvent) => {
-        if (!e.currentTarget) return;
+        if (!targetElement) return;
         
-        e.currentTarget.classList.remove('rhap_progress-dragging');
+        targetElement.classList.remove('rhap_progress-dragging');
         
-        const finalRect = e.currentTarget.getBoundingClientRect();
+        const finalRect = targetElement.getBoundingClientRect();
         const finalClientX = eventType === 'mouse' ? endEvent.clientX : endEvent.changedTouches[0].clientX;
         const finalRelativePos = Math.max(0, Math.min(1, (finalClientX - finalRect.left) / finalRect.width));
         const finalTime = finalRelativePos * duration;
@@ -199,6 +202,8 @@ export const useAudioInteractions = ({
     
     const handleProgressMouseDown = createProgressHandler('mouse');
     const handleProgressTouchStart = createProgressHandler('touch');
+
+
     
     progressContainers.forEach(container => {
       // Remove existing listeners first to avoid duplicates
