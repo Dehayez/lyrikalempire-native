@@ -166,7 +166,7 @@ export const calculateRefreshTime = (token) => {
 /**
  * Refresh access token using refresh token
  */
-export const refreshTokenFunction = async () => {
+export const refreshTokenFunction = async (retryCount = 0) => {
   try {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
@@ -175,7 +175,7 @@ export const refreshTokenFunction = async () => {
       return null;
     }
 
-    console.log('[TOKEN] Attempting to refresh access token');
+    console.log(`[TOKEN] Attempting to refresh access token (attempt ${retryCount + 1})`);
     const response = await apiRequest(
       'post', 
       '/token/refresh-token', 
@@ -190,7 +190,6 @@ export const refreshTokenFunction = async () => {
     if (!accessToken || !newRefreshToken) {
       console.error('[TOKEN] Invalid response from refresh endpoint');
       clearTokens();
-      window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
       return null;
     }
     
@@ -199,11 +198,18 @@ export const refreshTokenFunction = async () => {
     
     return accessToken;
   } catch (error) {
-    console.error('[ERROR] Failed to refresh token:', error);
-    // If refresh token is invalid, user must login again
+    console.error(`[ERROR] Failed to refresh token (attempt ${retryCount + 1}):`, error);
+    
+    // Retry up to 2 times before giving up
+    if (retryCount < 2) {
+      console.log(`[TOKEN] Retrying token refresh in ${(retryCount + 1) * 2} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 2000));
+      return refreshTokenFunction(retryCount + 1);
+    }
+    
+    // If all retries failed, clear tokens but don't immediately dispatch event
+    // Let the calling code decide whether to dispatch the event
     clearTokens();
-    // Trigger app-level handler for unauthenticated state
-    window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
     return null;
   }
 };
@@ -227,22 +233,13 @@ export const setupTokenRefresh = (accessToken) => {
         console.log('[TOKEN] Setting up next refresh cycle');
         setupTokenRefresh(newAccessToken);
       } else {
-        console.log('[TOKEN] No new access token received, stopping refresh cycle');
+        console.log('[TOKEN] Token refresh failed after retries, dispatching tokenExpired event');
+        window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
       }
     } catch (error) {
       console.error('[ERROR] Token refresh cycle error:', error);
-      // Retry once after 1 minute
-      setTimeout(async () => {
-        console.log('[TOKEN] Retrying token refresh');
-        try {
-          const retryAccessToken = await refreshTokenFunction();
-          if (retryAccessToken) {
-            setupTokenRefresh(retryAccessToken);
-          }
-        } catch (retryError) {
-          console.error('[ERROR] Token refresh retry failed:', retryError);
-        }
-      }, 60000);
+      // Final fallback - dispatch token expired event
+      window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
     }
   }, timeUntilRefresh);
 };
@@ -266,6 +263,9 @@ export const startTokenRefresh = () => {
         refreshTokenFunction().then(newToken => {
           if (newToken) {
             setupTokenRefresh(newToken);
+          } else {
+            console.log('[TOKEN] Failed to refresh expired token during initialization');
+            window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
           }
         });
       } else {
@@ -278,6 +278,9 @@ export const startTokenRefresh = () => {
       refreshTokenFunction().then(newToken => {
         if (newToken) {
           setupTokenRefresh(newToken);
+        } else {
+          console.log('[TOKEN] Failed to refresh invalid token during initialization');
+          window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
         }
       });
     }
@@ -300,6 +303,9 @@ export const startTokenRefresh = () => {
           refreshTokenFunction().then(newToken => {
             if (newToken) {
               setupTokenRefresh(newToken);
+            } else {
+              console.log('[TOKEN] Failed to refresh token during periodic check');
+              window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
             }
           });
         }

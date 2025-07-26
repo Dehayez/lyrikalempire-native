@@ -47,9 +47,18 @@ export const UserProvider = ({ children }) => {
     
     // Listen for token expiration events from userService
     const handleTokenExpired = () => {
-      setIsAuthenticated(false);
-      setUser({ id: '', email: '', username: '' });
-      navigate('/login');
+      // Add a small delay to allow any ongoing token refresh to complete
+      setTimeout(() => {
+        // Double-check if we still don't have a valid token
+        if (!userService.isAuthenticated()) {
+          console.log('[AUTH] Token expired and no valid token found, redirecting to login');
+          setIsAuthenticated(false);
+          setUser({ id: '', email: '', username: '' });
+          navigate('/login');
+        } else {
+          console.log('[AUTH] Token expired event received but valid token found, staying authenticated');
+        }
+      }, 2000); // Wait 2 seconds before redirecting
     };
     
     // Handle visibility change to check token when tab becomes active
@@ -58,21 +67,23 @@ export const UserProvider = ({ children }) => {
         // When tab becomes visible, check if we need to refresh token
         const accessToken = localStorage.getItem('accessToken');
         if (accessToken) {
-                     try {
-             const decodedToken = jwtDecode(accessToken);
-             const currentTime = Math.floor(Date.now() / 1000);
-             const timeUntilExpiry = decodedToken.exp - currentTime;
-             
-             // If token expires in less than 15 minutes, refresh it
-             if (timeUntilExpiry < 900) { // 15 minutes
-               console.log('[TOKEN] Tab became active, refreshing token');
-               userService.refreshTokenFunction().then(newToken => {
-                 if (newToken) {
-                   userService.setupTokenRefresh(newToken);
-                 }
-               });
-             }
-           } catch (error) {
+          try {
+            const decodedToken = jwtDecode(accessToken);
+            const currentTime = Math.floor(Date.now() / 1000);
+            const timeUntilExpiry = decodedToken.exp - currentTime;
+            
+            // If token expires in less than 15 minutes, refresh it
+            if (timeUntilExpiry < 900) { // 15 minutes
+              console.log('[TOKEN] Tab became active, refreshing token');
+              userService.refreshTokenFunction().then(newToken => {
+                if (newToken) {
+                  userService.setupTokenRefresh(newToken);
+                } else {
+                  console.log('[TOKEN] Token refresh failed on visibility change');
+                }
+              });
+            }
+          } catch (error) {
             console.error('[ERROR] Error checking token on visibility change:', error);
           }
         }
