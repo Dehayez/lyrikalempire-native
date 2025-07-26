@@ -185,10 +185,13 @@ const AudioPlayer = ({
     
     // Set position state if supported (shows progress in notifications)
     if (navigator.mediaSession.setPositionState) {
+      const duration = getDuration() || 0;
+      const position = Math.min(getCurrentTime() || 0, duration); // Clamp position to duration
+      
       navigator.mediaSession.setPositionState({
-        duration: getDuration() || 0, // Now uses database duration
+        duration: duration,
         playbackRate: 1.0,
-        position: getCurrentTime() || 0
+        position: position
       });
     }
   }, [currentBeat, artistName, getDuration, getCurrentTime]);
@@ -198,10 +201,13 @@ const AudioPlayer = ({
     if (!isPlaying || !('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
     
     const updateInterval = setInterval(() => {
+      const duration = getDuration() || 0;
+      const position = Math.min(getCurrentTime() || 0, duration); // Clamp position to duration
+      
       navigator.mediaSession.setPositionState({
-        duration: getDuration() || 0,
+        duration: duration,
         playbackRate: 1.0,
-        position: getCurrentTime() || 0
+        position: position
       });
     }, 1000);
     

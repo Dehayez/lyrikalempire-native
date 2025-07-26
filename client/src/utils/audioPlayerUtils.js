@@ -118,11 +118,14 @@ export const syncAllPlayers = ({
   // Use database duration instead of audio element duration for accuracy
   const duration = currentBeat?.duration || mainAudio.duration || 0;
   
+  // Clamp currentTime to prevent progress from exceeding 100%
+  const clampedCurrentTime = Math.min(currentTime, duration);
+  
   // Update state - use requestAnimationFrame to avoid state update loops in Safari
   requestAnimationFrame(() => {
-    setCurrentTimeState(currentTime);
+    setCurrentTimeState(clampedCurrentTime);
     setDuration(duration);
-    setProgress(duration ? currentTime / duration : 0);
+    setProgress(duration ? clampedCurrentTime / duration : 0);
   });
 
   // Update waveform - only if we have a valid wavesurfer instance and duration
@@ -130,7 +133,7 @@ export const syncAllPlayers = ({
   const isDragging = document.querySelector('.rhap_progress-dragging');
   if (wavesurfer.current && duration && wavesurfer.current.getDuration && !isDragging) {
     try {
-      wavesurfer.current.seekTo(currentTime / duration);
+      wavesurfer.current.seekTo(clampedCurrentTime / duration);
     } catch (error) {
       // Silently handle waveform errors
     }
@@ -159,7 +162,7 @@ export const syncAllPlayers = ({
         const durationEl = container.querySelector('.rhap_total-time');
         
         if (progressBar) {
-          const progressPercent = duration ? (currentTime / duration) * 100 : 0;
+          const progressPercent = duration ? Math.min((clampedCurrentTime / duration) * 100, 100) : 0;
           progressBar.style.width = `${progressPercent}%`;
           progressBar.style.transition = 'none';
           
@@ -170,7 +173,7 @@ export const syncAllPlayers = ({
         }
         
         if (currentTimeEl) {
-          currentTimeEl.textContent = formatTime(currentTime);
+          currentTimeEl.textContent = formatTime(clampedCurrentTime);
         }
         
         if (durationEl) {
