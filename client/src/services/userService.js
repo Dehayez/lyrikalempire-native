@@ -150,13 +150,16 @@ export const calculateRefreshTime = (token) => {
     
     const timeUntilRefresh = Math.max(
       (tokenIssuedAt + refreshPoint - currentTime) * 1000, 
-      0
+      60000 // Minimum 1 minute
     );
+    
+    const timeUntilRefreshMinutes = Math.round(timeUntilRefresh / 60000);
+    console.log(`[TOKEN] Token will refresh in ${timeUntilRefreshMinutes} minutes`);
     
     return timeUntilRefresh;
   } catch (error) {
     console.error('[ERROR] Token decode error:', error);
-    return 0; // Refresh immediately if we can't decode the token
+    return 60000; // Refresh in 1 minute if we can't decode the token
   }
 };
 
@@ -167,10 +170,12 @@ export const refreshTokenFunction = async () => {
   try {
     const refreshToken = localStorage.getItem('refreshToken');
     if (!refreshToken) {
+      console.log('[TOKEN] No refresh token found, clearing tokens');
       clearTokens(); // Clean up any lingering data
       return null;
     }
 
+    console.log('[TOKEN] Attempting to refresh access token');
     const response = await apiRequest(
       'post', 
       '/token/refresh-token', 
@@ -181,7 +186,16 @@ export const refreshTokenFunction = async () => {
     );
     
     const { accessToken, refreshToken: newRefreshToken } = response;
+    
+    if (!accessToken || !newRefreshToken) {
+      console.error('[TOKEN] Invalid response from refresh endpoint');
+      clearTokens();
+      window.dispatchEvent(new CustomEvent('auth:tokenExpired'));
+      return null;
+    }
+    
     storeTokens(accessToken, newRefreshToken);
+    console.log('[TOKEN] Successfully refreshed access token');
     
     return accessToken;
   } catch (error) {
@@ -207,12 +221,28 @@ export const setupTokenRefresh = (accessToken) => {
   
   refreshTimeoutId = setTimeout(async () => {
     try {
+      console.log('[TOKEN] Refresh timer triggered');
       const newAccessToken = await refreshTokenFunction();
       if (newAccessToken) {
+        console.log('[TOKEN] Setting up next refresh cycle');
         setupTokenRefresh(newAccessToken);
+      } else {
+        console.log('[TOKEN] No new access token received, stopping refresh cycle');
       }
     } catch (error) {
       console.error('[ERROR] Token refresh cycle error:', error);
+      // Retry once after 1 minute
+      setTimeout(async () => {
+        console.log('[TOKEN] Retrying token refresh');
+        try {
+          const retryAccessToken = await refreshTokenFunction();
+          if (retryAccessToken) {
+            setupTokenRefresh(retryAccessToken);
+          }
+        } catch (retryError) {
+          console.error('[ERROR] Token refresh retry failed:', retryError);
+        }
+      }, 60000);
     }
   }, timeUntilRefresh);
 };
@@ -228,8 +258,11 @@ export const startTokenRefresh = () => {
       const decodedToken = jwtDecode(accessToken);
       const currentTime = Math.floor(Date.now() / 1000);
       
+      console.log(`[TOKEN] Token expires in ${Math.round((decodedToken.exp - currentTime) / 60)} minutes`);
+      
       // If token is expired, refresh immediately
       if (decodedToken.exp <= currentTime) {
+        console.log('[TOKEN] Token is expired, refreshing immediately');
         refreshTokenFunction().then(newToken => {
           if (newToken) {
             setupTokenRefresh(newToken);
@@ -237,6 +270,7 @@ export const startTokenRefresh = () => {
         });
       } else {
         // Otherwise set up the normal refresh cycle
+        console.log('[TOKEN] Setting up token refresh cycle');
         setupTokenRefresh(accessToken);
       }
     } catch (error) {
@@ -247,7 +281,33 @@ export const startTokenRefresh = () => {
         }
       });
     }
+  } else {
+    console.log('[TOKEN] No access token found during initialization');
   }
+  
+  // Set up periodic token validation (every 5 minutes)
+  setInterval(() => {
+    const currentAccessToken = localStorage.getItem('accessToken');
+    if (currentAccessToken) {
+      try {
+        const decodedToken = jwtDecode(currentAccessToken);
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = decodedToken.exp - currentTime;
+        
+        // If token expires in less than 10 minutes and we haven't refreshed recently
+        if (timeUntilExpiry < 600) { // 10 minutes
+          console.log('[TOKEN] Token expiring soon, triggering refresh');
+          refreshTokenFunction().then(newToken => {
+            if (newToken) {
+              setupTokenRefresh(newToken);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('[ERROR] Error in periodic token validation:', error);
+      }
+    }
+  }, 300000); // Check every 5 minutes
 };
 
 /**

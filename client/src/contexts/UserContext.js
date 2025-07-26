@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import userService from '../services/userService';
 
 const UserContext = createContext();
@@ -51,10 +52,39 @@ export const UserProvider = ({ children }) => {
       navigate('/login');
     };
     
+    // Handle visibility change to check token when tab becomes active
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When tab becomes visible, check if we need to refresh token
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken) {
+                     try {
+             const decodedToken = jwtDecode(accessToken);
+             const currentTime = Math.floor(Date.now() / 1000);
+             const timeUntilExpiry = decodedToken.exp - currentTime;
+             
+             // If token expires in less than 15 minutes, refresh it
+             if (timeUntilExpiry < 900) { // 15 minutes
+               console.log('[TOKEN] Tab became active, refreshing token');
+               userService.refreshTokenFunction().then(newToken => {
+                 if (newToken) {
+                   userService.setupTokenRefresh(newToken);
+                 }
+               });
+             }
+           } catch (error) {
+            console.error('[ERROR] Error checking token on visibility change:', error);
+          }
+        }
+      }
+    };
+    
     window.addEventListener('auth:tokenExpired', handleTokenExpired);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
       window.removeEventListener('auth:tokenExpired', handleTokenExpired);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [navigate]);
 
