@@ -101,7 +101,8 @@ export const syncAllPlayers = ({
   shouldShowFullPagePlayer,
   isFullPageVisible,
   fullPageProgressRef,
-  forceUpdate = false
+  forceUpdate = false,
+  currentBeat
 }) => {
   const mainAudio = playerRef.current?.audio.current;
   if (!mainAudio) return;
@@ -114,7 +115,8 @@ export const syncAllPlayers = ({
   lastSyncTime = now;
 
   const currentTime = mainAudio.currentTime || 0;
-  const duration = mainAudio.duration || 0;
+  // Use database duration instead of audio element duration for accuracy
+  const duration = currentBeat?.duration || mainAudio.duration || 0;
   
   // Update state - use requestAnimationFrame to avoid state update loops in Safari
   requestAnimationFrame(() => {

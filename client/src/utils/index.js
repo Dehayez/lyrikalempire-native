@@ -2,7 +2,7 @@ import apiConfig from './apiConfig';
 export { apiConfig };
 export { apiRequest } from './apiUtils';
 export { eventBus } from './EventBus';
-export { formatDuration } from './formatDuration';
+// formatDuration removed - using formatTime for consistency with audio player
 export { getAuthHeaders } from './authUtils';
 export { isMobileOrTablet } from './isMobileOrTablet';
 export { isAuthPage } from './isAuthPage';

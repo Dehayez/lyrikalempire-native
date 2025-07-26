@@ -8,7 +8,7 @@ const isSafari = () => {
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-export const useAudioCore = () => {
+export const useAudioCore = (currentBeat) => {
   const playerRef = useRef();
   const audioContextRef = useRef(null);
   const lastUserInteractionRef = useRef(0);
@@ -159,9 +159,9 @@ export const useAudioCore = () => {
   }, []);
 
   const getDuration = useCallback(() => {
-    const audio = playerRef.current?.audio?.current;
-    return audio?.duration || 0;
-  }, []);
+    // Use database duration instead of audio element duration to avoid AAC conversion discrepancies
+    return currentBeat?.duration || 0;
+  }, [currentBeat]);
 
   const getReadyState = useCallback(() => {
     const audio = playerRef.current?.audio?.current;

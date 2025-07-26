@@ -83,7 +83,8 @@ export const useAudioSync = ({
       shouldShowFullPagePlayer,
       isFullPageVisible,
       fullPageProgressRef,
-      forceUpdate
+      forceUpdate,
+      currentBeat
     });
   }, [
     audioCore.playerRef,
@@ -97,7 +98,8 @@ export const useAudioSync = ({
     desktopPlayerRef,
     shouldShowFullPagePlayer,
     isFullPageVisible,
-    fullPageProgressRef
+    fullPageProgressRef,
+    currentBeat
   ]);
 
   // Handle seeking from display players

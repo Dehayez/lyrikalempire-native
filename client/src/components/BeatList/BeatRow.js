@@ -6,7 +6,7 @@ import classNames from 'classnames';
 
 import { useBpmHandlers } from '../../hooks';
 import { addBeatsToPlaylist, getBeatsByPlaylistId } from '../../services';
-import { isMobileOrTablet, formatDuration, replaceAudioWithToast } from '../../utils';
+import { isMobileOrTablet, formatTime, replaceAudioWithToast } from '../../utils';
 import { usePlaylist, useBeat, useData, useUser, useHeaderWidths } from '../../contexts';
 
 import { IconButton } from '../Buttons';
@@ -576,7 +576,7 @@ const BeatRow = ({
         <td className='beat-row__data beat-row__duration'>
           <div className="beat-row__duration-content">
             <span className="beat-row__duration-text">
-              {formatDuration(beat.duration)}
+              {formatTime(beat.duration)}
             </span>
           </div>
         </td>

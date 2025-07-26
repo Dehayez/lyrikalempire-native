@@ -186,7 +186,7 @@ const AudioPlayer = ({
     // Set position state if supported (shows progress in notifications)
     if (navigator.mediaSession.setPositionState) {
       navigator.mediaSession.setPositionState({
-        duration: getDuration() || 0,
+        duration: getDuration() || 0, // Now uses database duration
         playbackRate: 1.0,
         position: getCurrentTime() || 0
       });

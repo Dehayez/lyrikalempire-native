@@ -86,7 +86,7 @@ export const useAudioInteractions = ({
     }
     
     if (currentTimeEl) {
-      const duration = audioCore.getDuration();
+      const duration = audioCore.getDuration(); // Now uses database duration
       const newTime = progressPercent * duration;
       const minutes = Math.floor(newTime / 60);
       const seconds = Math.floor(newTime % 60);
@@ -117,9 +117,9 @@ export const useAudioInteractions = ({
       const rect = targetElement.getBoundingClientRect();
       const clientX = eventType === 'mouse' ? e.clientX : e.touches[0].clientX;
       const relativePos = (clientX - rect.left) / rect.width;
-      const duration = audioCore.getDuration();
-      
-      updateProgressUI(targetElement, relativePos);
+              const duration = audioCore.getDuration(); // Now uses database duration
+        
+        updateProgressUI(targetElement, relativePos);
       
       const handleMove = (moveEvent) => {
         if (!targetElement) return;

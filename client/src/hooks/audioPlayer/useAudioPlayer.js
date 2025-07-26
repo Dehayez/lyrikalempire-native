@@ -13,7 +13,7 @@ export const useAudioPlayer = ({
   repeat
 }) => {
   // Use the specialized hooks
-  const audioCore = useAudioCore();
+  const audioCore = useAudioCore(currentBeat);
   const audioInteractions = useAudioInteractions({
     onNext,
     onPrev,
