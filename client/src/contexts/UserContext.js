@@ -14,18 +14,28 @@ export const UserProvider = ({ children }) => {
     const checkAuth = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('token');
-
-        if (token) {
-          const userDetails = await userService.getUserDetails(token);
+        // Clean up any legacy single token storage
+        const legacyToken = localStorage.getItem('token');
+        if (legacyToken) {
+          localStorage.removeItem('token');
+        }
+        
+        // Initialize token refresh mechanism on app startup
+        userService.startTokenRefresh();
+        
+        // Use userService method that checks for accessToken
+        if (userService.isAuthenticated()) {
+          const userDetails = await userService.getUserDetails();
           setUser({ id: userDetails.id, email: userDetails.email, username: userDetails.username });
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
         }
       } catch (error) {
+        console.error('Auth check failed:', error);
         setIsAuthenticated(false);
-        localStorage.removeItem('token');
+        // Clear all tokens on auth failure
+        userService.clearTokens();
         navigate('/login');
       } finally {
         setIsLoading(false);
@@ -33,13 +43,26 @@ export const UserProvider = ({ children }) => {
     };
 
     checkAuth();
+    
+    // Listen for token expiration events from userService
+    const handleTokenExpired = () => {
+      setIsAuthenticated(false);
+      setUser({ id: '', email: '', username: '' });
+      navigate('/login');
+    };
+    
+    window.addEventListener('auth:tokenExpired', handleTokenExpired);
+    
+    return () => {
+      window.removeEventListener('auth:tokenExpired', handleTokenExpired);
+    };
   }, [navigate]);
 
   const login = async (identifier, password) => {
     setIsLoading(true);
     try {
-      const { token, email, username, id } = await userService.login({ email: identifier, password });
-      localStorage.setItem('token', token);
+      const { accessToken, refreshToken, email, username, id } = await userService.login({ email: identifier, password });
+      // userService.login already stores tokens and sets up refresh - no need to store manually
       setUser({ id, email, username });
       setIsAuthenticated(true);
       navigate('/');
@@ -51,11 +74,18 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser({ id: '', email: '', username: '' });
-    setIsAuthenticated(false);
-    navigate('/login');
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await userService.logout(); // This clears tokens and notifies server
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser({ id: '', email: '', username: '' });
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      navigate('/login');
+    }
   };
 
   return (

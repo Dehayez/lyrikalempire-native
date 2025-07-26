@@ -32,7 +32,7 @@ function App() {
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
   const { isSafari } = useOs();
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   const [viewState, setViewState] = useState(() => getInitialState('lastView', 'queue'));
   const [currentBeat, setCurrentBeat] = useState(() => getInitialState('currentBeat', null));
   const [selectedBeat, setSelectedBeat] = useState(() => getInitialState('selectedBeat', null));
@@ -51,28 +51,7 @@ function App() {
     isCurrentSessionMaster: false
   });
 
-  useEffect(() => {
-    // Initialize token refresh mechanism
-    userService.startTokenRefresh();
-    
-    // Set initial authentication state
-    setIsAuthenticated(userService.isAuthenticated());
-    
-    // Listen for authentication events
-    const handleTokenExpired = () => {
-      setIsAuthenticated(false);
-      // You might want to redirect to login page or show a modal
-      console.log('Authentication expired - please login again');
-    };
-    
-    // Add event listener for token expiration
-    window.addEventListener('auth:tokenExpired', handleTokenExpired);
-    
-    // Cleanup function
-    return () => {
-      window.removeEventListener('auth:tokenExpired', handleTokenExpired);
-    };
-  }, []);
+
 
   // Initialize cache status for beats
   useEffect(() => {
