@@ -353,38 +353,37 @@ audio {
   touch-action: none;
   cursor: pointer; // Show pointer cursor for seeking
 
-  &:hover {
-    .rhap_progress-filled {
-      background: #FFCC44 !important;
-    }
-    
-    .rhap_progress-indicator {
-      opacity: 1;
-      transform: scale(1.2); // Slightly enlarge indicator on hover
-    }
-  }
-
   .waveform {
     opacity: 0;
     transition: opacity .3s ease;
   }
-
-  &:hover .waveform {
-    opacity: .4;
-  }
-  
-  // Improve seeking experience
-  &:active {
-    .rhap_progress-indicator {
-      opacity: 1;
-      transform: scale(1.3); // Even larger when actively seeking
-    }
-  }
 }
 
-.rhap_progress-container:hover {
-  .rhap_progress-indicator {
-    opacity: 1;
+// Desktop-only hover behavior for progress indicator
+.audio-player--desktop {
+  .rhap_progress-container {
+    &:hover {
+      .rhap_progress-filled {
+        background: #FFCC44 !important;
+      }
+      
+      .rhap_progress-indicator {
+        opacity: 1;
+        transform: scale(1.2); // Slightly enlarge indicator on hover
+      }
+
+      .waveform {
+        opacity: .4;
+      }
+    }
+    
+    // Improve seeking experience on desktop
+    &:active {
+      .rhap_progress-indicator {
+        opacity: 1;
+        transform: scale(1.3); // Even larger when actively seeking
+      }
+    }
   }
 }
 
