@@ -4,6 +4,25 @@
   align-items: center;
   width: 100%;
 
+  &--mobile-disabled {
+    .volume-slider__icon {
+      color: #FFCC44 !important;
+      cursor: default;
+      
+      &:hover {
+        color: #FFCC44 !important;
+      }
+    }
+    
+    .volume-slider__track {
+      pointer-events: none;
+      
+      .volume-slider__progress {
+        background: #FFCC44 !important;
+      }
+    }
+  }
+
   &:hover {
     .volume-slider__track {
       .volume-slider__progress {
@@ -38,6 +57,15 @@
     height: 5px;
     background-color: rgba(221, 221, 221, 0.5);
     border-radius: 2px;
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      
+      .volume-slider__click-capture {
+        cursor: not-allowed;
+      }
+    }
 
     .volume-slider__click-capture {
       position: absolute;

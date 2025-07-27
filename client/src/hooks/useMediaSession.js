@@ -1,10 +1,95 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export const useMediaSession = ({
   handlePlayPause,
   handlePrevClick,
-  onNext
+  onNext,
+  currentBeat,
+  isPlaying,
+  artistName
 }) => {
+  const wakeLockRef = useRef(null);
+
+  // Set media metadata when currentBeat or artistName changes
+  useEffect(() => {
+    if ('mediaSession' in navigator && currentBeat) {
+      // Use artistName from user_id lookup, fallback to currentBeat.artist
+      const artist = artistName && artistName !== '\u00A0' ? artistName : (currentBeat.artist || 'Unknown Artist');
+      
+      // Use artworkUrl (like in audioPlayerUtils) or fallback to placeholder
+      const artworkUrl = currentBeat.artworkUrl || currentBeat.artwork || currentBeat.image || 'https://www.lyrikalempire.com/placeholder.png';
+      
+      const metadata = {
+        title: currentBeat.title || 'Unknown Title',
+        artist: artist,
+        album: currentBeat.album || 'Lyrikal Empire',
+        artwork: [
+          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
+          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+          { src: artworkUrl, sizes: '512x512', type: 'image/png' }
+        ]
+      };
+
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata(metadata);
+        console.log('Media metadata updated:', { 
+          title: metadata.title, 
+          artist: metadata.artist, 
+          artwork: artworkUrl,
+          source: 'useMediaSession'
+        });
+      } catch (error) {
+        console.error('Failed to set media metadata:', error);
+      }
+    }
+  }, [currentBeat, artistName]);
+
+  // Set playback state when playing status changes
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
+
+  // Wake Lock API for preventing sleep during playback
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && isPlaying) {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        }
+      } catch (err) {
+        // Wake lock request failed - this is common and not critical
+      }
+    };
+
+    const releaseWakeLock = async () => {
+      try {
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+        }
+      } catch (err) {
+        // Wake lock release failed - not critical
+      }
+    };
+
+    if (isPlaying) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      releaseWakeLock();
+    };
+  }, [isPlaying]);
+
+  // Set up media session handlers
   useEffect(() => {
     if ('mediaSession' in navigator) {
       // Set up media session action handlers for playback controls
@@ -15,36 +100,61 @@ export const useMediaSession = ({
       
       // Add additional handlers for better control in background/lock screen
       try {
-        // Stop handler (optional)
+        // Stop handler
         navigator.mediaSession.setActionHandler('stop', () => handlePlayPause(false));
         
-        // Seek handlers (optional)
+        // Seek handlers with better audio element targeting
         navigator.mediaSession.setActionHandler('seekbackward', (details) => {
           const skipTime = details.seekOffset || 10;
-          const audio = document.querySelector('audio');
-          if (audio) {
+          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+          if (audio && !isNaN(audio.currentTime)) {
             audio.currentTime = Math.max(0, audio.currentTime - skipTime);
           }
         });
         
         navigator.mediaSession.setActionHandler('seekforward', (details) => {
           const skipTime = details.seekOffset || 10;
-          const audio = document.querySelector('audio');
-          if (audio) {
+          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+          if (audio && !isNaN(audio.currentTime) && !isNaN(audio.duration)) {
             audio.currentTime = Math.min(audio.duration, audio.currentTime + skipTime);
           }
         });
         
-        // Seek to position handler (optional)
+        // Seek to position handler
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-          const audio = document.querySelector('audio');
-          if (audio && details.seekTime !== undefined) {
+          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+          if (audio && details.seekTime !== undefined && !isNaN(details.seekTime)) {
             audio.currentTime = details.seekTime;
           }
         });
+
+        // Position state for better lock screen integration
+        if (navigator.mediaSession.setPositionState) {
+          const updatePositionState = () => {
+            const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+            if (audio && !isNaN(audio.duration) && !isNaN(audio.currentTime)) {
+              navigator.mediaSession.setPositionState({
+                duration: audio.duration,
+                playbackRate: audio.playbackRate,
+                position: audio.currentTime
+              });
+            }
+          };
+
+          // Update position state periodically during playback
+          const positionInterval = setInterval(() => {
+            if (isPlaying) {
+              updatePositionState();
+            }
+          }, 1000);
+
+          // Store interval for cleanup
+          return () => {
+            clearInterval(positionInterval);
+          };
+        }
       } catch (error) {
-        // Some browsers might not support all handlers
-        console.log('MediaSession: Some actions not supported', error);
+        // Some browsers might not support all handlers - silent fail
       }
     }
 
@@ -61,5 +171,5 @@ export const useMediaSession = ({
         navigator.mediaSession.setActionHandler('seekto', null);
       }
     };
-  }, [handlePlayPause, handlePrevClick, onNext]);
+  }, [handlePlayPause, handlePrevClick, onNext, isPlaying]);
 }; 

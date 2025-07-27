@@ -14,6 +14,9 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
   const [isMuted, setIsMuted] = useState(() => JSON.parse(localStorage.getItem('isMuted')) || false);
   const [prevVolume, setPrevVolume] = useState(() => parseFloat(localStorage.getItem('prevVolume')) || volume);
   const initialSetupDone = useRef(false);
+  
+  // Check if device is mobile
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Update refs when props change
   useEffect(() => {
@@ -22,6 +25,9 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
   }, [volume, handleVolumeChange]);
 
   const calculateVolume = useCallback((event) => {
+    // Prevent volume changes on mobile devices
+    if (isMobile) return;
+    
     const rect = sliderRef.current.getBoundingClientRect();
     const newVolume = clamp((event.clientX - rect.left) / rect.width, 0, 1);
     
@@ -32,9 +38,12 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
       localStorage.setItem('isMuted', JSON.stringify(newVolume === 0));
       localStorage.setItem('prevVolume', newVolume.toString());
     }
-  }, []);
+  }, [isMobile]);
 
   const toggleMute = useCallback(() => {
+    // Prevent muting on mobile devices
+    if (isMobile) return;
+    
     if (isMuted) {
       const volumeToRestore = prevVolume === 0 ? 1 : prevVolume;
       handleVolumeChangeRef.current({ target: { value: volumeToRestore } });
@@ -47,7 +56,7 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
       localStorage.setItem('isMuted', JSON.stringify(true));
       localStorage.setItem('prevVolume', volumeRef.current.toString());
     }
-  }, [isMuted, prevVolume]);
+  }, [isMuted, prevVolume, isMobile]);
 
   const handleMouseMove = useCallback((event) => {
     if (isDragging) calculateVolume(event);
@@ -91,22 +100,22 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
     : <IoVolumeMuteSharp size={24} />;
 
   return (
-    <div className='volume-slider'>
+    <div className={`volume-slider ${isMobile ? 'volume-slider--mobile-disabled' : ''}`}>
       <IconButton
         className='volume-slider__icon'
         onClick={toggleMute}
-        text={isMuted ? 'Unmute' : 'Mute'}
+        text={isMobile ? 'Volume fixed at maximum' : (isMuted ? 'Unmute' : 'Mute')}
         tooltipPosition="top"
-        ariaLabel={isMuted ? 'Unmute' : 'Mute'}
+        ariaLabel={isMobile ? 'Volume fixed at maximum' : (isMuted ? 'Unmute' : 'Mute')}
       >
         {volumeIcon}
       </IconButton>
       <div
-        className={`volume-slider__track ${isHovering || isDragging ? 'hover' : ''}`}
+        className={`volume-slider__track ${isHovering || isDragging ? 'hover' : ''} ${isMobile ? 'disabled' : ''}`}
         ref={sliderRef}
-        onMouseDown={() => setIsDragging(true)}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
+        onMouseDown={isMobile ? undefined : () => setIsDragging(true)}
+        onMouseEnter={isMobile ? undefined : () => setIsHovering(true)}
+        onMouseLeave={isMobile ? undefined : () => setIsHovering(false)}
       >
         <div
           className='volume-slider__progress'

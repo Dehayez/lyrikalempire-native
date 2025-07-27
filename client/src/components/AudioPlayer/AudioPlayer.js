@@ -165,54 +165,9 @@ const AudioPlayer = ({
     markBeatAsCached
   });
 
-  // Update MediaSession metadata when currentBeat changes
-  useEffect(() => {
-    if (!currentBeat || !('mediaSession' in navigator)) return;
-    
-    // Set metadata for MediaSession API (shows in lock screen, notifications)
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentBeat.title || 'Unknown Title',
-      artist: currentBeat.artist || artistName || 'Unknown Artist',
-      album: currentBeat.album || 'Lyrikal Empire',
-      artwork: [
-        {
-          src: currentBeat.artwork || '/placeholder.png',
-          sizes: '512x512',
-          type: 'image/png'
-        }
-      ]
-    });
-    
-    // Set position state if supported (shows progress in notifications)
-    if (navigator.mediaSession.setPositionState) {
-      const duration = getDuration() || 0;
-      const position = Math.min(getCurrentTime() || 0, duration); // Clamp position to duration
-      
-      navigator.mediaSession.setPositionState({
-        duration: duration,
-        playbackRate: 1.0,
-        position: position
-      });
-    }
-  }, [currentBeat, artistName, getDuration, getCurrentTime]);
+  // MediaSession metadata is now handled by useMediaSession hook
 
-  // Update position state periodically while playing
-  useEffect(() => {
-    if (!isPlaying || !('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-    
-    const updateInterval = setInterval(() => {
-      const duration = getDuration() || 0;
-      const position = Math.min(getCurrentTime() || 0, duration); // Clamp position to duration
-      
-      navigator.mediaSession.setPositionState({
-        duration: duration,
-        playbackRate: 1.0,
-        position: position
-      });
-    }, 1000);
-    
-    return () => clearInterval(updateInterval);
-  }, [isPlaying, getDuration, getCurrentTime]);
+  // Position state updates are now handled by useMediaSession hook
 
   // Reset hasLoaded when audio source changes
   useEffect(() => {
@@ -320,7 +275,10 @@ const AudioPlayer = ({
   useMediaSession({
     handlePlayPause,
     handlePrevClick,
-    onNext
+    onNext,
+    currentBeat,
+    isPlaying,
+    artistName
   });
 
   // Pass session props up to App level for PlayingIndicator

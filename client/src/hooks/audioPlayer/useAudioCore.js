@@ -262,26 +262,119 @@ export const useAudioCore = (currentBeat) => {
     const audio = playerRef.current?.audio?.current;
     if (!audio) return;
 
-    // Set attributes for mobile playback
+    // Set attributes for mobile playback and PWA background audio
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
     audio.setAttribute('preload', 'auto');
-    audio.setAttribute('controls', '');
+    audio.setAttribute('controls', 'true');
     
-    if (audio.hasOwnProperty('webkitAudioDecodedByteCount')) {
+    // iOS Safari specific attributes for background playback
+    if (audio.hasOwnProperty('webkitAudioDecodedByteCount') || /iPad|iPhone|iPod/.test(navigator.userAgent)) {
       audio.setAttribute('x-webkit-airplay', 'allow');
+      // Allow background audio on iOS
+      audio.setAttribute('autoplay', 'false');
+      audio.setAttribute('muted', 'false');
+      
+      // Disable automatic audio interruption (only with user gesture)
+      const setupSinkId = () => {
+        try {
+          if (audio.setSinkId) {
+            audio.setSinkId('').catch(() => {
+              // setSinkId failed, that's okay
+            });
+          }
+        } catch (e) {
+          // setSinkId not supported, that's okay
+        }
+      };
+      
+      // Set up sink ID on first user interaction
+      const handleUserGesture = () => {
+        setupSinkId();
+        document.removeEventListener('touchstart', handleUserGesture);
+        document.removeEventListener('click', handleUserGesture);
+        document.removeEventListener('play', handleUserGesture);
+      };
+      
+      document.addEventListener('touchstart', handleUserGesture, { once: true });
+      document.addEventListener('click', handleUserGesture, { once: true });
+      audio.addEventListener('play', handleUserGesture, { once: true });
     }
     
     if (isMobile()) {
       audio.setAttribute('muted', 'false');
       audio.removeAttribute('autoplay');
+      
+      // Prevent audio interruption on iOS
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        // Set audio session for background playback
+        const setAudioSession = () => {
+          try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(audio);
+            source.connect(audioContext.destination);
+            
+            // Resume audio context if suspended (required for iOS)
+            if (audioContext.state === 'suspended') {
+              audioContext.resume();
+            }
+          } catch (e) {
+            // Audio context setup failed, fallback to regular audio
+          }
+        };
+        
+        // Set up audio session on first user interaction
+        const setupAudioSession = () => {
+          setAudioSession();
+          document.removeEventListener('touchstart', setupAudioSession);
+          document.removeEventListener('click', setupAudioSession);
+        };
+        
+        document.addEventListener('touchstart', setupAudioSession, { once: true });
+        document.addEventListener('click', setupAudioSession, { once: true });
+      }
     }
 
-    // Set up media session handlers
+    // Enhanced media session handlers for background playback
     if ('mediaSession' in navigator) {
-      navigator.mediaSession.setActionHandler('play', () => play());
-      navigator.mediaSession.setActionHandler('pause', () => pause());
+      navigator.mediaSession.setActionHandler('play', () => {
+        play().catch(console.warn);
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        pause();
+      });
+      
+      // Set initial playback state
+      navigator.mediaSession.playbackState = 'none';
     }
+
+    // Listen for audio interruptions (phone calls, etc.)
+    const handleAudioInterruption = () => {
+      if (!audio.paused) {
+        // Audio was interrupted, mark for resumption
+        audio.dataset.wasPlayingBeforeInterruption = 'true';
+      }
+    };
+
+    const handleAudioResume = () => {
+      if (audio.dataset.wasPlayingBeforeInterruption === 'true') {
+        // Resume playback after interruption
+        audio.play().catch(console.warn);
+        delete audio.dataset.wasPlayingBeforeInterruption;
+      }
+    };
+
+    // Add interruption listeners for iOS
+    audio.addEventListener('pause', handleAudioInterruption);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        handleAudioResume();
+      }
+    });
+
+    return () => {
+      audio.removeEventListener('pause', handleAudioInterruption);
+    };
   }, [play, pause]);
 
   return {

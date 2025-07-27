@@ -10,7 +10,11 @@ export const useAudioInteractions = ({
   audioCore 
 }) => {
   // User interaction state
-  const [volume, setVolume] = useState(() => parseFloat(localStorage.getItem('volume')) || 1.0);
+  const [volume, setVolume] = useState(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Always use max volume on mobile, otherwise use stored or default to max
+    return isMobile ? 1.0 : (parseFloat(localStorage.getItem('volume')) || 1.0);
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [dragPosition, setDragPosition] = useState(0);
@@ -19,9 +23,22 @@ export const useAudioInteractions = ({
   // Sync with localStorage
   useLocalStorageSync({ shuffle, repeat, currentBeat, volume, currentTime });
 
+  // Ensure max volume on mobile devices
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile && audioCore) {
+      audioCore.setVolume(1.0);
+      setVolume(1.0);
+      localStorage.setItem('volume', '1.0');
+    }
+  }, [audioCore]);
+
   // Volume control
   const handleVolumeChange = useCallback((e) => {
-    const newVolume = parseFloat(e.target.value);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // On mobile, always keep volume at maximum
+    const newVolume = isMobile ? 1.0 : parseFloat(e.target.value);
     
     setVolume(newVolume);
     localStorage.setItem('volume', newVolume.toString());
