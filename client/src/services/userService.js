@@ -320,6 +320,7 @@ export default {
   resetPassword,
   verifyToken,
   refreshToken: refreshTokenFunction,
+  refreshTokenFunction,
   startTokenRefresh,
   isAuthenticated,
 };

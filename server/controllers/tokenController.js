@@ -93,7 +93,7 @@ const refreshToken = async (req, res) => {
     // Only generate new refresh token if current one is close to expiry
     const now = Math.floor(Date.now() / 1000);
     const refreshTokenExpiresIn = decoded.exp;
-    const refreshThreshold = 3 * 24 * 60 * 60; // 3 days in seconds
+    const refreshThreshold = 3 * 24 * 60 * 60; // 3 days - when to renew refresh token
     
     let refreshToken = token;
     

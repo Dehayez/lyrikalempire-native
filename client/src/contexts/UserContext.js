@@ -23,20 +23,29 @@ export const UserProvider = ({ children }) => {
           localStorage.removeItem('token');
         }
         
-        // Initialize token refresh mechanism on app startup
-        userService.startTokenRefresh();
-        
-        // Check if we have a token that might need refreshing
+        // Check if we have tokens and handle authentication properly
         const accessToken = localStorage.getItem('accessToken');
+        const refreshToken = localStorage.getItem('refreshToken');
         let isCurrentlyAuthenticated = false;
         
-        if (accessToken) {
+        if (refreshToken && !accessToken) {
+          // We have refresh token but no access token - try to get new access token
+          try {
+            const newToken = await userService.refreshTokenFunction();
+            if (newToken) {
+              isCurrentlyAuthenticated = true;
+            }
+          } catch (error) {
+            isCurrentlyAuthenticated = false;
+          }
+        } else if (accessToken) {
           try {
             const decodedToken = jwtDecode(accessToken);
             const currentTime = Math.floor(Date.now() / 1000);
+            const isExpired = decodedToken.exp <= currentTime;
             
             // If token is expired, try to refresh it immediately
-            if (decodedToken.exp <= currentTime) {
+            if (isExpired) {
               try {
                 const newToken = await userService.refreshTokenFunction();
                 if (newToken) {
@@ -50,16 +59,25 @@ export const UserProvider = ({ children }) => {
               isCurrentlyAuthenticated = true;
             }
           } catch (error) {
-            // Token is invalid, try to refresh
-            try {
-              const newToken = await userService.refreshTokenFunction();
-              if (newToken) {
-                isCurrentlyAuthenticated = true;
+            // Token is invalid, try to refresh if we have refresh token
+            if (refreshToken) {
+              try {
+                const newToken = await userService.refreshTokenFunction();
+                if (newToken) {
+                  isCurrentlyAuthenticated = true;
+                }
+              } catch (refreshError) {
+                isCurrentlyAuthenticated = false;
               }
-            } catch (refreshError) {
+            } else {
               isCurrentlyAuthenticated = false;
             }
           }
+        }
+        
+        // Initialize token refresh mechanism AFTER we've authenticated
+        if (isCurrentlyAuthenticated) {
+          userService.startTokenRefresh();
         }
         
         if (isCurrentlyAuthenticated) {
@@ -70,7 +88,6 @@ export const UserProvider = ({ children }) => {
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
         setIsAuthenticated(false);
         // Clear all tokens on auth failure
         userService.clearTokens();
