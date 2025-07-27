@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { IoCheckmarkSharp, IoCloseSharp } from "react-icons/io5";
@@ -12,8 +12,15 @@ import userService from '../services/userService';
 const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const { login, setUser } = useUser();
+  const { login, setUser, isAuthenticated, isLoading } = useUser();
   const navigate = useNavigate();
+
+  // Redirect to homepage if already authenticated
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

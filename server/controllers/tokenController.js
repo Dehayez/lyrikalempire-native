@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const TOKEN_CONFIG = {
   access: {
     secret: process.env.JWT_SECRET,
-    expiresIn: '15m' // 15 minutes - good balance for production
+    expiresIn: '15m' // 15 minutes - production value
   },
   refresh: {
     secret: process.env.JWT_REFRESH_SECRET,

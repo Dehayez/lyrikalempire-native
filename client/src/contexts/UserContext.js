@@ -26,8 +26,43 @@ export const UserProvider = ({ children }) => {
         // Initialize token refresh mechanism on app startup
         userService.startTokenRefresh();
         
-        // Use userService method that checks for accessToken
-        if (userService.isAuthenticated()) {
+        // Check if we have a token that might need refreshing
+        const accessToken = localStorage.getItem('accessToken');
+        let isCurrentlyAuthenticated = false;
+        
+        if (accessToken) {
+          try {
+            const decodedToken = jwtDecode(accessToken);
+            const currentTime = Math.floor(Date.now() / 1000);
+            
+            // If token is expired, try to refresh it immediately
+            if (decodedToken.exp <= currentTime) {
+              try {
+                const newToken = await userService.refreshTokenFunction();
+                if (newToken) {
+                  isCurrentlyAuthenticated = true;
+                }
+              } catch (error) {
+                isCurrentlyAuthenticated = false;
+              }
+            } else {
+              // Token is still valid
+              isCurrentlyAuthenticated = true;
+            }
+          } catch (error) {
+            // Token is invalid, try to refresh
+            try {
+              const newToken = await userService.refreshTokenFunction();
+              if (newToken) {
+                isCurrentlyAuthenticated = true;
+              }
+            } catch (refreshError) {
+              isCurrentlyAuthenticated = false;
+            }
+          }
+        }
+        
+        if (isCurrentlyAuthenticated) {
           const userDetails = await userService.getUserDetails();
           setUser({ id: userDetails.id, email: userDetails.email, username: userDetails.username });
           setIsAuthenticated(true);

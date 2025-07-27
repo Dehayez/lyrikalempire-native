@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { IoCheckmarkSharp } from "react-icons/io5";
@@ -6,6 +6,7 @@ import { GoogleLogin } from 'react-google-login';
 import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button, Warning } from '../components';
+import { useUser } from '../contexts/UserContext';
 import userService from '../services/userService';
 
 const RegisterPage = () => {
@@ -18,7 +19,15 @@ const RegisterPage = () => {
   const [isEmailValid, setIsEmailValid] = useState(true);
   const [isPasswordValid, setIsPasswordValid] = useState(true);
   const [isConfirmPasswordValid, setIsConfirmPasswordValid] = useState(true);
+  const { isAuthenticated, isLoading } = useUser();
   const navigate = useNavigate();
+
+  // Redirect to homepage if already authenticated
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

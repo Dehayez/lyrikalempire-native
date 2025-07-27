@@ -9,7 +9,11 @@ const ProtectedRoute = ({ element }) => {
     return null; // Show nothing while checking authentication
   }
 
-  return isAuthenticated ? element : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return element;
 };
 
 export default ProtectedRoute;
