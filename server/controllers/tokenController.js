@@ -5,11 +5,11 @@ const crypto = require('crypto');
 const TOKEN_CONFIG = {
   access: {
     secret: process.env.JWT_SECRET,
-    expiresIn: '15m'
+    expiresIn: '15m' // 15 minutes - good balance for production
   },
   refresh: {
     secret: process.env.JWT_REFRESH_SECRET,
-    expiresIn: '7d'
+    expiresIn: '30d' // 30 days - keeps you logged in like Spotify
   }
 };
 
@@ -110,8 +110,6 @@ const refreshToken = async (req, res) => {
     
     res.json({ accessToken, refreshToken });
   } catch (error) {
-    console.error('[ERROR] Token refresh error:', error);
-    
     // Provide helpful error messages based on the error type
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ error: 'Refresh token has expired, please login again' });
@@ -145,7 +143,6 @@ const revokeToken = async (req, res) => {
       res.status(400).json({ error: 'Token does not contain a valid identifier' });
     }
   } catch (error) {
-    console.error('[ERROR] Token revocation error:', error);
     res.status(400).json({ error: 'Invalid token' });
   }
 };
@@ -177,7 +174,6 @@ const verifyUserToken = (req, res) => {
     
     res.json({ valid: true });
   } catch (error) {
-    console.error('[ERROR] Token verification error:', error);
     res.json({ valid: false, error: error.message });
   }
 };
@@ -186,7 +182,6 @@ const verifyUserToken = (req, res) => {
 const cleanupBlacklist = () => {
   // In a production environment, you'd remove expired tokens from the blacklist
   // With a database or Redis, you could set expiry times on blacklisted tokens
-  console.log('Token blacklist size:', tokenBlacklist.size);
 };
 
 module.exports = {

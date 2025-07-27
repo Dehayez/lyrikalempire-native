@@ -1,7 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import userService from '../services/userService';
+import { isAuthPage } from '../utils/isAuthPage';
 
 const UserContext = createContext();
 
@@ -10,6 +11,7 @@ export const UserProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState({ id: '', email: '', username: '' });
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,12 +53,19 @@ export const UserProvider = ({ children }) => {
       setTimeout(() => {
         // Double-check if we still don't have a valid token
         if (!userService.isAuthenticated()) {
-          console.log('[AUTH] Token expired and no valid token found, redirecting to login');
           setIsAuthenticated(false);
           setUser({ id: '', email: '', username: '' });
-          navigate('/login');
-        } else {
-          console.log('[AUTH] Token expired event received but valid token found, staying authenticated');
+          
+          // Only redirect to login if user is on a protected route
+          const currentPath = location.pathname;
+          const isPublicRoute = isAuthPage(currentPath) || 
+                              currentPath === '/profile' || 
+                              currentPath === '*' ||
+                              currentPath === '/404';
+          
+          if (!isPublicRoute) {
+            navigate('/login');
+          }
         }
       }, 2000); // Wait 2 seconds before redirecting
     };
@@ -72,14 +81,11 @@ export const UserProvider = ({ children }) => {
             const currentTime = Math.floor(Date.now() / 1000);
             const timeUntilExpiry = decodedToken.exp - currentTime;
             
-            // If token expires in less than 15 minutes, refresh it
-            if (timeUntilExpiry < 900) { // 15 minutes
-              console.log('[TOKEN] Tab became active, refreshing token');
+            // If token expires in less than 5 minutes, refresh it
+            if (timeUntilExpiry < 300) { // 5 minutes
               userService.refreshTokenFunction().then(newToken => {
                 if (newToken) {
                   userService.setupTokenRefresh(newToken);
-                } else {
-                  console.log('[TOKEN] Token refresh failed on visibility change');
                 }
               });
             }
