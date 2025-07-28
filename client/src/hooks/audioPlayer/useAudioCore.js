@@ -191,6 +191,10 @@ export const useAudioCore = (currentBeat) => {
     if (isMobile()) {
       const audio = playerRef.current?.audio?.current;
       if (audio) {
+        // Reset any previous AudioContext linkage so we can safely create a
+        // fresh MediaElementSource for the upcoming track (prevents
+        // "Media element is already associated with an audio source node" on iOS).
+        audio._audioSourceConnected = false;
         audio.setAttribute('playsinline', 'true');
         audio.setAttribute('webkit-playsinline', 'true');
         
