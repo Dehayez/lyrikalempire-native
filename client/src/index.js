@@ -15,8 +15,6 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('SW registered: ', registration);
-        
         // Listen for service worker messages (audio control)
         navigator.serviceWorker.addEventListener('message', (event) => {
           const { type, data, direction } = event.data;

@@ -12,15 +12,7 @@ export const useMediaSession = ({
 
   // Set media metadata when currentBeat or artistName changes
   useEffect(() => {
-    // Allow disabling Media Session API for debugging Safari mobile issues
-    const skipMediaSession = localStorage.getItem('skipMediaSession') === 'true';
-    if (skipMediaSession) {
-      console.log('🎵 Skipping Media Session setup (disabled via localStorage)');
-      return;
-    }
-
     if ('mediaSession' in navigator && currentBeat) {
-      console.log('🎵 Setting Media Session metadata:', currentBeat.title);
       // Use artistName from user_id lookup, fallback to currentBeat.artist
       const artist = artistName && artistName !== '\u00A0' ? artistName : (currentBeat.artist || 'Unknown Artist');
       
@@ -43,12 +35,7 @@ export const useMediaSession = ({
 
       try {
         navigator.mediaSession.metadata = new MediaMetadata(metadata);
-        console.log('Media metadata updated:', { 
-          title: metadata.title, 
-          artist: metadata.artist, 
-          artwork: artworkUrl,
-          source: 'useMediaSession'
-        });
+
       } catch (error) {
         console.error('Failed to set media metadata:', error);
       }
@@ -97,18 +84,10 @@ export const useMediaSession = ({
     };
   }, [isPlaying]);
 
-  // Set up media session handlers
+  // Set up media session handlers (only once on mount)  
   useEffect(() => {
-    // Allow disabling Media Session API for debugging Safari mobile issues
-    const skipMediaSession = localStorage.getItem('skipMediaSession') === 'true';
-    if (skipMediaSession) {
-      console.log('🎵 Skipping Media Session handlers (disabled via localStorage)');
-      return;
-    }
-
     if ('mediaSession' in navigator) {
-      console.log('🎵 Setting up Media Session action handlers');
-      // Set up media session action handlers for playback controls
+      // Set up media session action handlers for playbook controls
       navigator.mediaSession.setActionHandler('play', () => handlePlayPause(true));
       navigator.mediaSession.setActionHandler('pause', () => handlePlayPause(false));
       navigator.mediaSession.setActionHandler('previoustrack', handlePrevClick);
@@ -174,5 +153,5 @@ export const useMediaSession = ({
         // Note: seekbackward and seekforward are already set to null above
       }
     };
-  }, [handlePlayPause, handlePrevClick, onNext, isPlaying]);
+  }, [handlePlayPause, handlePrevClick, onNext]);
 }; 
