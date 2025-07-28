@@ -9,25 +9,18 @@ export const useMediaSession = ({
   artistName
 }) => {
   const wakeLockRef = useRef(null);
-  const audioContextRef = useRef(null);
-
-  // Initialize AudioContext for Safari PWA background playback
-  useEffect(() => {
-    if ('webkitAudioContext' in window || 'AudioContext' in window) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!audioContextRef.current) {
-        try {
-          audioContextRef.current = new AudioContext();
-        } catch (error) {
-          console.warn('Could not create AudioContext for background playback:', error);
-        }
-      }
-    }
-  }, []);
 
   // Set media metadata when currentBeat or artistName changes
   useEffect(() => {
+    // Allow disabling Media Session API for debugging Safari mobile issues
+    const skipMediaSession = localStorage.getItem('skipMediaSession') === 'true';
+    if (skipMediaSession) {
+      console.log('🎵 Skipping Media Session setup (disabled via localStorage)');
+      return;
+    }
+
     if ('mediaSession' in navigator && currentBeat) {
+      console.log('🎵 Setting Media Session metadata:', currentBeat.title);
       // Use artistName from user_id lookup, fallback to currentBeat.artist
       const artist = artistName && artistName !== '\u00A0' ? artistName : (currentBeat.artist || 'Unknown Artist');
       
@@ -92,30 +85,8 @@ export const useMediaSession = ({
       }
     };
 
-    // Enhanced audio setup for PWA background playback
-    const setupAudioForBackground = () => {
-      const audio = document.querySelector('audio[src]') || document.querySelector('audio');
-      if (audio) {
-        // Ensure audio attributes for background playback
-        audio.setAttribute('playsinline', 'true');
-        audio.setAttribute('webkit-playsinline', 'true');
-        audio.preload = 'auto';
-        
-        // Connect audio to AudioContext for iOS background playback
-        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume().catch(console.warn);
-        }
-        
-        // For Safari PWA, ensure audio session category is set for background
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-        }
-      }
-    };
-
     if (isPlaying) {
       requestWakeLock();
-      setupAudioForBackground();
     } else {
       releaseWakeLock();
     }
@@ -128,7 +99,15 @@ export const useMediaSession = ({
 
   // Set up media session handlers
   useEffect(() => {
+    // Allow disabling Media Session API for debugging Safari mobile issues
+    const skipMediaSession = localStorage.getItem('skipMediaSession') === 'true';
+    if (skipMediaSession) {
+      console.log('🎵 Skipping Media Session handlers (disabled via localStorage)');
+      return;
+    }
+
     if ('mediaSession' in navigator) {
+      console.log('🎵 Setting up Media Session action handlers');
       // Set up media session action handlers for playback controls
       navigator.mediaSession.setActionHandler('play', () => handlePlayPause(true));
       navigator.mediaSession.setActionHandler('pause', () => handlePlayPause(false));

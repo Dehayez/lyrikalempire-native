@@ -27,6 +27,19 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Additional CORS headers for audio files
+app.use((req, res, next) => {
+  // Set CORS headers for audio files specifically
+  if (req.path.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i)) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
+    res.header('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+    res.header('Accept-Ranges', 'bytes');
+  }
+  next();
+});
+
 //app.use('/uploads', express.static(path.join(__dirname, '../client/public/uploads')));
 
 app.use(express.static(path.join(__dirname, '../client/build')));

@@ -17,24 +17,37 @@ export const useAudioCore = (currentBeat) => {
   
   // Initialize audio context for Safari
   const initAudioContext = useCallback(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      console.log('🎵 initAudioContext: Window undefined');
+      return;
+    }
     
     const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
+    if (!AudioContext) {
+      console.log('🎵 initAudioContext: AudioContext not available');
+      return;
+    }
     
     if (!audioContextRef.current) {
       try {
+        console.log('🎵 initAudioContext: Creating new AudioContext');
         audioContextRef.current = new AudioContext();
+        console.log('🎵 initAudioContext: AudioContext created, state:', audioContextRef.current.state);
       } catch (error) {
-        console.warn('Could not create AudioContext:', error);
+        console.error('🎵 initAudioContext: Could not create AudioContext:', error);
         return;
       }
     }
     
     if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().catch(error => {
-        console.warn('Failed to resume AudioContext:', error);
+      console.log('🎵 initAudioContext: AudioContext suspended, attempting resume');
+      audioContextRef.current.resume().then(() => {
+        console.log('🎵 initAudioContext: AudioContext resumed successfully');
+      }).catch(error => {
+        console.error('🎵 initAudioContext: Failed to resume AudioContext:', error);
       });
+    } else {
+      console.log('🎵 initAudioContext: AudioContext state is', audioContextRef.current.state);
     }
   }, []);
 
@@ -64,12 +77,35 @@ export const useAudioCore = (currentBeat) => {
   const play = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
     
+    console.log('🎵 PLAY FUNCTION CALLED:', {
+      hasAudio: !!audio,
+      audioSrc: audio?.src,
+      audioPaused: audio?.paused,
+      audioReadyState: audio?.readyState,
+      audioNetworkState: audio?.networkState,
+      audioError: audio?.error,
+      audioCurrentTime: audio?.currentTime,
+      audioDuration: audio?.duration
+    });
+    
     if (!audio) {
+      console.error('🎵 PLAY FAILED: No audio element found');
+      return Promise.resolve();
+    }
+
+    if (!audio.src) {
+      console.error('🎵 PLAY FAILED: No audio source');
       return Promise.resolve();
     }
 
     initAudioContext();
     updateUserInteraction();
+    
+    console.log('🎵 CHECKING PLAY CONDITIONS:', {
+      paused: audio.paused,
+      readyState: audio.readyState,
+      canPlay: audio.readyState >= 1
+    });
     
     if (audio.paused && audio.readyState >= 1) {
       // Cancel any pending play promise
@@ -78,14 +114,31 @@ export const useAudioCore = (currentBeat) => {
         pendingPlayPromiseRef.current = null;
       }
       
-      const playPromise = audio.play().catch(error => {
+      console.log('🎵 STARTING AUDIO.PLAY()');
+      const playPromise = audio.play().then(() => {
+        console.log('🎵 AUDIO.PLAY() SUCCESS');
+      }).catch(error => {
+        console.error('🎵 AUDIO.PLAY() FAILED:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          audioSrc: audio?.src,
+          audioReadyState: audio?.readyState,
+          audioNetworkState: audio?.networkState,
+          audioError: audio?.error
+        });
+        
         if (error.name === 'NotAllowedError') {
+          console.warn('🎵 Safari autoplay blocked - need user interaction');
           // Safari autoplay blocked - dispatch event for UI handling
           if (isMobile()) {
             window.dispatchEvent(new CustomEvent('safari-autoplay-blocked', { 
               detail: { needsUserInteraction: true } 
             }));
           }
+        } else if (error.name === 'NotSupportedError') {
+          console.error('🎵 Audio format not supported or CORS issue');
+        } else if (error.name === 'AbortError') {
+          console.warn('🎵 Audio play was aborted');
         }
         
         return Promise.resolve();
@@ -301,30 +354,105 @@ export const useAudioCore = (currentBeat) => {
       audio.addEventListener('play', handleUserGesture, { once: true });
     }
     
+    // Debug logging for Safari mobile
+    const isSafariMobile = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
+    console.log('🎵 AUDIO SETUP DEBUG:', {
+      userAgent: navigator.userAgent,
+      isSafariMobile,
+      isMobile: isMobile(),
+      audioSrc: audio.src,
+      audioReady: audio.readyState,
+      audioError: audio.error
+    });
+
+    // Set CORS attribute for Safari compatibility with Media Session API - but only for cross-origin
+    try {
+      // Only set crossorigin if the audio source is from a different domain
+      if (audio.src && !audio.src.startsWith(window.location.origin)) {
+        console.log('🎵 Setting crossorigin for external audio:', audio.src);
+        audio.setAttribute('crossorigin', 'anonymous');
+      } else {
+        console.log('🎵 Same-origin audio, not setting crossorigin');
+        audio.removeAttribute('crossorigin');
+      }
+    } catch (error) {
+      console.error('🎵 Error setting crossorigin:', error);
+    }
+    
     if (isMobile()) {
+      console.log('🎵 MOBILE AUDIO SETUP');
       audio.setAttribute('muted', 'false');
       audio.removeAttribute('autoplay');
       
+      // Additional Safari mobile attributes
+      audio.setAttribute('playsinline', 'true');
+      audio.setAttribute('webkit-playsinline', 'true');
+      audio.preload = 'metadata';
+      
       // Prevent audio interruption on iOS
       if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        console.log('🎵 iOS DETECTED - Setting up audio session');
+        
         // Set audio session for background playback
         const setAudioSession = () => {
+          // Skip AudioContext setup if it's causing issues (can be disabled for debugging)
+          const skipAudioContext = localStorage.getItem('skipAudioContext') === 'true';
+          if (skipAudioContext) {
+            console.log('🎵 Skipping AudioContext setup (disabled via localStorage)');
+            return;
+          }
+          
           try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaElementSource(audio);
-            source.connect(audioContext.destination);
+            console.log('🎵 CREATING iOS AUDIO SESSION');
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+              console.error('🎵 AudioContext not available');
+              return;
+            }
             
-            // Resume audio context if suspended (required for iOS)
-            if (audioContext.state === 'suspended') {
-              audioContext.resume();
+            // Don't create AudioContext if one already exists from initAudioContext
+            if (audioContextRef.current) {
+              console.log('🎵 Using existing AudioContext from initAudioContext');
+              const audioContext = audioContextRef.current;
+              try {
+                const source = audioContext.createMediaElementSource(audio);
+                source.connect(audioContext.destination);
+                console.log('🎵 Connected to existing AudioContext');
+              } catch (sourceError) {
+                console.error('🎵 Failed to connect to existing AudioContext:', sourceError);
+              }
+              return;
+            }
+            
+            const audioContext = new AudioContextClass();
+            console.log('🎵 New AudioContext created, state:', audioContext.state);
+            
+            // Only create source if audio context is working
+            if (audioContext) {
+              const source = audioContext.createMediaElementSource(audio);
+              source.connect(audioContext.destination);
+              console.log('🎵 Audio context connected');
+              
+              // Resume audio context if suspended (required for iOS)
+              if (audioContext.state === 'suspended') {
+                console.log('🎵 Resuming suspended audio context');
+                audioContext.resume().then(() => {
+                  console.log('🎵 Audio context resumed successfully');
+                }).catch(err => {
+                  console.error('🎵 Failed to resume audio context:', err);
+                });
+              }
             }
           } catch (e) {
+            console.error('🎵 Audio context setup failed:', e);
+            console.log('🎵 To disable AudioContext, run: localStorage.setItem("skipAudioContext", "true")');
             // Audio context setup failed, fallback to regular audio
           }
         };
         
         // Set up audio session on first user interaction
         const setupAudioSession = () => {
+          console.log('🎵 Setting up audio session on user interaction');
           setAudioSession();
           document.removeEventListener('touchstart', setupAudioSession);
           document.removeEventListener('click', setupAudioSession);
