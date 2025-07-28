@@ -281,7 +281,7 @@ const AudioPlayer = ({
     onNext,
     currentBeat,
     isPlaying,
-    artistName: user?.id || artistName // Use user.id as artist name, fallback to existing artistName
+    artistName // Use the actual username fetched from user data
   });
 
   // Pass session props up to App level for PlayingIndicator
