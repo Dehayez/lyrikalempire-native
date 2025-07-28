@@ -11,7 +11,7 @@ import {
   useAudioSync,
   useOs
 } from '../../hooks';
-import { usePlaylist } from '../../contexts';
+import { usePlaylist, useUser } from '../../contexts';
 
 import { ContextMenu } from '../ContextMenu';
 
@@ -70,6 +70,9 @@ const AudioPlayer = ({
 
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
+  
+  // Get user context
+  const { user } = useUser();
 
   // Get audio player functionality (now includes audioCore and audioInteractions)
   const audioPlayer = useAudioPlayer({
@@ -278,7 +281,7 @@ const AudioPlayer = ({
     onNext,
     currentBeat,
     isPlaying,
-    artistName
+    artistName: user?.id || artistName // Use user.id as artist name, fallback to existing artistName
   });
 
   // Pass session props up to App level for PlayingIndicator

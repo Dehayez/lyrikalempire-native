@@ -9,6 +9,21 @@ export const useMediaSession = ({
   artistName
 }) => {
   const wakeLockRef = useRef(null);
+  const audioContextRef = useRef(null);
+
+  // Initialize AudioContext for Safari PWA background playback
+  useEffect(() => {
+    if ('webkitAudioContext' in window || 'AudioContext' in window) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!audioContextRef.current) {
+        try {
+          audioContextRef.current = new AudioContext();
+        } catch (error) {
+          console.warn('Could not create AudioContext for background playback:', error);
+        }
+      }
+    }
+  }, []);
 
   // Set media metadata when currentBeat or artistName changes
   useEffect(() => {
@@ -54,7 +69,7 @@ export const useMediaSession = ({
     }
   }, [isPlaying]);
 
-  // Wake Lock API for preventing sleep during playback
+  // Enhanced background playback support for Safari PWA
   useEffect(() => {
     const requestWakeLock = async () => {
       try {
@@ -77,8 +92,30 @@ export const useMediaSession = ({
       }
     };
 
+    // Enhanced audio setup for PWA background playback
+    const setupAudioForBackground = () => {
+      const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+      if (audio) {
+        // Ensure audio attributes for background playback
+        audio.setAttribute('playsinline', 'true');
+        audio.setAttribute('webkit-playsinline', 'true');
+        audio.preload = 'auto';
+        
+        // Connect audio to AudioContext for iOS background playback
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume().catch(console.warn);
+        }
+        
+        // For Safari PWA, ensure audio session category is set for background
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+        }
+      }
+    };
+
     if (isPlaying) {
       requestWakeLock();
+      setupAudioForBackground();
     } else {
       releaseWakeLock();
     }
@@ -103,24 +140,12 @@ export const useMediaSession = ({
         // Stop handler
         navigator.mediaSession.setActionHandler('stop', () => handlePlayPause(false));
         
-        // Seek handlers with better audio element targeting
-        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-          const skipTime = details.seekOffset || 10;
-          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
-          if (audio && !isNaN(audio.currentTime)) {
-            audio.currentTime = Math.max(0, audio.currentTime - skipTime);
-          }
-        });
+        // REMOVE seek handlers to ensure Apple UI shows track controls (previous/next) instead of seek controls
+        // This is crucial for PWA apps to show proper track navigation buttons
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
         
-        navigator.mediaSession.setActionHandler('seekforward', (details) => {
-          const skipTime = details.seekOffset || 10;
-          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
-          if (audio && !isNaN(audio.currentTime) && !isNaN(audio.duration)) {
-            audio.currentTime = Math.min(audio.duration, audio.currentTime + skipTime);
-          }
-        });
-        
-        // Seek to position handler
+        // Seek to position handler (keep this for scrubbing functionality)
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           const audio = document.querySelector('audio[src]') || document.querySelector('audio');
           if (audio && details.seekTime !== undefined && !isNaN(details.seekTime)) {
@@ -166,9 +191,8 @@ export const useMediaSession = ({
         navigator.mediaSession.setActionHandler('previoustrack', null);
         navigator.mediaSession.setActionHandler('nexttrack', null);
         navigator.mediaSession.setActionHandler('stop', null);
-        navigator.mediaSession.setActionHandler('seekbackward', null);
-        navigator.mediaSession.setActionHandler('seekforward', null);
         navigator.mediaSession.setActionHandler('seekto', null);
+        // Note: seekbackward and seekforward are already set to null above
       }
     };
   }, [handlePlayPause, handlePrevClick, onNext, isPlaying]);
