@@ -15,27 +15,10 @@ const MobileAudioPlayer = forwardRef(({
   handleTouchMove,
   handleTouchEnd,
   dragPosition,
-  isLoadingAudio,
-  isCachedAudio,
-  progress,
-  currentTime,
-  duration,
-  lyricsModal = false // Add default value
+  lyricsModal = false
 }, ref) => {
   
-  // Enhanced logging for mobile play/pause
   const handleMobilePlayPause = useCallback((shouldPlay) => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    
-    console.log('🔍 [DEBUG] Mobile play/pause button tapped:', {
-      shouldPlay,
-      isPlaying,
-      currentBeat: currentBeat?.title,
-      isMobile,
-      isSafari
-    });
-    
     // Always call the original handler - let the audio core handle any restrictions
     if (handlePlayPause) {
       handlePlayPause(shouldPlay);
