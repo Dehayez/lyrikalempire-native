@@ -322,66 +322,80 @@ export const useAudioCore = (currentBeat) => {
       audio.preload = 'metadata';
       
       // Prevent audio interruption on iOS
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isIOS) {
+        // ----
+        // IMPORTANT: iOS mutes any track that is routed through Web-Audio when the
+        // PWA goes to the background / the phone is locked.  The plain <audio> tag
+        // keeps playing just fine.  Therefore on real iPhones we completely skip
+        // creating a MediaElementSource.  Waveform / analyser features will still
+        // work on desktop and Android but audio will always keep playing in the
+        // background on iOS.
+        // ----
+
+        return; // ← do NOT set up Web-Audio on iOS
+      }
+
+      // ------- Non-iOS flow (desktop / Android) -------
+
+      // Set audio session for background playback
+      const setAudioSession = () => {
+        // Check if this audio element already has an AudioContext connection
+        if (audio._audioSourceConnected) {
+          return;
+        }
         
-        // Set audio session for background playback
-        const setAudioSession = () => {
-          // Check if this audio element already has an AudioContext connection
-          if (audio._audioSourceConnected) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) {
             return;
           }
           
-          try {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextClass) {
-              return;
-            }
-            
-            // Don't create AudioContext if one already exists from initAudioContext
-            if (audioContextRef.current) {
-              const audioContext = audioContextRef.current;
-              try {
-                const source = audioContext.createMediaElementSource(audio);
-                source.connect(audioContext.destination);
-                // Mark this specific audio element as connected
-                audio._audioSourceConnected = true;
-              } catch (sourceError) {
-                // Mark as connected anyway to prevent retry loops
-                audio._audioSourceConnected = true;
-              }
-              return;
-            }
-            
-            const audioContext = new AudioContextClass();
-            
-            // Only create source if audio context is working
-            if (audioContext) {
+          // Don't create AudioContext if one already exists from initAudioContext
+          if (audioContextRef.current) {
+            const audioContext = audioContextRef.current;
+            try {
               const source = audioContext.createMediaElementSource(audio);
               source.connect(audioContext.destination);
               // Mark this specific audio element as connected
               audio._audioSourceConnected = true;
-              
-              // Resume audio context if suspended (required for iOS)
-              if (audioContext.state === 'suspended') {
-                audioContext.resume();
-              }
+            } catch (sourceError) {
+              // Mark as connected anyway to prevent retry loops
+              audio._audioSourceConnected = true;
             }
-          } catch (e) {
-            // Mark as connected to prevent retry loops
-            audio._audioSourceConnected = true;
+            return;
           }
-        };
-        
-        // Set up audio session on first user interaction
-        const setupAudioSession = () => {
-          setAudioSession();
-          document.removeEventListener('touchstart', setupAudioSession);
-          document.removeEventListener('click', setupAudioSession);
-        };
-        
-        document.addEventListener('touchstart', setupAudioSession, { once: true });
-        document.addEventListener('click', setupAudioSession, { once: true });
-      }
+          
+          const audioContext = new AudioContextClass();
+          
+          // Only create source if audio context is working
+          if (audioContext) {
+            const source = audioContext.createMediaElementSource(audio);
+            source.connect(audioContext.destination);
+            // Mark this specific audio element as connected
+            audio._audioSourceConnected = true;
+            
+            // Resume audio context if suspended (required for iOS)
+            if (audioContext.state === 'suspended') {
+              audioContext.resume();
+            }
+          }
+        } catch (e) {
+          // Mark as connected to prevent retry loops
+          audio._audioSourceConnected = true;
+        }
+      };
+      
+      // Set up audio session on first user interaction
+      const setupAudioSession = () => {
+        setAudioSession();
+        document.removeEventListener('touchstart', setupAudioSession);
+        document.removeEventListener('click', setupAudioSession);
+      };
+
+      document.addEventListener('touchstart', setupAudioSession, { once: true });
+      document.addEventListener('click', setupAudioSession, { once: true });
     }
 
     // Enhanced media session handlers for background playback
