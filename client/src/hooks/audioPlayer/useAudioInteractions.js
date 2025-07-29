@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocalStorageSync } from '../useLocalStorageSync';
+import { isMobileOrTablet } from '../../utils';
 
 export const useAudioInteractions = ({ 
   onNext, 
@@ -129,17 +130,31 @@ export const useAudioInteractions = ({
       // Store the target element reference to use in move/end handlers
       const targetElement = e.currentTarget;
       
+      // Track if this is a real drag vs just a click/tap
+      let hasMoved = false;
+      const startX = eventType === 'mouse' ? e.clientX : e.touches[0].clientX;
+      
       targetElement.classList.add('rhap_progress-dragging');
       
       const rect = targetElement.getBoundingClientRect();
       const clientX = eventType === 'mouse' ? e.clientX : e.touches[0].clientX;
       const relativePos = (clientX - rect.left) / rect.width;
-              const duration = audioCore.getDuration(); // Now uses database duration
+      const duration = audioCore.getDuration();
         
+      // Only update UI immediately on desktop, or wait for movement on mobile
+      if (!isMobileOrTablet()) {
         updateProgressUI(targetElement, relativePos);
+      }
       
       const handleMove = (moveEvent) => {
         if (!targetElement) return;
+        
+        const currentX = eventType === 'mouse' ? moveEvent.clientX : moveEvent.touches[0].clientX;
+        
+        // Mark as moved if there's significant movement
+        if (Math.abs(currentX - startX) > 5) {
+          hasMoved = true;
+        }
         
         const newRect = targetElement.getBoundingClientRect();
         const newClientX = eventType === 'mouse' ? moveEvent.clientX : moveEvent.touches[0].clientX;
@@ -156,13 +171,19 @@ export const useAudioInteractions = ({
         
         targetElement.classList.remove('rhap_progress-dragging');
         
-        const finalRect = targetElement.getBoundingClientRect();
-        const finalClientX = eventType === 'mouse' ? endEvent.clientX : endEvent.changedTouches[0].clientX;
-        const finalRelativePos = Math.max(0, Math.min(1, (finalClientX - finalRect.left) / finalRect.width));
-        const finalTime = finalRelativePos * duration;
+        // On mobile, only seek if there was actual movement (drag)
+        // On desktop, always seek (click or drag)
+        const shouldSeek = !isMobileOrTablet() || hasMoved;
         
-        audioCore.setCurrentTime(finalTime);
-        updateCurrentTime(finalTime);
+        if (shouldSeek) {
+          const finalRect = targetElement.getBoundingClientRect();
+          const finalClientX = eventType === 'mouse' ? endEvent.clientX : endEvent.changedTouches[0].clientX;
+          const finalRelativePos = Math.max(0, Math.min(1, (finalClientX - finalRect.left) / finalRect.width));
+          const finalTime = finalRelativePos * duration;
+          
+          audioCore.setCurrentTime(finalTime);
+          updateCurrentTime(finalTime);
+        }
         
         const moveEventName = eventType === 'mouse' ? 'mousemove' : 'touchmove';
         const endEventName = eventType === 'mouse' ? 'mouseup' : 'touchend';
@@ -184,7 +205,7 @@ export const useAudioInteractions = ({
       e.preventDefault();
       e.stopPropagation();
     };
-  }, [audioCore, updateProgressUI, updateCurrentTime]);
+  }, [audioCore, updateProgressUI, updateCurrentTime, isMobileOrTablet]);
 
   // Set up touch event prevention for smooth gestures
   useEffect(() => {
