@@ -644,7 +644,7 @@ const AudioPlayer = ({
 
       <FullPageAudioPlayer
         ref={fullPagePlayerRef}
-        style={{ display: shouldShowFullPagePlayer ? 'block' : 'none' }}
+        style={{ display: shouldShowFullPagePlayer ? 'flex' : 'none' }}
         fullPageProgressRef={fullPageProgressRef}
         fullPageOverlayRef={fullPageOverlayRef}
         currentBeat={currentBeat || {}}
