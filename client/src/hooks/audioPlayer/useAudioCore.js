@@ -101,17 +101,29 @@ export const useAudioCore = (currentBeat) => {
   const pause = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
     
+    // Cancel any pending play promise
     if (pendingPlayPromiseRef.current) {
       pendingPlayPromiseRef.current.catch(() => {});
       pendingPlayPromiseRef.current = null;
     }
-    
+
     if (audio && !audio.paused) {
       try {
         audio.pause();
       } catch (error) {
         // Ignore pause errors
       }
+    }
+
+    // Suspend the AudioContext on Safari to free resources and avoid extra delay
+    if (audioContextRef.current && audioContextRef.current.state === 'running') {
+      // Suspends the context asynchronously but it's quick and light-weight
+      audioContextRef.current.suspend().catch(() => {});
+    }
+
+    // Proactively update MediaSession state to minimise UI lag on iOS
+    if ('mediaSession' in navigator && navigator.mediaSession.playbackState !== 'paused') {
+      navigator.mediaSession.playbackState = 'paused';
     }
   }, []);
 
