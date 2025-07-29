@@ -53,7 +53,8 @@ self.addEventListener('fetch', (event) => {
           
           return fetch(request).then(fetchResponse => {
             // Cache audio files for offline playback
-            if (fetchResponse.ok) {
+            // Only cache complete responses; the Cache API rejects partial (206) responses.
+            if (fetchResponse.ok && fetchResponse.status === 200) {
               cache.put(request, fetchResponse.clone());
             }
             return fetchResponse;
