@@ -642,42 +642,41 @@ const AudioPlayer = ({
         />
       )}
 
-      {shouldShowFullPagePlayer && (
-        <FullPageAudioPlayer
-          ref={fullPagePlayerRef}
-          fullPageProgressRef={fullPageProgressRef}
-          fullPageOverlayRef={fullPageOverlayRef}
-          currentBeat={currentBeat}
-          artistName={artistName}
-          isPlaying={isPlaying}
-          handlePlayPause={handlePlayPause}
-          handlePrevClick={handlePrevClick}
-          onNext={onNext}
-          progress={progress}
-          currentTime={currentTimeState}
-          duration={duration}
-          volume={volume}
-          handleVolumeChange={handleVolumeChange}
-          toggleFullPagePlayer={toggleFullPagePlayer}
-          isFullPageVisible={isFullPageVisible}
-          handleDragStart={handleDragStart}
-          handleDragMove={handleDragMove}
-          handleDragEnd={handleDragEnd}
-          toggleLyricsModal={toggleLyricsModal}
-          handleEllipsisClick={handleEllipsisClick}
-          waveformRef={waveformRefFullPage}
-          waveform={waveform}
-          toggleWaveform={toggleWaveform}
-          isLoadingAudio={isLoadingAudio}
-          isCachedAudio={isCachedAudio}
-          shuffle={shuffle}
-          setShuffle={setShuffle}
-          repeat={repeat}
-          setRepeat={setRepeat}
-          onUpdateBeat={onUpdateBeat}
-          lyricsModal={lyricsModal}
-        />
-      )}
+      <FullPageAudioPlayer
+        ref={fullPagePlayerRef}
+        style={{ display: shouldShowFullPagePlayer ? 'block' : 'none' }}
+        fullPageProgressRef={fullPageProgressRef}
+        fullPageOverlayRef={fullPageOverlayRef}
+        currentBeat={currentBeat || {}}
+        artistName={artistName}
+        isPlaying={isPlaying}
+        handlePlayPause={handlePlayPause}
+        handlePrevClick={handlePrevClick}
+        onNext={onNext}
+        progress={progress}
+        currentTime={currentTimeState}
+        duration={duration}
+        volume={volume}
+        handleVolumeChange={handleVolumeChange}
+        toggleFullPagePlayer={toggleFullPagePlayer}
+        isFullPageVisible={isFullPageVisible}
+        handleDragStart={handleDragStart}
+        handleDragMove={handleDragMove}
+        handleDragEnd={handleDragEnd}
+        toggleLyricsModal={toggleLyricsModal}
+        handleEllipsisClick={handleEllipsisClick}
+        waveformRef={waveformRefFullPage}
+        waveform={waveform}
+        toggleWaveform={toggleWaveform}
+        isLoadingAudio={isLoadingAudio}
+        isCachedAudio={isCachedAudio}
+        shuffle={shuffle}
+        setShuffle={setShuffle}
+        repeat={repeat}
+        setRepeat={setRepeat}
+        onUpdateBeat={onUpdateBeat}
+        lyricsModal={lyricsModal}
+      />
 
       {/* Context menu */}
       {activeContextMenu && (

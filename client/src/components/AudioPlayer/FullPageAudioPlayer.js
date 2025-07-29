@@ -44,7 +44,8 @@ const FullPageAudioPlayer = forwardRef(({
   currentTime,
   duration,
   volume,
-  handleVolumeChange
+  handleVolumeChange,
+  style = {}
 }, ref) => {
   // Create edit inputs content for the third slide
   const editInputsContent = (
@@ -68,6 +69,7 @@ const FullPageAudioPlayer = forwardRef(({
       <div
         ref={ref}
         className="audio-player audio-player__full-page"
+        style={style}
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
@@ -103,7 +105,7 @@ const FullPageAudioPlayer = forwardRef(({
           <div className="audio-player__full-page-info">
             <div className="audio-player__full-page-text">
               <p className="audio-player__title">
-                {currentBeat.title || 'Audio Player'}
+                {currentBeat?.title || 'Audio Player'}
               </p>
               <p className="audio-player__artist">
                 {artistName}
