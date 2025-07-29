@@ -136,10 +136,11 @@ audio {
       z-index: 5;
       opacity: 0;
       transition: opacity 0.3s ease;
+      pointer-events: none; // Disable interactions when hidden
 
       &.visible {
         opacity: 1;
-        pointer-events: auto;
+        pointer-events: auto; // Enable when active
       }
     }
 
