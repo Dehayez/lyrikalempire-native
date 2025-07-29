@@ -127,6 +127,17 @@ export const useAudioInteractions = ({
     return (e) => {
       if (!e.currentTarget) return;
       
+      // On mobile, only allow dragging from the indicator itself
+      if (isMobileOrTablet()) {
+        const clickedElement = e.target;
+        const isIndicator = clickedElement.classList.contains('rhap_progress-indicator');
+        const isIndicatorChild = clickedElement.closest('.rhap_progress-indicator');
+        
+        if (!isIndicator && !isIndicatorChild) {
+          return; // Ignore clicks/touches outside the indicator on mobile
+        }
+      }
+      
       // Store the target element reference to use in move/end handlers
       const targetElement = e.currentTarget;
       
