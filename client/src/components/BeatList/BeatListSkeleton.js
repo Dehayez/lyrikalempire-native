@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useHeaderWidths } from '../../contexts';
 import './BeatListSkeleton.scss';
 
 const BeatListSkeleton = () => {
   const { headerWidths } = useHeaderWidths();
+  const containerRef = useRef(null);
+  const tableRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+
+  // Get actual container width
+  useEffect(() => {
+    if (containerRef.current) {
+      const updateWidth = () => {
+        setContainerWidth(containerRef.current.offsetWidth);
+      };
+      
+      updateWidth();
+      window.addEventListener('resize', updateWidth);
+      
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+  }, []);
 
   // Get column widths from localStorage or use defaults
   const getColumnWidth = (index) => {
@@ -36,76 +53,114 @@ const BeatListSkeleton = () => {
     return defaultPercentages[index];
   };
 
-  // Build grid template columns string
-  const getGridTemplateColumns = () => {
-    const columns = [];
-    for (let i = 0; i < 10; i++) {
-      const width = getColumnWidth(i);
-      if (i === 1 || i === 4 || i === 5 || i === 6 || i === 7) {
-        // Resizable columns use percentage
-        columns.push(`${width}%`);
-      } else {
-        // Static columns use pixels
-        columns.push(`${width}px`);
-      }
-    }
-    return columns.join(' ');
+  // Check if column should be visible based on container width (matching BeatList responsive rules)
+  const isColumnVisible = (index) => {
+    if (containerWidth <= 200) return index !== 0; // Hide number column
+    if (containerWidth <= 300) return index !== 8; // Hide duration column
+    if (containerWidth <= 400) return index !== 2; // Hide tierlist column
+    if (containerWidth <= 500) return index !== 3; // Hide bpm column
+    if (containerWidth <= 600) return index !== 4; // Hide genre column
+    if (containerWidth <= 800) return index !== 5; // Hide mood column
+    if (containerWidth <= 1000) return index !== 6; // Hide keyword column
+    if (containerWidth <= 1200) return index !== 7; // Hide feature column
+    return true; // All columns visible
   };
 
-  const gridTemplateColumns = getGridTemplateColumns();
+  // Calculate column widths like real BeatList
+  const getColumnWidths = () => {
+    const staticColumns = [0, 2, 3, 8, 9];
+    const staticWidths = { 0: 60, 2: 95, 3: 80, 8: 80, 9: 50 };
+    
+    // Calculate total static width for visible columns only
+    const visibleStaticColumns = staticColumns.filter(isColumnVisible);
+    const totalStaticWidth = visibleStaticColumns.reduce((sum, index) => sum + staticWidths[index], 0);
+    const availableWidth = containerWidth - totalStaticWidth;
+    
+    const widths = [];
+    for (let i = 0; i < 10; i++) {
+      if (!isColumnVisible(i)) {
+        widths.push(0);
+        continue;
+      }
+      
+      const width = getColumnWidth(i);
+      
+      if (i === 1 || i === 4 || i === 5 || i === 6 || i === 7) {
+        // Resizable columns: convert percentage to pixels like real BeatList
+        const pixelWidth = (availableWidth * width) / 100;
+        widths.push(pixelWidth);
+      } else {
+        // Static columns use fixed width
+        widths.push(width);
+      }
+    }
+    return widths;
+  };
+
+  const columnWidths = getColumnWidths();
 
   // Log the column information
+  const visibleStaticColumns = [0, 2, 3, 8, 9].filter(isColumnVisible);
+  const staticWidths = { 0: 60, 2: 95, 3: 80, 8: 80, 9: 50 };
+  const totalStaticWidth = visibleStaticColumns.reduce((sum, index) => sum + staticWidths[index], 0);
+  const availableWidth = containerWidth - totalStaticWidth;
+  
   console.log('🎭 BeatListSkeleton - Column Info:', {
     totalColumns: 10,
-    gridTemplateColumns,
-    columnWidths: Array.from({ length: 10 }, (_, i) => ({
-      index: i,
-      width: getColumnWidth(i),
-      isResizable: [1, 4, 5, 6, 7].includes(i),
-      localStorageValue: localStorage.getItem(`headerWidth${i}`)
-    }))
+    containerWidth,
+    availableWidth,
+    columnWidths: Array.from({ length: 10 }, (_, i) => {
+      const width = getColumnWidth(i);
+      const isResizable = [1, 4, 5, 6, 7].includes(i);
+      const isVisible = isColumnVisible(i);
+      const pixelWidth = isVisible ? (isResizable ? (availableWidth * width) / 100 : width) : 0;
+      
+      return {
+        index: i,
+        percentage: width,
+        pixelWidth: `${pixelWidth}px`,
+        isResizable,
+        isVisible,
+        localStorageValue: localStorage.getItem(`headerWidth${i}`)
+      };
+    })
   });
 
   return (
-    <div className="beat-list-skeleton">
-      {/* Table skeleton */}
-      <div className="beat-list-skeleton__table">
-        {/* Table header skeleton */}
-        <div 
-          className="beat-list-skeleton__table-header"
-          style={{ gridTemplateColumns }}
-        >
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--index"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--title"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--tierlist"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--bpm"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--genre"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--mood"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--keyword"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--feature"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--duration"></div>
-          <div className="beat-list-skeleton__header-cell beat-list-skeleton__header-cell--menu"></div>
-        </div>
-        
-        {/* Table rows skeleton */}
-        {Array.from({ length: 10 }).map((_, index) => (
-          <div 
-            key={index} 
-            className="beat-list-skeleton__row"
-            style={{ gridTemplateColumns }}
-          >
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--index"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--title"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--tierlist"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--bpm"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--genre"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--mood"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--keyword"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--feature"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--duration"></div>
-            <div className="beat-list-skeleton__cell beat-list-skeleton__cell--menu"></div>
-          </div>
-        ))}
+    <div ref={containerRef} className="beat-list-skeleton">
+      <div className="beat-list-skeleton__table-container">
+        <table className="beat-list-skeleton__table" ref={tableRef}>
+          <thead className="beat-list-skeleton__table-header">
+            <tr>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[0]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[1]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[2]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[3]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[4]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[5]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[6]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[7]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[8]}px` }}></th>
+              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[9]}px` }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 10 }).map((_, rowIndex) => (
+              <tr key={rowIndex} className="beat-list-skeleton__row">
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[0]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[1]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[2]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[3]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[4]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[5]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[6]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[7]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[8]}px` }}></td>
+                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[9]}px` }}></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -29,16 +29,6 @@ $color-yellow-light: #FFE066;
 $color-yellow-dark: #CC9900;
 $color-warning-dark: #A02230;
 
-// Skeleton loading gradient
-$skeleton-gradient: linear-gradient(90deg, $color-gray-dark 25%, $color-gray-dark-active 50%, $color-gray-dark 75%);
-
-@mixin skeleton-shimmer {
-  background: $skeleton-gradient;
-  background-size: 200% 100%;
-  animation: shimmer 2.5s infinite;
-  border-radius: 2px;
-}
-
 $safe-area-inset-bottom: 36px;
 $overlay: rgba($color-black-dark, 0.5);
 
@@ -59,6 +49,25 @@ $box-shadow: 0 0 28px 16px rgba(0, 0, 0, .1);
 $box-shadow-card: 0 0 24px 12px rgba(0, 0, 0, .02);
 $box-shadow-card-hover: 0 0 40px 12px rgba(0, 0, 0, .001);
 $box-shadow-hover: 0 0 0 .5px $color-gray-default;
+
+// Skeleton loading gradient
+$skeleton-gradient: linear-gradient(90deg, $color-gray-dark 25%, $color-gray-dark-active 50%, $color-gray-dark 75%);
+
+@keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+@mixin skeleton-shimmer {
+  background: $skeleton-gradient;
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+  border-radius: 2px;
+}
 
 @mixin hide-scrollbar {
     &::-webkit-scrollbar {

@@ -3,29 +3,38 @@
 .beat-list-skeleton {
   width: 100%;
   
-
+  &__table-container {
+    padding-right: 16px;
+    margin-top: -1px;
+  }
   
   &__table {
+    display: table;
+    table-layout: fixed;
     width: 100%;
+    white-space: nowrap;
+    border: none;
+    border-collapse: collapse;
+    container-type: inline-size;
   }
   
   &__table-header {
-    display: grid;
-    gap: 16px;
-    padding: 12px 20px;
-    border-bottom: 1px solid $color-gray-dark;
+    // Table header styles will be inherited from BeatList
   }
   
   &__header-cell {
-    height: 16px;
+    height: 40px;
+    padding: 12px 20px;
     @include skeleton-shimmer;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
   }
   
   &__row {
-    display: grid;
-    gap: 16px;
-    padding: 12px 20px;
     border-bottom: 1px solid $color-gray-dark;
+    height: 60px;
     
     &:hover {
       background-color: $color-gray-dark;
@@ -33,57 +42,15 @@
   }
   
   &__cell {
-    height: 20px;
+    height: 60px;
+    padding: 12px 20px;
     @include skeleton-shimmer;
-    
-    &--index {
-      width: 30px;
-    }
-    
-    &--title {
-      width: 80%;
-    }
-    
-    &--tierlist {
-      width: 40px;
-    }
-    
-    &--bpm {
-      width: 40px;
-    }
-    
-    &--genre {
-      width: 60%;
-    }
-    
-    &--mood {
-      width: 60%;
-    }
-    
-    &--keyword {
-      width: 60%;
-    }
-    
-    &--feature {
-      width: 60%;
-    }
-    
-    &--duration {
-      width: 50px;
-    }
-    
-    &--menu {
-      width: 20px;
-    }
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+    max-width: 0; // Forces text-overflow to work
+    word-wrap: break-word;
+    box-sizing: border-box;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
   }
 }
 
