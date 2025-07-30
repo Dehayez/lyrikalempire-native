@@ -4,6 +4,7 @@ import classNames from 'classnames';
 import { IoPencil, IoHeadsetSharp } from "react-icons/io5";
 import { toast, Slide } from 'react-toastify';
 import { ClipLoader } from 'react-spinners';
+import BeatListSkeleton from './BeatListSkeleton';
 
 import { usePlaylist, useBeat, useData, useUser } from '../../contexts';
 import { isMobileOrTablet, getInitialState } from '../../utils';
@@ -572,9 +573,7 @@ const handlePlayPause = useCallback((beat) => {
         onFilterChange={handleFilterChange}
       />
       {isLoadingBeats ? (
-        <div className="beat-list__spinner-container">
-          <ClipLoader size={50} color={"#FFCC44"} loading={true} />
-        </div>
+        <BeatListSkeleton />
       ) : beats.length > 0 ? (
         filteredAndSortedBeats.length === 0 ? (
           <div className="placeholder-text">No tracks found</div>
