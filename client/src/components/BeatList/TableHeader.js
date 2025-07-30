@@ -8,7 +8,7 @@ import { IoChevronUpSharp, IoChevronDownSharp, IoTimeOutline, IoAddSharp } from 
 import ContextMenu from '../ContextMenu/ContextMenu';
 import './TableHeader.scss';
 
-const TableHeader = ({ onSort, sortConfig, mode, topOffset }) => {
+const TableHeader = ({ onSort, sortConfig, mode, topOffset, isScrolled }) => {
   const tableRef = useRef(null);
   const [activeContextMenu, setActiveContextMenu] = useState(null);
   const [contextMenuPosition, setContextMenuPosition] = useState({ top: 0, left: 0 });
@@ -91,7 +91,7 @@ const TableHeader = ({ onSort, sortConfig, mode, topOffset }) => {
   };
 
   return (
-    <thead className="table-header" ref={tableRef}
+    <thead className={`table-header ${isScrolled ? 'table-header--scrolled' : ''}`} ref={tableRef}
       style={{
         position: 'sticky',
         top: `${topOffset}px`,

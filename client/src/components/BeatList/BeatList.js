@@ -31,6 +31,7 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const [currentPage, setCurrentPage] = useState(() => getInitialState(urlKey, 1));
   const [previousPage, setPreviousPage] = useState(currentPage);
   const [searchInputFocused, setSearchInputFocused] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   
   
   const { setPlaylistId } = usePlaylist();
@@ -408,9 +409,8 @@ const handlePlayPause = useCallback((beat) => {
 
   useEffect(() => {
     const handleScroll = () => {
-      const maxScroll = 50; 
       const scrollPosition = containerRef.current.scrollTop;
-      const opacity = Math.max(1 - scrollPosition / maxScroll, 0);
+      setIsScrolled(scrollPosition > 0);
     };
 
     const container = containerRef.current;
@@ -530,6 +530,7 @@ const handlePlayPause = useCallback((beat) => {
           className={classNames('beat-list__header', {
             'beat-list__header--focused': searchInputFocused,
             'beat-list__header--mobile': isMobileOrTablet(),
+            'beat-list__header--scrolled': isScrolled,
           })}
         >
         {
@@ -584,7 +585,8 @@ const handlePlayPause = useCallback((beat) => {
                 onSort={onSort} 
                 sortConfig={sortConfig} 
                 mode={mode}
-                topOffset={filterDropdownHeight} />
+                topOffset={filterDropdownHeight}
+                isScrolled={isScrolled} />
 
               <tbody ref={tbodyRef}>
                 {virtualizedBeats}

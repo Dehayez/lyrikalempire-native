@@ -6,6 +6,23 @@
     text-align: left;
     z-index: 3;
     background-color: $color-black;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -40px;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(to bottom, $color-black 0%, transparent 100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    &.table-header--scrolled::after {
+      opacity: 1;
+    }
     
     &__cell {
         position: relative;
