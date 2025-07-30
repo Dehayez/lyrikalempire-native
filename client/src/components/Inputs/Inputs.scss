@@ -77,6 +77,17 @@ input[type="number"] {
                 border: $border-primary;
             }
         }
+        
+        // Override Safari autofill background
+        &:-webkit-autofill,
+        &:-webkit-autofill:hover,
+        &:-webkit-autofill:focus,
+        &:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px $color-black inset !important;
+            -webkit-text-fill-color: $color-white !important;
+            transition: background-color 5000s ease-in-out 0s;
+            background-color: $color-black !important;
+        }
     }
 
     &__label {
