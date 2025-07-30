@@ -91,10 +91,11 @@ const TableHeader = ({ onSort, sortConfig, mode, topOffset, isScrolled }) => {
   };
 
   return (
-    <thead className={`table-header ${isScrolled ? 'table-header--scrolled' : ''}`} ref={tableRef}
+    <thead className="table-header" ref={tableRef}
       style={{
         position: 'sticky',
         top: `${topOffset}px`,
+        '--scroll-opacity': isScrolled,
       }}>
       <tr>
         <th className="table-header__cell table-header__cell--center non-draggable">#</th>

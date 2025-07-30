@@ -16,12 +16,8 @@
       height: 40px;
       background: linear-gradient(to bottom, $color-black 0%, transparent 100%);
       pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    &.table-header--scrolled::after {
-      opacity: 1;
+      opacity: var(--scroll-opacity, 0);
+      transition: opacity 0.1s ease;
     }
     
     &__cell {

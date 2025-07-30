@@ -410,7 +410,9 @@ const handlePlayPause = useCallback((beat) => {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = containerRef.current.scrollTop;
-      setIsScrolled(scrollPosition > 0);
+      const maxScroll = 40;
+      const opacity = Math.min(scrollPosition / maxScroll, 1);
+      setIsScrolled(opacity);
     };
 
     const container = containerRef.current;
