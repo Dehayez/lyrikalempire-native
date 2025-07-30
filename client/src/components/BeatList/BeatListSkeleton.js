@@ -146,7 +146,7 @@ const BeatListSkeleton = () => {
               {columnWidths.map((w,i)=>{
                 const isResizable=resizableIndexes.includes(i);
                 const style={width:isResizable?`${w}%`:`${w}px`};
-                const className = `beat-list-skeleton__header-cell${i===9 && !isMobileOrTablet() ? ' beat-list-skeleton__header-cell--menu' : ''}`;
+                const className = `beat-list-skeleton__header-cell${i===9 ? ' beat-list-skeleton__header-cell--menu' : ''}`;
                 return <th key={i} className={className} style={style}></th>
               })}
             </tr>
