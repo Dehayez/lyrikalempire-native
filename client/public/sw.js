@@ -18,7 +18,12 @@ const ESSENTIAL_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ESSENTIAL_ASSETS))
+      .then(async cache => {
+        // Try to add all assets, but ignore any failures (e.g. 404/hashes)
+        await Promise.allSettled(
+          ESSENTIAL_ASSETS.map(asset => cache.add(asset))
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });

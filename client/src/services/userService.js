@@ -323,4 +323,5 @@ export default {
   refreshTokenFunction,
   startTokenRefresh,
   isAuthenticated,
+  setupTokenRefresh,
 };
