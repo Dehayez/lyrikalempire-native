@@ -40,7 +40,7 @@ audio {
   &::before {
     content: '';
     position: absolute;
-    top: -40px;
+    top: -46px;
     left: 0;
     right: 0;
     height: 40px;
@@ -48,6 +48,7 @@ audio {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.1s ease;
+    z-index: 1;
   }
 
   &.audio-player--scrolled-bottom::before {
