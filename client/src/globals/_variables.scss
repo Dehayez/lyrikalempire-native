@@ -78,6 +78,44 @@ $skeleton-gradient: linear-gradient(90deg, #1a1a1a 25%, #1d1d1d 50%, #1a1a1a 75%
     -ms-overflow-style: none; 
 }
 
+@mixin custom-scrollbar {
+    // Webkit browsers (Chrome, Safari, Edge)
+    &::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: $color-black-dark;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $color-gray-mid;
+        border-radius: 4px;
+        transition: background 0.2s ease;
+
+        &:hover {
+            background: $color-gray-default;
+        }
+
+        &:active {
+            background: $color-gray-light;
+        }
+    }
+
+    &::-webkit-scrollbar-corner {
+        background: $color-black-dark;
+    }
+
+    // Firefox
+    scrollbar-width: thin;
+    scrollbar-color: $color-gray-mid $color-black-dark;
+
+    // IE/Edge (legacy)
+    -ms-overflow-style: auto;
+}
+
 @mixin bg-border($text-color: $color-white, $bg-color: $color-primary-bg, $border: $border-primary) {
     color: $text-color;
     background-color: $bg-color;

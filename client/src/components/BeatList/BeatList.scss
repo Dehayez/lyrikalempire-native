@@ -161,7 +161,7 @@
 
   &__table {
     display: block;
-    margin: 0 16px;
+    margin: 0;
     table-layout: fixed;
     width: 100%;
     white-space: nowrap;
@@ -197,7 +197,7 @@
     }
 
     &-container {
-      padding-right: 16px;
+      padding: 0 16px;
       margin-top: -1px;
     }
 
