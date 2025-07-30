@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { isMobileOrTablet } from '../../utils';
 import { useHeaderWidths } from '../../contexts';
 import './BeatListSkeleton.scss';
 
@@ -145,7 +146,8 @@ const BeatListSkeleton = () => {
               {columnWidths.map((w,i)=>{
                 const isResizable=resizableIndexes.includes(i);
                 const style={width:isResizable?`${w}%`:`${w}px`};
-                return <th key={i} className="beat-list-skeleton__header-cell" style={style}></th>
+                const className = `beat-list-skeleton__header-cell${i===9 && !isMobileOrTablet() ? ' beat-list-skeleton__header-cell--menu' : ''}`;
+                return <th key={i} className={className} style={style}></th>
               })}
             </tr>
           </thead>
@@ -155,7 +157,8 @@ const BeatListSkeleton = () => {
                 {columnWidths.map((w,i)=>{
                   const isResizable=resizableIndexes.includes(i);
                   const style={width:isResizable?`${w}%`:`${w}px`};
-                  return <td key={i} className="beat-list-skeleton__cell" style={style}></td>
+                  const className = `beat-list-skeleton__cell${i===9 && !isMobileOrTablet() ? ' beat-list-skeleton__cell--menu' : ''}`;
+                  return <td key={i} className={className} style={style}></td>
                 })}
                 <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[1]}px` }}></td>
                 <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[2]}px` }}></td>
