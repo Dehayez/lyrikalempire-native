@@ -524,44 +524,6 @@ const handlePlayPause = useCallback((beat) => {
     setBeats
   ]);
 
-  // Log BeatList column widths for comparison with skeleton
-  useEffect(() => {
-    if (!isLoadingBeats && tableRef.current && containerRef.current) {
-      const table = tableRef.current;
-      const container = containerRef.current;
-      const containerWidth = container.offsetWidth;
-      
-      // Get column widths from localStorage
-      const columnWidths = [];
-      for (let i = 0; i < 10; i++) {
-        const savedWidth = localStorage.getItem(`headerWidth${i}`);
-        columnWidths.push(savedWidth ? parseFloat(savedWidth) : null);
-      }
-      
-      // Get computed column widths from the actual table
-      const headerCells = table.querySelectorAll('thead th');
-      const computedWidths = Array.from(headerCells).map(cell => cell.offsetWidth);
-      
-      console.log('🎵 BeatList - Column Info:', {
-        totalColumns: headerCells.length,
-        containerWidth,
-        columnWidths: Array.from({ length: 10 }, (_, i) => {
-          const isResizable = [1, 4, 5, 6, 7].includes(i);
-          const localStorageValue = columnWidths[i];
-          const computedWidth = computedWidths[i] || 0;
-          
-          return {
-            index: i,
-            localStorageValue,
-            computedWidth: `${computedWidth}px`,
-            isResizable,
-            isVisible: computedWidth > 0
-          };
-        })
-      });
-    }
-  }, [filteredAndSortedBeats.length, isLoadingBeats]);
-
   return (
     <div ref={containerRef} className="beat-list">
         <div

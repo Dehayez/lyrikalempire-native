@@ -73,14 +73,6 @@ const BeatListSkeleton = () => {
 
   // Calculate column widths like real BeatList
   const getColumnWidths = () => {
-    const staticColumns = [0, 2, 3, 8, 9];
-    const staticWidths = { 0: 60, 2: 95, 3: 80, 8: 80, 9: 50 };
-    
-    // Calculate total static width for visible columns only
-    const visibleStaticColumns = staticColumns.filter(isColumnVisible);
-    const totalStaticWidth = visibleStaticColumns.reduce((sum, index) => sum + staticWidths[index], 0);
-    const availableWidth = containerWidth - totalStaticWidth;
-    
     const widths = [];
     for (let i = 0; i < 10; i++) {
       if (!isColumnVisible(i)) {
@@ -108,33 +100,6 @@ const BeatListSkeleton = () => {
   const columnWidths = columnPercents.map((w,i)=>{
     if(resizableIndexes.includes(i)) return w*factor;
     return w;});
-
-  // Log the column information
-  const visibleStaticColumns = [0, 2, 3, 8, 9].filter(isColumnVisible);
-  const staticWidths = { 0: 60, 2: 95, 3: 80, 8: 80, 9: 50 };
-  const totalStaticWidth = visibleStaticColumns.reduce((sum, index) => sum + staticWidths[index], 0);
-  const availableWidth = containerWidth - totalStaticWidth;
-  
-  console.log('🎭 BeatListSkeleton - Column Info:', {
-    totalColumns: 10,
-    containerWidth,
-    availableWidth,
-    columnWidths: Array.from({ length: 10 }, (_, i) => {
-      const width = getColumnWidth(i);
-      const isResizable = [1, 4, 5, 6, 7].includes(i);
-      const isVisible = isColumnVisible(i);
-      const pixelWidth = isVisible ? (isResizable ? (availableWidth * width) / 100 : width) : 0;
-      
-      return {
-        index: i,
-        percentage: width,
-        pixelWidth: `${pixelWidth}px`,
-        isResizable,
-        isVisible,
-        localStorageValue: localStorage.getItem(`headerWidth${i}`)
-      };
-    })
-  });
 
   return (
     <div ref={containerRef} className="beat-list-skeleton">
