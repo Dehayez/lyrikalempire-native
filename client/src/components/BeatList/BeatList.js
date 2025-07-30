@@ -572,7 +572,8 @@ const handlePlayPause = useCallback((beat) => {
         ]}
         onFilterChange={handleFilterChange}
       />
-      {isLoadingBeats ? (
+      {/* Force skeleton for debugging - change this to false when done */}
+      {true ? (
         <BeatListSkeleton />
       ) : beats.length > 0 ? (
         filteredAndSortedBeats.length === 0 ? (
