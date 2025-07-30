@@ -5,7 +5,6 @@
   width: 100%;
   overflow: auto;
   position: relative;
-  @include hide-scrollbar;
 
   &__header {
     display: flex;
