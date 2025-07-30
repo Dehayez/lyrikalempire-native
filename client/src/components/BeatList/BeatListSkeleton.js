@@ -91,9 +91,7 @@ const BeatListSkeleton = () => {
       const width = getColumnWidth(i);
       
       if (i === 1 || i === 4 || i === 5 || i === 6 || i === 7) {
-        // Resizable columns: convert percentage to pixels like real BeatList
-        const pixelWidth = (availableWidth * width) / 100;
-        widths.push(pixelWidth);
+        widths.push(width);
       } else {
         // Static columns use fixed width
         widths.push(width);
@@ -102,7 +100,14 @@ const BeatListSkeleton = () => {
     return widths;
   };
 
-  const columnWidths = getColumnWidths();
+  const columnPercents = getColumnWidths();
+  // Normalize resizable column percentages to total 100
+  const resizableIndexes = [1,4,5,6,7].filter(isColumnVisible);
+  const percentSum = resizableIndexes.reduce((sum,i)=>sum+columnPercents[i],0);
+  const factor = percentSum>0?100/percentSum:1;
+  const columnWidths = columnPercents.map((w,i)=>{
+    if(resizableIndexes.includes(i)) return w*factor;
+    return w;});
 
   // Log the column information
   const visibleStaticColumns = [0, 2, 3, 8, 9].filter(isColumnVisible);
@@ -137,22 +142,21 @@ const BeatListSkeleton = () => {
         <table className="beat-list-skeleton__table" ref={tableRef}>
           <thead className="beat-list-skeleton__table-header">
             <tr>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[0]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[1]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[2]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[3]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[4]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[5]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[6]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[7]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[8]}px` }}></th>
-              <th className="beat-list-skeleton__header-cell" style={{ width: `${columnWidths[9]}px` }}></th>
+              {columnWidths.map((w,i)=>{
+                const isResizable=resizableIndexes.includes(i);
+                const style={width:isResizable?`${w}%`:`${w}px`};
+                return <th key={i} className="beat-list-skeleton__header-cell" style={style}></th>
+              })}
             </tr>
           </thead>
           <tbody>
             {Array.from({ length: 10 }).map((_, rowIndex) => (
               <tr key={rowIndex} className="beat-list-skeleton__row">
-                <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[0]}px` }}></td>
+                {columnWidths.map((w,i)=>{
+                  const isResizable=resizableIndexes.includes(i);
+                  const style={width:isResizable?`${w}%`:`${w}px`};
+                  return <td key={i} className="beat-list-skeleton__cell" style={style}></td>
+                })}
                 <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[1]}px` }}></td>
                 <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[2]}px` }}></td>
                 <td className="beat-list-skeleton__cell" style={{ width: `${columnWidths[3]}px` }}></td>
