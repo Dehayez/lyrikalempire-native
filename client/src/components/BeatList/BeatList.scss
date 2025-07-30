@@ -325,36 +325,37 @@
   // Scrollbar thumb styling
   .simplebar-scrollbar {
     position: relative;
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: $color-gray-mid;
-      border-radius: 4px;
-      opacity: 0.4;
-      transition: all 0.2s ease;
-    }
-
-    /* Hover via SimpleBar JS adds .simplebar-hover */
-    &.simplebar-hover::before {
-      
-    }
-
-    &.simplebar-visible::before {
-      opacity: 0.9;
-      background: $color-gray-mid;
-    }
-  }
-
-  // Ensure scrollbar is always visible when scrolling
-  .simplebar-content-wrapper {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    background: $color-gray;
+    border-radius: 4px;
+    opacity: 0.1;
+    transition: opacity 0.4s ease 0.8s;
     
-    &::-webkit-scrollbar {
+    &::before {
       display: none;
     }
   }
+
+  .simplebar-visible {
+    opacity: 0.4;
+    transition: opacity 0s 0s;
+  }
+}
+.beat-list.simplebar-scrolling.simplebar-dragging {
+  .simplebar-scrollbar {
+    opacity: .8;
+  }
 }
 
+.container__content__middle--mobile{
+  .simplebar-scrollbar {
+   width: 4px;
+   height: 40px !important;
+   border-radius: 4px;
+   opacity: 0;
+  }
+
+  .simplebar-visible {
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+  }
+}
