@@ -18,10 +18,7 @@
   
   &__header-cell {
     height: 16px;
-    background: linear-gradient(90deg, $color-gray-dark 30%, $color-gray-dark 50%, $color-gray-dark 70%);
-    background-size: 200% 100%;
-    animation: shimmer 2.5s infinite;
-    border-radius: 2px;
+    @include skeleton-shimmer;
   }
   
   &__row {
@@ -37,10 +34,7 @@
   
   &__cell {
     height: 20px;
-    background: linear-gradient(90deg, $color-gray-dark 30%, $color-gray-dark 50%, $color-gray-dark 70%);
-    background-size: 200% 100%;
-    animation: shimmer 2.5s infinite;
-    border-radius: 2px;
+    @include skeleton-shimmer;
     
     &--index {
       width: 30px;

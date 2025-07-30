@@ -29,6 +29,16 @@ $color-yellow-light: #FFE066;
 $color-yellow-dark: #CC9900;
 $color-warning-dark: #A02230;
 
+// Skeleton loading gradient
+$skeleton-gradient: linear-gradient(90deg, $color-gray-dark 25%, $color-gray-dark-active 50%, $color-gray-dark 75%);
+
+@mixin skeleton-shimmer {
+  background: $skeleton-gradient;
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
+  border-radius: 2px;
+}
+
 $safe-area-inset-bottom: 36px;
 $overlay: rgba($color-black-dark, 0.5);
 
