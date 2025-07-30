@@ -16,6 +16,7 @@
     border: none;
     border-collapse: collapse;
     container-type: inline-size;
+    @include skeleton-shimmer;
   }
   
   &__table-header {
@@ -25,32 +26,28 @@
   &__header-cell {
     height: 40px;
     padding: 12px 20px;
-    @include skeleton-shimmer;
     box-sizing: border-box;
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
+    border: 4px solid $color-black-dark;
   }
   
   &__row {
     border-bottom: 1px solid $color-gray-dark;
     height: 60px;
-    
-    &:hover {
-      background-color: $color-gray-dark;
-    }
   }
   
   &__cell {
     height: 60px;
     padding: 12px 20px;
-    @include skeleton-shimmer;
     max-width: 0; // Forces text-overflow to work
     word-wrap: break-word;
     box-sizing: border-box;
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
+    border: 4px solid $color-black-dark;
   }
 }
 
