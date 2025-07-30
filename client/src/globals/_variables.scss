@@ -51,7 +51,7 @@ $box-shadow-card-hover: 0 0 40px 12px rgba(0, 0, 0, .001);
 $box-shadow-hover: 0 0 0 .5px $color-gray-default;
 
 // Skeleton loading gradient
-$skeleton-gradient: linear-gradient(90deg, $color-gray-dark 25%, $color-gray-dark-active 50%, $color-gray-dark 75%);
+$skeleton-gradient: linear-gradient(90deg, #1a1a1a 25%, #1d1d1d 50%, #1a1a1a 75%);
 
 @keyframes shimmer {
     0% {
