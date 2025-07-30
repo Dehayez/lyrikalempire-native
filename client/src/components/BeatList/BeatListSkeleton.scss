@@ -17,6 +17,63 @@
     border-collapse: collapse;
     container-type: inline-size;
     @include skeleton-shimmer;
+    
+    // Responsive column visibility - order: feature, keywords, mood, genre, bpm, tierlist, duration, number
+    @media (max-width: 1200px) {
+      th:nth-child(8),
+      td:nth-child(8) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1000px) {
+      th:nth-child(7),
+      td:nth-child(7) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 800px) {
+      th:nth-child(6),
+      td:nth-child(6) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      th:nth-child(5),
+      td:nth-child(5) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 500px) {
+      th:nth-child(4),
+      td:nth-child(4) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 400px) {
+      th:nth-child(3),
+      td:nth-child(3) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 300px) {
+      th:nth-child(9),
+      td:nth-child(9) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 200px) {
+      th:nth-child(1),
+      td:nth-child(1) {
+        display: none;
+      }
+    }
   }
   
   &__table-header {
@@ -51,68 +108,4 @@
   }
 }
 
-// Responsive column visibility - matching BeatList.scss exactly
-.beat-list-skeleton {
-  container-type: inline-size;
-
-  &__table {
-    container-type: inline-size;
-  }
-
-  // Responsive column visibility - order: feature, keywords, mood, genre, bpm, tierlist, duration, number
-  @container (max-width: 1200px) {
-    .beat-list-skeleton__header-cell:nth-child(8), // feature column (8th position)
-    .beat-list-skeleton__cell:nth-child(8) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 1000px) {
-    .beat-list-skeleton__header-cell:nth-child(7), // keywords column (7th position)
-    .beat-list-skeleton__cell:nth-child(7) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 800px) {
-    .beat-list-skeleton__header-cell:nth-child(6), // mood column (6th position)
-    .beat-list-skeleton__cell:nth-child(6) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 600px) {
-    .beat-list-skeleton__header-cell:nth-child(5), // genre column (5th position)
-    .beat-list-skeleton__cell:nth-child(5) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 500px) {
-    .beat-list-skeleton__header-cell:nth-child(4), // bpm column (4th position)
-    .beat-list-skeleton__cell:nth-child(4) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 400px) {
-    .beat-list-skeleton__header-cell:nth-child(3), // tierlist column (3rd position)
-    .beat-list-skeleton__cell:nth-child(3) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 300px) {
-    .beat-list-skeleton__header-cell:nth-child(9), // duration column (9th position)
-    .beat-list-skeleton__cell:nth-child(9) {
-      display: none;
-    }
-  }
-
-  @container (max-width: 200px) {
-    .beat-list-skeleton__header-cell:nth-child(1), // number column (1st position) - last to hide
-    .beat-list-skeleton__cell:nth-child(1) {
-      display: none;
-    }
-  }
-} 
+ 
