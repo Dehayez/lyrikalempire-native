@@ -46,6 +46,7 @@ function App() {
   const [repeat, setRepeat] = useState(() => getInitialState('repeat', 'Disabled Repeat'));
   const [lyricsModal, setLyricsModal] = useState(getInitialState('lyricsModal', false));
   const [isScrolledBottom, setIsScrolledBottom] = useState(false);
+  const [scrollOpacityBottom, setScrollOpacityBottom] = useState(0);
   const [sessionProps, setSessionProps] = useState({
     masterSession: null,
     currentSessionId: null,
@@ -339,6 +340,7 @@ function App() {
                       onUpdate={onUpdate}
                       isBeatCachedSync={isBeatCachedSync}
                       setIsScrolledBottom={setIsScrolledBottom}
+                      setScrollOpacityBottom={setScrollOpacityBottom}
                     />
                     <AddBeatButton setIsOpen={setIsOpen} />
                   </>
@@ -454,6 +456,7 @@ function App() {
             onSessionUpdate={handleSessionUpdate}
             addToCustomQueue={addToCustomQueue}
             isScrolledBottom={isScrolledBottom}
+            scrollOpacityBottom={scrollOpacityBottom}
           />
         }
        {!isAuthRoute && isMobileOrTablet() && (

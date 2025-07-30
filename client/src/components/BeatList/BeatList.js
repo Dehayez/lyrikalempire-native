@@ -19,7 +19,7 @@ import { SearchInput } from '../Inputs/SearchInput';
 
 import './BeatList.scss';
 
-const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addToCustomQueue, onBeatClick, externalBeats, headerContent, onDeleteFromPlaylist, deleteMode = 'default', playlistName, playlistId, onUpdateBeat, onUpdate, setBeats, isBeatCachedSync, setIsScrolledBottom }) => {
+const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addToCustomQueue, onBeatClick, externalBeats, headerContent, onDeleteFromPlaylist, deleteMode = 'default', playlistName, playlistId, onUpdateBeat, onUpdate, setBeats, isBeatCachedSync, setIsScrolledBottom, setScrollOpacityBottom }) => {
   const tableRef = useRef(null);
   const containerRef = useRef(null);
   const tbodyRef = useRef(null);
@@ -32,7 +32,6 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const [previousPage, setPreviousPage] = useState(currentPage);
   const [searchInputFocused, setSearchInputFocused] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [scrollOpacityBottom, setScrollOpacityBottom] = useState(0);
   
   
   const { setPlaylistId } = usePlaylist();
@@ -542,7 +541,6 @@ const handlePlayPause = useCallback((beat) => {
     <div 
       ref={containerRef} 
       className="beat-list"
-      style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
     >
         <div
           className={classNames('beat-list__header', {

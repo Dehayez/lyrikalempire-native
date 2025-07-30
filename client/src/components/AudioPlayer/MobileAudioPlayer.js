@@ -16,7 +16,8 @@ const MobileAudioPlayer = forwardRef(({
   handleTouchEnd,
   dragPosition,
   lyricsModal = false,
-  isScrolledBottom = false
+  isScrolledBottom = false,
+  scrollOpacityBottom = 0
 }, ref) => {
   
   const handleMobilePlayPause = useCallback((shouldPlay) => {
@@ -28,7 +29,8 @@ const MobileAudioPlayer = forwardRef(({
 
   return (
     <div
-      className={`audio-player audio-player--mobile ${lyricsModal ? 'audio-player--lyrics-modal-open' : ''} ${isScrolledBottom ? 'audio-player--scrolled-bottom' : ''}`}
+      className={`audio-player audio-player--mobile ${lyricsModal ? 'audio-player--lyrics-modal-open' : ''}`}
+      style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
       onClick={toggleFullPagePlayer}
     >
       <H5AudioPlayer
