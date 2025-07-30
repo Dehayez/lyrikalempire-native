@@ -2,10 +2,10 @@
 
 .beat-list-skeleton {
   width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
   
   &__table-container {
-    padding-right: 16px;
-    margin-top: -1px;
   }
   
   &__table {
