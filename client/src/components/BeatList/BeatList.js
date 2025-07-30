@@ -5,6 +5,8 @@ import { IoPencil, IoHeadsetSharp } from "react-icons/io5";
 import { toast, Slide } from 'react-toastify';
 import { ClipLoader } from 'react-spinners';
 import BeatListSkeleton from './BeatListSkeleton';
+import SimpleBar from 'simplebar-react';
+import 'simplebar-react/dist/simplebar.min.css';
 
 import { usePlaylist, useBeat, useData, useUser } from '../../contexts';
 import { isMobileOrTablet, getInitialState } from '../../utils';
@@ -538,8 +540,8 @@ const handlePlayPause = useCallback((beat) => {
   ]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <SimpleBar
+      scrollableNodeProps={{ ref: containerRef }}
       className="beat-list"
     >
         <div
@@ -623,7 +625,7 @@ const handlePlayPause = useCallback((beat) => {
         onConfirm={handleConfirm} 
         onCancel={() => setIsOpen(false)}
       />
-    </div>
+    </SimpleBar>
   );
 };
 

@@ -3,7 +3,7 @@
 .beat-list {
   height: 100%;
   width: 100%;
-  overflow: auto;
+  overflow-y: scroll;
   position: relative;
 
   &__header {
