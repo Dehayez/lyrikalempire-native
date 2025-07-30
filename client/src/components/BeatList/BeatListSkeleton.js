@@ -8,11 +8,16 @@ const BeatListSkeleton = () => {
   const tableRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
 
-  // Get actual container width
+  // Get actual table width (like real BeatList)
   useEffect(() => {
-    if (containerRef.current) {
+    if (tableRef.current) {
       const updateWidth = () => {
-        setContainerWidth(containerRef.current.offsetWidth);
+        // Small delay to ensure table is rendered
+        setTimeout(() => {
+          if (tableRef.current) {
+            setContainerWidth(tableRef.current.offsetWidth);
+          }
+        }, 0);
       };
       
       updateWidth();
