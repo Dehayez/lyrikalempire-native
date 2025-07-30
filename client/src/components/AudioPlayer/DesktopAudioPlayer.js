@@ -32,10 +32,11 @@ const DesktopAudioPlayer = forwardRef(({
   progress,
   currentTime,
   duration,
-  lyricsModal = false // Add default value
+  lyricsModal = false, // Add default value
+  isScrolledBottom = false
 }, ref) => {
   return (
-    <div className="audio-player audio-player--desktop audio">
+    <div className={`audio-player audio-player--desktop audio ${isScrolledBottom ? 'audio-player--scrolled-bottom' : ''}`}>
       <div className='audio-player__text audio-player__text--desktop' style={{ flex: '1' }}>
         <p className="audio-player__title">{currentBeat.title}</p>
         <p className="audio-player__artist">{artistName}</p>

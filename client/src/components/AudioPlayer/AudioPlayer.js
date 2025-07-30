@@ -34,7 +34,8 @@ const AudioPlayer = ({
   onUpdateBeat,
   markBeatAsCached,
   onSessionUpdate,
-  addToCustomQueue
+  addToCustomQueue,
+  isScrolledBottom = false
 }) => {
   // Guard clause: Don't render if there's no current beat
   if (!currentBeat) {
@@ -609,6 +610,7 @@ const AudioPlayer = ({
           isLoadingAudio={isLoadingAudio}
           isCachedAudio={isCachedAudio}
           lyricsModal={lyricsModal}
+          isScrolledBottom={isScrolledBottom}
         />
       )}
 
@@ -639,6 +641,7 @@ const AudioPlayer = ({
           repeat={repeat}
           setRepeat={setRepeat}
           lyricsModal={lyricsModal}
+          isScrolledBottom={isScrolledBottom}
         />
       )}
 

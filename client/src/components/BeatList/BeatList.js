@@ -19,7 +19,7 @@ import { SearchInput } from '../Inputs/SearchInput';
 
 import './BeatList.scss';
 
-const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addToCustomQueue, onBeatClick, externalBeats, headerContent, onDeleteFromPlaylist, deleteMode = 'default', playlistName, playlistId, onUpdateBeat, onUpdate, setBeats, isBeatCachedSync }) => {
+const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addToCustomQueue, onBeatClick, externalBeats, headerContent, onDeleteFromPlaylist, deleteMode = 'default', playlistName, playlistId, onUpdateBeat, onUpdate, setBeats, isBeatCachedSync, setIsScrolledBottom }) => {
   const tableRef = useRef(null);
   const containerRef = useRef(null);
   const tbodyRef = useRef(null);
@@ -32,6 +32,7 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const [previousPage, setPreviousPage] = useState(currentPage);
   const [searchInputFocused, setSearchInputFocused] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollOpacityBottom, setScrollOpacityBottom] = useState(0);
   
   
   const { setPlaylistId } = usePlaylist();
@@ -410,9 +411,20 @@ const handlePlayPause = useCallback((beat) => {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = containerRef.current.scrollTop;
+      const scrollHeight = containerRef.current.scrollHeight;
+      const clientHeight = containerRef.current.clientHeight;
+      const maxScrollTop = scrollHeight - clientHeight;
+      
+      // Top gradient opacity
       const maxScroll = 40;
       const opacity = Math.min(scrollPosition / maxScroll, 1);
       setIsScrolled(opacity);
+      
+      // Bottom gradient opacity (fade in when near bottom)
+      const distanceFromBottom = maxScrollTop - scrollPosition;
+      const bottomOpacity = Math.min(distanceFromBottom / maxScroll, 1);
+      setScrollOpacityBottom(bottomOpacity);
+      setIsScrolledBottom(bottomOpacity > 0);
     };
 
     const container = containerRef.current;
@@ -527,7 +539,11 @@ const handlePlayPause = useCallback((beat) => {
   ]);
 
   return (
-    <div ref={containerRef} className="beat-list">
+    <div 
+      ref={containerRef} 
+      className="beat-list"
+      style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
+    >
         <div
           className={classNames('beat-list__header', {
             'beat-list__header--focused': searchInputFocused,

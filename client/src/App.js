@@ -45,6 +45,7 @@ function App() {
   const [shuffle, setShuffle] = useState(() => getInitialState('shuffle', false));
   const [repeat, setRepeat] = useState(() => getInitialState('repeat', 'Disabled Repeat'));
   const [lyricsModal, setLyricsModal] = useState(getInitialState('lyricsModal', false));
+  const [isScrolledBottom, setIsScrolledBottom] = useState(false);
   const [sessionProps, setSessionProps] = useState({
     masterSession: null,
     currentSessionId: null,
@@ -337,6 +338,7 @@ function App() {
                       onUpdateBeat={handleUpdateBeat}
                       onUpdate={onUpdate}
                       isBeatCachedSync={isBeatCachedSync}
+                      setIsScrolledBottom={setIsScrolledBottom}
                     />
                     <AddBeatButton setIsOpen={setIsOpen} />
                   </>
@@ -451,6 +453,7 @@ function App() {
             markBeatAsCached={markBeatAsCached}
             onSessionUpdate={handleSessionUpdate}
             addToCustomQueue={addToCustomQueue}
+            isScrolledBottom={isScrolledBottom}
           />
         }
        {!isAuthRoute && isMobileOrTablet() && (

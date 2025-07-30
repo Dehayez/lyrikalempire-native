@@ -37,6 +37,23 @@ audio {
   background-color: $color-black;
   padding: 0 20px;
 
+  &::before {
+    content: '';
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(to top, $color-black 0%, transparent 100%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  &.audio-player--scrolled-bottom::before {
+    opacity: 1;
+  }
+
   &--desktop {
     .rhap_progress-section {
       padding: 40px 0;
