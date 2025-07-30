@@ -5,9 +5,6 @@
   padding: 0 16px;
   box-sizing: border-box;
   
-  &__table-container {
-  }
-  
   &__table {
     display: table;
     table-layout: fixed;
@@ -18,7 +15,6 @@
     container-type: inline-size;
     @include skeleton-shimmer;
     
-    // Responsive column visibility - order: feature, keywords, mood, genre, bpm, tierlist, duration, number
     @media (max-width: 1200px) {
       th:nth-child(8),
       td:nth-child(8) {
@@ -76,10 +72,6 @@
     }
   }
   
-  &__table-header {
-    // Table header styles will be inherited from BeatList
-  }
-  
   &__header-cell {
     height: 40px;
     padding: 12px 20px;
@@ -101,7 +93,7 @@
   &__cell {
     height: 60px;
     padding: 12px 20px;
-    max-width: 0; // Forces text-overflow to work
+    max-width: 0;
     word-wrap: break-word;
     box-sizing: border-box;
     text-overflow: ellipsis;

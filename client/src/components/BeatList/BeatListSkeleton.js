@@ -4,7 +4,6 @@ import { useHeaderWidths } from '../../contexts';
 import './BeatListSkeleton.scss';
 
 const BeatListSkeleton = () => {
-  const { headerWidths } = useHeaderWidths();
   const containerRef = useRef(null);
   const tableRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
