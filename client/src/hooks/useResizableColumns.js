@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useLayoutEffect, useCallback } from 'react';
 import { useHeaderWidths } from '../contexts';
 
 export const useResizableColumns = (tableRef) => {
@@ -106,7 +106,7 @@ export const useResizableColumns = (tableRef) => {
     });
   }, [setHeaderWidths, isColumnVisible]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!tableRef.current) return;
 
     const table = tableRef.current.closest('table');
