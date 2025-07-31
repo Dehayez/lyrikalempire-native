@@ -22,6 +22,7 @@ export const useAudioPlayerState = ({
   const originalUrlRef = useRef('');
   const lastUrlRefreshRef = useRef(0);
   const artistLoadRetryCount = useRef(0);
+  const loadingTimeoutRef = useRef(null);
 
   // State
   const [artistName, setArtistName] = useState('\u00A0');
@@ -35,6 +36,7 @@ export const useAudioPlayerState = ({
   const [audioSrc, setAudioSrc] = useState('');
   const [autoPlay, setAutoPlay] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const [isCachedAudio, setIsCachedAudio] = useState(false);
   
   const [waveform, setWaveform] = useState(() => 
@@ -94,6 +96,12 @@ export const useAudioPlayerState = ({
 
     try {
       setIsLoadingAudio(true);
+      
+      // Start delayed loading animation after 500ms
+      loadingTimeoutRef.current = setTimeout(() => {
+        setShowLoadingAnimation(true);
+      }, 500);
+      
       cacheInProgressRef.current = true;
 
       // Check if audio is cached
@@ -185,6 +193,14 @@ export const useAudioPlayerState = ({
       setAudioSrc('');
     } finally {
       setIsLoadingAudio(false);
+      setShowLoadingAnimation(false);
+      
+      // Clear the timeout if it hasn't fired yet
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      
       cacheInProgressRef.current = false;
     }
   }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari, isOffline]);
@@ -200,6 +216,11 @@ export const useAudioPlayerState = ({
     
     try {
       setIsLoadingAudio(true);
+      
+      // Start delayed loading animation after 500ms
+      loadingTimeoutRef.current = setTimeout(() => {
+        setShowLoadingAnimation(true);
+      }, 500);
       
       const freshSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
       originalUrlRef.current = freshSignedUrl;
@@ -230,6 +251,13 @@ export const useAudioPlayerState = ({
       }
     } finally {
       setIsLoadingAudio(false);
+      setShowLoadingAnimation(false);
+      
+      // Clear the timeout if it hasn't fired yet
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
     }
   }, [currentBeat, isSafari]);
 
@@ -277,6 +305,16 @@ export const useAudioPlayerState = ({
     loadAudio();
   }, [loadAudio]);
 
+  // Cleanup loading timeout when component unmounts or beat changes
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+  }, [currentBeat?.id]);
+
   // Derived state
   const shouldShowFullPagePlayer = isFullPage; // Render when full page is requested
   const shouldShowMobilePlayer = isMobileOrTablet();
@@ -304,6 +342,7 @@ export const useAudioPlayerState = ({
     audioSrc,
     autoPlay,
     isLoadingAudio,
+    showLoadingAnimation,
     isCachedAudio,
     waveform,
     isFullPage,

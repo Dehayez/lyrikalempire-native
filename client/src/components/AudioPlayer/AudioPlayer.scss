@@ -6,6 +6,10 @@ $indicator-half-size: math.div($indicator-size, 2);
 
 // Loading animation mixin
 @mixin loading-shimmer-animation {
+  .rhap_progress-bar {
+    transition: background 0.3s ease;
+  }
+  
   &.loading .rhap_progress-bar {
     background: linear-gradient(90deg, 
       $color-gray-dark 25%, 

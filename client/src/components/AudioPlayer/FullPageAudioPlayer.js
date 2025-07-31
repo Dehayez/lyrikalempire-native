@@ -32,6 +32,7 @@ const FullPageAudioPlayer = forwardRef(({
   waveform,
   waveformRef,
   isLoadingAudio = false,
+  showLoadingAnimation = false,
   lyricsModal = false,
   isFullPageVisible,
   toggleFullPagePlayer,
@@ -62,7 +63,7 @@ const FullPageAudioPlayer = forwardRef(({
       />
       <div
         ref={ref}
-        className="audio-player audio-player__full-page"
+        className={`audio-player audio-player__full-page ${showLoadingAnimation ? 'loading' : ''}`}
         style={style}
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
@@ -109,7 +110,7 @@ const FullPageAudioPlayer = forwardRef(({
           
           <H5AudioPlayer
             ref={fullPageProgressRef}
-            className={`smooth-progress-bar smooth-progress-bar--full-page ${isLoadingAudio ? 'loading' : ''}`}
+            className="smooth-progress-bar smooth-progress-bar--full-page"
             customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
             customControlsSection={[
               <>

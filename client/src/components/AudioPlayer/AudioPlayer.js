@@ -142,6 +142,7 @@ const AudioPlayer = ({
     audioSrc,
     autoPlay,
     isLoadingAudio,
+    showLoadingAnimation,
     isCachedAudio,
     waveform,
     isFullPage,
@@ -638,6 +639,7 @@ const AudioPlayer = ({
           handleTouchEnd={handleTouchEnd}
           dragPosition={dragPosition}
           isLoadingAudio={isLoadingAudio}
+          showLoadingAnimation={showLoadingAnimation}
           isCachedAudio={isCachedAudio}
           lyricsModal={lyricsModal}
           isScrolledBottom={isScrolledBottom}
@@ -666,6 +668,7 @@ const AudioPlayer = ({
           waveform={waveform}
           toggleWaveform={toggleWaveform}
           isLoadingAudio={isLoadingAudio}
+          showLoadingAnimation={showLoadingAnimation}
           isCachedAudio={isCachedAudio}
           shuffle={shuffle}
           setShuffle={setShuffle}
