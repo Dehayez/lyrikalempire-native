@@ -306,22 +306,22 @@ audio {
   }
 
   &__text {
+    font-size: 14px;
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-width: 0; // Allow text to shrink
+    min-width: 0;
   }
 
   &__title-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 0; // Allow text to shrink
+    min-width: 0; 
   }
 
   &__title {
-    font-size: 16px;
     font-weight: 600;
     color: $color-white;
     margin: 0;
@@ -333,7 +333,6 @@ audio {
   }
 
   &__artist {
-    font-size: 14px;
     color: $color-gray-light;
     margin: 0;
     overflow: hidden;
