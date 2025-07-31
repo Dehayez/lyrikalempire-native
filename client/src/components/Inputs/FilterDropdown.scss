@@ -1,4 +1,4 @@
-@import '../../globals/variables.scss';
+@import '../../globals/_variables';
 
 .filter-dropdown {
   &-container {
@@ -143,6 +143,7 @@
     flex-direction: column;
     gap: 4px;
     padding: 0 16px;
+    @include custom-scrollbar;
   }
 
   &__actions {

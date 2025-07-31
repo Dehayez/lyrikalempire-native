@@ -114,3 +114,50 @@ $skeleton-gradient: linear-gradient(90deg, #1a1a1a 25%, #1d1d1d 50%, #1a1a1a 75%
 @mixin bg-border-hover-warning($text-color: $color-white, $bg-color: $color-warning-bg, $border: $border-warning, $hover-bg-color: $color-warning-bg-hover, $hover-border: $border-warning-hover) {
     @include bg-border-hover($text-color, $bg-color, $border, $hover-bg-color, $hover-border);
 }
+
+// Custom scrollbar mixin
+@mixin custom-scrollbar {
+  // Vertical scrollbar track
+  .simplebar-track.simplebar-vertical {
+    width: 8px;
+    background: transparent;
+    right: 0;
+  }
+
+  // Horizontal scrollbar track (if needed)
+  .simplebar-track.simplebar-horizontal {
+    height: 6px;
+    background: transparent;
+    bottom: 0;
+  }
+
+  // Scrollbar thumb styling
+  .simplebar-scrollbar {
+    position: relative;
+    background: $color-gray;
+    border-radius: 4px;
+    opacity: 0.1;
+    transition: opacity 0.4s ease 0.8s; // 0.8s delay before fading out
+    
+    &::before {
+      display: none;
+    }
+
+    // Only transition on hover, not when dragging stops
+    &:hover {
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+    }
+  }
+
+  .simplebar-visible {
+    opacity: 0.4;
+    transition: opacity 0s 0s;
+  }
+
+  &.simplebar-scrolling.simplebar-dragging {
+    .simplebar-scrollbar {
+      opacity: .8;
+    }
+  }
+}

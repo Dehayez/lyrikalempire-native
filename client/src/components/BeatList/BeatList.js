@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import classNames from 'classnames';
 import { IoPencil, IoHeadsetSharp } from "react-icons/io5";
 import { toast, Slide } from 'react-toastify';
-import { ClipLoader } from 'react-spinners';
 import BeatListSkeleton from './BeatListSkeleton';
 import SimpleBar from 'simplebar-react';
 import 'simplebar-react/dist/simplebar.min.css';

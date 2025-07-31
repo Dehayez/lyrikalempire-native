@@ -5,6 +5,7 @@
   width: 100%;
   overflow-y: scroll;
   position: relative;
+  @include custom-scrollbar;
 
   &__header {
     display: flex;
@@ -304,46 +305,6 @@
   height: 1px;
   width: calc(100% - 32px);
   background-color: $color-yellow;
-}
-
-// Professional SimpleBar scrollbar styling
-.beat-list {
-  // Vertical scrollbar track
-  .simplebar-track.simplebar-vertical {
-    width: 8px;
-    background: transparent;
-    right: 0;
-  }
-
-  // Horizontal scrollbar track (if needed)
-  .simplebar-track.simplebar-horizontal {
-    height: 6px;
-    background: transparent;
-    bottom: 0;
-  }
-
-  // Scrollbar thumb styling
-  .simplebar-scrollbar {
-    position: relative;
-    background: $color-gray;
-    border-radius: 4px;
-    opacity: 0.1;
-    transition: opacity 0.4s ease 0.8s;
-    
-    &::before {
-      display: none;
-    }
-  }
-
-  .simplebar-visible {
-    opacity: 0.4;
-    transition: opacity 0s 0s;
-  }
-}
-.beat-list.simplebar-scrolling.simplebar-dragging {
-  .simplebar-scrollbar {
-    opacity: .8;
-  }
 }
 
 .container__content__middle--mobile {
