@@ -31,6 +31,7 @@ const FullPageAudioPlayer = forwardRef(({
   toggleLyricsModal,
   waveform,
   waveformRef,
+  isLoadingAudio = false,
   lyricsModal = false,
   isFullPageVisible,
   toggleFullPagePlayer,
@@ -108,7 +109,7 @@ const FullPageAudioPlayer = forwardRef(({
           
           <H5AudioPlayer
             ref={fullPageProgressRef}
-            className="smooth-progress-bar smooth-progress-bar--full-page"
+            className={`smooth-progress-bar smooth-progress-bar--full-page ${isLoadingAudio ? 'loading' : ''}`}
             customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
             customControlsSection={[
               <>

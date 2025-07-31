@@ -4,6 +4,19 @@
 $indicator-size: 14px;
 $indicator-half-size: math.div($indicator-size, 2);
 
+// Loading animation mixin
+@mixin loading-shimmer-animation {
+  &.loading .rhap_progress-bar {
+    background: linear-gradient(90deg, 
+      $color-gray-dark 25%, 
+      $color-gray-mid 50%, 
+      $color-gray-dark 75%
+    );
+    background-size: 200% 100%;
+    animation: loading-shimmer 3s linear infinite;
+  }
+}
+
 :root {
   --indicator-size: #{$indicator-size};
   --indicator-half-size: #{$indicator-half-size};
@@ -135,6 +148,9 @@ audio {
         transition: opacity 0.4s ease, transform 0s !important;
       }
     }
+
+    // Loading animation
+    @include loading-shimmer-animation;
     position: fixed;
     top: 0;
     left: 0;
@@ -260,6 +276,9 @@ audio {
       border-radius: 0;
       height: 6px;
     }
+
+    // Loading animation
+    @include loading-shimmer-animation;
 
     .rhap_progress-indicator {
        opacity: 0 !important;
@@ -560,5 +579,14 @@ audio {
 .audio-player__full-page-content {
   flex: 1;
   position: relative;
+}
 
+// Loading animation keyframes
+@keyframes loading-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

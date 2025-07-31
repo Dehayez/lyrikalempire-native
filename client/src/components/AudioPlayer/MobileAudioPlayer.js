@@ -15,6 +15,7 @@ const MobileAudioPlayer = forwardRef(({
   handleTouchMove,
   handleTouchEnd,
   dragPosition,
+  isLoadingAudio = false,
   lyricsModal = false,
   isScrolledBottom = false,
   scrollOpacityBottom = 0
@@ -35,7 +36,7 @@ const MobileAudioPlayer = forwardRef(({
     >
       <H5AudioPlayer
         ref={ref}
-        className="smooth-progress-bar smooth-progress-bar--mobile"
+        className={`smooth-progress-bar smooth-progress-bar--mobile ${isLoadingAudio ? 'loading' : ''}`}
         customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
         customControlsSection={[]}
       />

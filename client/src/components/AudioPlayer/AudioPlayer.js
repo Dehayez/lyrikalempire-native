@@ -469,6 +469,18 @@ const AudioPlayer = ({
 
   // Custom handlers for audio events
   const handleCanPlay = useCallback((e) => {
+    console.log('🎉 [AUDIO DEBUG] CanPlay event fired - audio is ready to play:', {
+      beatId: currentBeat?.id,
+      readyState: e?.target?.readyState,
+      networkState: e?.target?.networkState,
+      duration: e?.target?.duration,
+      currentTime: e?.target?.currentTime,
+      buffered: e?.target?.buffered?.length ? Array.from({length: e.target.buffered.length}, (_, i) => ({
+        start: e.target.buffered.start(i),
+        end: e.target.buffered.end(i)
+      })) : []
+    });
+    
     // Mark as loaded to prevent duplicate play attempts
     hasLoadedRef.current = true;
     
@@ -487,10 +499,11 @@ const AudioPlayer = ({
     
     // For Safari, we need to manually trigger play if autoPlay is true
     if (isSafari && isPlaying && audioCore.isPaused()) {
+      console.log('🦁 [AUDIO DEBUG] Safari auto-play triggered after canPlay event');
       // Add a small delay for Safari to properly initialize the audio
       setTimeout(() => {
         audioCore.play().catch(error => {
-          console.error('Safari: Error playing audio on canplay event:', error);
+          console.error('❌ [AUDIO DEBUG] Safari: Error playing audio on canplay event:', error);
         });
       }, 100);
     }
@@ -501,8 +514,24 @@ const AudioPlayer = ({
     const audio = e.target;
     const error = audio?.error;
     
+    console.error('❌ [AUDIO DEBUG] Audio error event fired:', {
+      beatId: currentBeat?.id,
+      error: error?.message || 'Unknown error',
+      code: error?.code,
+      src: audio?.src,
+      readyState: audio?.readyState,
+      networkState: audio?.networkState,
+      errorCodeMeaning: {
+        1: 'MEDIA_ERR_ABORTED - User aborted',
+        2: 'MEDIA_ERR_NETWORK - Network error',
+        3: 'MEDIA_ERR_DECODE - Decode error', 
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
+      }[error?.code] || 'Unknown error code'
+    });
+    
     // Skip errors for empty src (during initialization)
     if (!audioSrc || audioSrc === '') {
+      console.log('⏭️ [AUDIO DEBUG] Skipping error for empty audio source (initialization)');
       return;
     }
     
