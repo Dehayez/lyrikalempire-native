@@ -223,6 +223,7 @@ audio {
     }
   }
 
+  // Mobile components
   &--mobile {
     display: flex;
     justify-content: space-between;
@@ -244,6 +245,20 @@ audio {
     .rhap_progress-bar {
       border-radius: 0;
       height: 6px;
+    }
+
+    .rhap_progress-indicator {
+       opacity: 0 !important;
+       transform: scale(3) !important; // 3x size when idle
+       transition: opacity 0.4s ease, transform 0.4s ease 0.25s !important; // delay scale only when growing back
+     }
+
+    .rhap_progress-dragging {
+      .rhap_progress-indicator {
+        opacity: 1 !important;
+        transform: scale(1) !important;
+        transition: opacity 0.4s ease, transform 0s !important; // no delay when shrinking
+      }
     }
 
     .rhap_controls-section,
@@ -340,6 +355,7 @@ audio {
 }
 
 .rhap_progress-bar {
+  background-color: $color-gray-mid;
   z-index: 1;
 }
 
@@ -532,8 +548,6 @@ audio {
   position: relative;
 
 }
-
-
 
 .rhap_progress-indicator {
   opacity: 0;
