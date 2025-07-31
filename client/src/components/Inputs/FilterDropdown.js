@@ -6,6 +6,7 @@ import { getInitialState, getInitialStateForFilters } from '../../utils/stateUti
 import { isMobileOrTablet, slideIn, slideOut } from '../../utils';
 
 import { Button } from '../Buttons';
+import Portal from './Portal';
 import './FilterDropdown.scss';
 
 export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref) => {
@@ -302,14 +303,16 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
             </span>
 
             {isDropdownOpen[name] && (
-              <div 
-                className={`filter-dropdown__wrapper ${isMobileOrTablet() ? 'filter-dropdown__wrapper--mobile' : ''}`}
-                ref={isMobileOrTablet() ? dismissRef : null}
-                onTouchStart={handleTouchStartWrapper}
-                onTouchMove={handleTouchMoveWrapper}
-                onTouchEnd={handleTouchEndWrapper}
-                onClick={(e) => e.stopPropagation()}
-              >
+              isMobileOrTablet() ? (
+                <Portal>
+                  <div 
+                    className="filter-dropdown__wrapper filter-dropdown__wrapper--mobile"
+                    ref={dismissRef}
+                    onTouchStart={handleTouchStartWrapper}
+                    onTouchMove={handleTouchMoveWrapper}
+                    onTouchEnd={handleTouchEndWrapper}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                 {isMobileOrTablet() && (
                   <div 
                     className="filter-dropdown__header"
@@ -358,11 +361,59 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
                     );
                   })}
                 </div>
-                <div className={`filter-dropdown__actions ${isMobileOrTablet() ? 'filter-dropdown__actions--mobile' : ''}`}>
+                <div className="filter-dropdown__actions filter-dropdown__actions--mobile">
                   <Button size="small" variant="transparent" className="filter-dropdown__clear-button" onClick={() => handleClear(name)}>Clear</Button>
                   <Button size="small" className="filter-dropdown__close-button" variant='primary' onClick={(e) => toggleDropdown(name, e)}>Done</Button>
                 </div>
-              </div>
+                  </div>
+                </Portal>
+              ) : (
+                <div 
+                  className="filter-dropdown__wrapper"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="filter-dropdown__search">
+                    <input
+                      type="text"
+                      name={`search-${name}`} 
+                      id={`search-${name}`}
+                      placeholder={`Search ${label?.toLowerCase()}...`} 
+                      value={searchTerms[name] || ''} 
+                      onChange={(e) => handleSearch(name, e.target.value)} 
+                      className="filter-dropdown__search-input"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div 
+                    className="filter-dropdown__list"
+                    ref={listRef}
+                  >
+                    {getFilteredOptions(options, name).map(option => {
+                      const optionId = `${id}-${option.id}`;
+                      return (
+                        <div key={option.id} className="filter-dropdown__option">
+                          <input
+                            type="checkbox"
+                            id={optionId}
+                            name={name}
+                            value={option.id}
+                            checked={selectedItems[name]?.some(selectedItem => selectedItem.id === option.id)}
+                            onChange={() => handleSelect(name, option)}
+                            className="filter-dropdown__option-input"
+                          />
+                          <span onClick={() => handleSelect(name, option)} className="filter-dropdown__option-text">
+                            {option.name} <span className="filter-dropdown__option-text-count">{option.count}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="filter-dropdown__actions">
+                    <Button size="small" variant="transparent" className="filter-dropdown__clear-button" onClick={() => handleClear(name)}>Clear</Button>
+                    <Button size="small" className="filter-dropdown__close-button" variant='primary' onClick={(e) => toggleDropdown(name, e)}>Done</Button>
+                  </div>
+                </div>
+              )
             )}
           </div>
         ))}
