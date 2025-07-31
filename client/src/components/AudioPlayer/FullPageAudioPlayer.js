@@ -31,20 +31,13 @@ const FullPageAudioPlayer = forwardRef(({
   toggleLyricsModal,
   waveform,
   waveformRef,
-  lyricsModal = false, // Add default value
+  lyricsModal = false,
   isFullPageVisible,
   toggleFullPagePlayer,
   handleDragStart,
   handleDragMove,
   handleDragEnd,
   handleEllipsisClick,
-  isLoadingAudio,
-  isCachedAudio,
-  progress,
-  currentTime,
-  duration,
-  volume,
-  handleVolumeChange,
   style = {}
 }, ref) => {
   // Create edit inputs content for the third slide
