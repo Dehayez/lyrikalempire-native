@@ -17,7 +17,7 @@ export const formatTime = (time) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
-export const createSlides = (currentBeat, editInputs) => [
+export const createSlides = (currentBeat, editInputs, lyricsContent) => [
   {
     id: 'image',
     content: (
@@ -43,6 +43,14 @@ export const createSlides = (currentBeat, editInputs) => [
     content: editInputs || (
       <div className="audio-player__full-page-edit-content">
         <p>Edit inputs will be available here</p>
+      </div>
+    )
+  },
+  {
+    id: 'lyrics',
+    content: lyricsContent || (
+      <div className="audio-player__full-page-lyrics-content">
+        <p>Lyrics will be available here</p>
       </div>
     )
   }

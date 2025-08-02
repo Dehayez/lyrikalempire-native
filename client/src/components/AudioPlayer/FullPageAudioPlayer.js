@@ -9,6 +9,7 @@ import { IconButton } from '../Buttons';
 import { NextButton, PlayPauseButton, PrevButton, ShuffleButton, RepeatButton } from './AudioControls';
 import SwipeableContent from './SwipeableContent';
 import BeatEditInputs from './BeatEditInputs';
+import LyricsSlide from './LyricsSlide';
 
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
@@ -42,7 +43,7 @@ const FullPageAudioPlayer = forwardRef(({
   handleEllipsisClick,
   style = {}
 }, ref) => {
-  // Create edit inputs content for the third slide
+  // Create edit inputs content for the second slide
   const editInputsContent = (
     <div className="audio-player__full-page-edit-content">
       <BeatEditInputs 
@@ -52,8 +53,16 @@ const FullPageAudioPlayer = forwardRef(({
     </div>
   );
 
+  // Create lyrics content for the third slide
+  const lyricsContent = (
+    <LyricsSlide 
+      currentBeat={currentBeat} 
+      onUpdateBeat={onUpdateBeat}
+    />
+  );
+
   // Generate slides for the full page player
-  const slides = createSlides(currentBeat, editInputsContent);
+  const slides = createSlides(currentBeat, editInputsContent, lyricsContent);
 
   return (
     <>
