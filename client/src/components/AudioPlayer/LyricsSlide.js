@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getAssociationsByBeatId } from '../../services/beatService';
-import { getLyricsById } from '../../services/lyricsService';
+import { getAssociationsByBeatId, addAssociationsToBeat } from '../../services/beatService';
+import { getLyricsById, updateLyricsById, createLyrics } from '../../services/lyricsService';
 import { FormTextarea } from '../Inputs';
 import './LyricsSlide.scss';
 
@@ -54,9 +54,18 @@ const LyricsSlide = ({ currentBeat, onUpdateBeat }) => {
     const newLyrics = e.target.value;
     setLyrics(newLyrics);
 
-    // Update lyrics in the beat object
-    if (onUpdateBeat && currentBeat) {
-      onUpdateBeat(currentBeat.id, { lyrics: newLyrics });
+    try {
+      if (lyricsId) {
+        // Update existing lyrics
+        await updateLyricsById(lyricsId, newLyrics);
+      } else {
+        // Create new lyrics and associate with beat
+        const newId = await createLyrics(newLyrics);
+        setLyricsId(newId);
+        await addAssociationsToBeat(currentBeat.id, 'lyrics', newId);
+      }
+    } catch (err) {
+      console.error('Failed to update/create lyrics:', err);
     }
   };
 

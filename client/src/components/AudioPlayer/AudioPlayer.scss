@@ -577,7 +577,7 @@ audio {
   justify-content: center;
   gap: 8px;
   position: absolute;
-  bottom: 0;
+  bottom: -13px;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -593,8 +593,7 @@ audio {
   
   &.active {
     background-color: $color-gray;
-    transform: scale(1.2);
-    width: 12px;
+    width: 16px;
     border-radius: 4px;
   }
 }
