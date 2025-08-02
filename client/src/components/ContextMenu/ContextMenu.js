@@ -6,6 +6,7 @@ import { IoChevronForwardSharp } from "react-icons/io5";
 import { getUserById } from '../../services';
 import { useDragToDismiss } from '../../hooks';
 import { isMobileOrTablet, slideIn, slideOut } from '../../utils';
+import Portal from '../Inputs/Portal';
 
 const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
   const {
@@ -98,19 +99,20 @@ const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
 
   if (isMobileOrTablet()) {
     return (
-      <>
-        <div 
-          className={`context-menu__overlay${!isVisible ? ' inactive' : ''}`} 
-          onClick={(e) => { e.stopPropagation(); hideContextMenu(); }}
-        />
-        <div 
-          ref={dismissRef}
-          className={`context-menu--mobile`}
-          id="context-menu--mobile"
-          onClick={(e) => { e.stopPropagation(); }}
-          onTouchStart={handleDragStart}
-          onTouchEnd={handleDragEnd}
-        >
+      <Portal>
+        <>
+          <div 
+            className={`context-menu__overlay${!isVisible ? ' inactive' : ''}`} 
+            onClick={(e) => { e.stopPropagation(); hideContextMenu(); }}
+          />
+          <div 
+            ref={dismissRef}
+            className={`context-menu--mobile`}
+            id="context-menu--mobile"
+            onClick={(e) => { e.stopPropagation(); }}
+            onTouchStart={handleDragStart}
+            onTouchEnd={handleDragEnd}
+          >
           <div className="context-menu__header">
             <p className="context-menu__title">{beat ? beat.title : ''}</p>
             <p className="context-menu__artist">{artistName}</p>
@@ -140,20 +142,22 @@ const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
             </div>
           ))}
         </div>
-      </>
+        </>
+      </Portal>
     );
   }
 
   return (
-    <div 
-      className="context-menu" 
-      id="context-menu" 
-      style={{ top: position.top, left: position.left }} 
-      onMouseDown={handleDragStart} 
-      onMouseMove={handleDragMove} 
-      onMouseUp={handleDragEnd} 
-      onMouseLeave={hideContextMenu}
-    >
+    <Portal>
+      <div 
+        className="context-menu" 
+        id="context-menu" 
+        style={{ top: position.top, left: position.left }} 
+        onMouseDown={handleDragStart} 
+        onMouseMove={handleDragMove} 
+        onMouseUp={handleDragEnd} 
+        onMouseLeave={hideContextMenu}
+      >
       {items.map((item, index) => (
         <div
           key={index}
@@ -188,7 +192,8 @@ const ContextMenu = ({ items, position, beat, setActiveContextMenu }) => {
           )}
         </div>
       ))}
-    </div>
+      </div>
+    </Portal>
   );
 };
 

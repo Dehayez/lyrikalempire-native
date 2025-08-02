@@ -599,14 +599,12 @@ const BeatRow = ({
       </IconButton>
       </td>
       {activeContextMenu === beat.id && (
-        <td className="beat-row__data">
-         <ContextMenu
-            beat={beat}
-            position={{ top: contextMenuPosition.y, left: contextMenuPosition.x }}
-            setActiveContextMenu={setActiveContextMenu}
-            items={contextMenuItems}
-          />
-        </td>
+        <ContextMenu
+          beat={beat}
+          position={{ top: contextMenuPosition.y, left: contextMenuPosition.x }}
+          setActiveContextMenu={setActiveContextMenu}
+          items={contextMenuItems}
+        />
       )}
     </tr>
   );

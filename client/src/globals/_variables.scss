@@ -161,31 +161,3 @@ $skeleton-gradient: linear-gradient(90deg, #1a1a1a 25%, #1d1d1d 50%, #1a1a1a 75%
     }
   }
 }
-
-// Disable hover effects on touch devices
-/* @media (hover: none) and (pointer: coarse) {
-  * {
-    &:hover {
-      // Disable all hover effects on touch devices
-      background-color: inherit !important;
-      color: inherit !important;
-      border-color: inherit !important;
-      transform: none !important;
-      transform: scale(1) !important;
-      scale: none !important;
-      opacity: inherit !important;
-      box-shadow: inherit !important;
-      text-decoration: inherit !important;
-      outline: inherit !important;
-    }
-  }
-} */
-
-@media (hover: none) and (pointer: coarse) {
-  * {
-    &:hover {
-      // Disable all hover effects on touch devices
-      scale: 1 !important;
-    }
-  }
-}
