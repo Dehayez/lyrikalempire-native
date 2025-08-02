@@ -575,7 +575,7 @@ audio {
 .swipeable-dots {
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   position: absolute;
   bottom: 0;
   left: 50%;
@@ -589,10 +589,13 @@ audio {
   border-radius: 50%;
   border: none;
   background-color: $color-gray-mid;
+  transition: all 0.4s ease;
   
   &.active {
     background-color: $color-gray;
     transform: scale(1.2);
+    width: 12px;
+    border-radius: 4px;
   }
 }
 
