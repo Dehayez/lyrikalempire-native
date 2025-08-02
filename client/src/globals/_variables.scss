@@ -180,3 +180,12 @@ $skeleton-gradient: linear-gradient(90deg, #1a1a1a 25%, #1d1d1d 50%, #1a1a1a 75%
     }
   }
 } */
+
+@media (hover: none) and (pointer: coarse) {
+  * {
+    &:hover {
+      // Disable all hover effects on touch devices
+      scale: 1 !important;
+    }
+  }
+}

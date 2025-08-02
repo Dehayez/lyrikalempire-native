@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { IoPersonSharp } from "react-icons/io5";
+import classNames from 'classnames';
 
 import { isMobileOrTablet, getInitialState, isAuthPage } from './utils';
 import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache, useOs } from './hooks';
@@ -30,8 +31,6 @@ function App() {
   const { emitBeatChange } = useWebSocket();
   const { isDraggingOver, droppedFiles, clearDroppedFiles } = useDragAndDrop(setRefreshBeats, user.id);
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
-  const { isSafari } = useOs();
-
 
   const [viewState, setViewState] = useState(() => getInitialState('lastView', 'queue'));
   const [currentBeat, setCurrentBeat] = useState(() => getInitialState('currentBeat', null));
@@ -280,7 +279,11 @@ function App() {
 }, [queue.length, currentBeat, currentBeats, shuffle]);
 
   return (
-      <div className={`app app--hidden ${lyricsModal ? 'app--lyrics-modal-open' : ''}`}>
+      <div className={classNames('app', {
+        'app--mobile': isMobileOrTablet(),
+        'app--hidden': true,
+        'app--lyrics-modal-open': lyricsModal
+      })}>
         {isDraggingOver && (
           <div className='app__overlay'>
             Drop files to upload
@@ -313,7 +316,10 @@ function App() {
         )}
         <div className="container">
           <div className='container__content'>
-            <div className={`container__content__left ${isMobileOrTablet() && isLeftPanelVisible ? 'container__content__left--mobile' : ''} ${isLeftPanelVisible ? 'container__content__left--pinned' : ''}`}>
+            <div className={classNames('container__content__left', {
+              'container__content__left--mobile': isMobileOrTablet() && isLeftPanelVisible,
+              'container__content__left--pinned': isLeftPanelVisible
+            })}>
               {!isAuthRoute && (isLeftPanelVisible || isLeftDivVisible) ? (
                 <LeftSidePanel
                   isDivVisible={isLeftPanelVisible || isLeftDivVisible}
@@ -324,7 +330,10 @@ function App() {
                 </LeftSidePanel>
               ) : null}
             </div>
-            <div className={`container__content__middle ${isMobileOrTablet() ? 'container__content__middle--mobile' : ''} ${isMobileOrTablet() && (isRightPanelVisible || isLeftPanelVisible) ? 'container__content__middle--hide' : ''}`}>
+            <div className={classNames('container__content__middle', {
+              'container__content__middle--mobile': isMobileOrTablet(),
+              'container__content__middle--hide': isMobileOrTablet() && (isRightPanelVisible || isLeftPanelVisible)
+            })}>
             <Routes>
               <Route path="/" element={
                 <ProtectedRoute element={
@@ -377,7 +386,10 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             </div>
-            <div className={`container__content__right ${isMobileOrTablet() && isRightPanelVisible ? 'container__content__right--mobile' : ''} ${isRightPanelVisible ? 'container__content__right--pinned' : ''}`}>
+            <div className={classNames('container__content__right', {
+              'container__content__right--mobile': isMobileOrTablet() && isRightPanelVisible,
+              'container__content__right--pinned': isRightPanelVisible
+            })}>
               {!isAuthRoute && (isRightPanelVisible || isRightDivVisible) ? (
                 <RightSidePanel
                   isDivVisible={isRightPanelVisible || isRightDivVisible}
@@ -387,8 +399,12 @@ function App() {
                 <div>
                   <div className='view-toggle-container'>
                     <div className='view-toggle-container__left'>
-                      <h3 onClick={() => toggleView("queue")} className={`view-toggle-container__title ${viewState === "queue" ? 'view-toggle-container__title--active' : ''}`}>Queue</h3>
-                      <h3 onClick={() => toggleView("history")} className={`view-toggle-container__title ${viewState === "history" ? 'view-toggle-container__title--active' : ''}`}>History</h3>
+                                      <h3 onClick={() => toggleView("queue")} className={classNames('view-toggle-container__title', {
+                  'view-toggle-container__title--active': viewState === "queue"
+                })}>Queue</h3>
+                <h3 onClick={() => toggleView("history")} className={classNames('view-toggle-container__title', {
+                  'view-toggle-container__title--active': viewState === "history"
+                })}>History</h3>
                     </div>
                     <div className='view-toggle-container__right'>
                        <IconButton
