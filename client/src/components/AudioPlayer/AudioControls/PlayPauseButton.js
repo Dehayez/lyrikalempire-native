@@ -3,7 +3,7 @@ import { IoPlaySharp, IoPauseSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './PlayPauseButton.scss';
 
-const PlayPauseButton = ({ isPlaying, setIsPlaying, className }) => {
+const PlayPauseButton = ({ isPlaying, setIsPlaying, className, iconSize = 24 }) => {
   const [animatePlayPause, setAnimatePlayPause] = useState(false);
 
   const handlePlayPauseClick = (e) => {
@@ -63,7 +63,7 @@ const PlayPauseButton = ({ isPlaying, setIsPlaying, className }) => {
       text={isPlaying ? 'Pause' : 'Play'}
       ariaLabel={isPlaying ? 'Pause' : 'Play'}
     >
-      {isPlaying ? <IoPauseSharp size={24} /> : <IoPlaySharp size={24} className="play-icon" />}
+      {isPlaying ? <IoPauseSharp size={iconSize} /> : <IoPlaySharp size={iconSize} className="play-icon" />}
     </IconButton>
   );
 };

@@ -1,6 +1,8 @@
 import React, { forwardRef, useCallback } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PlayPauseButton } from './AudioControls';
+import PrevButton from './AudioControls/PrevButton';
+import NextButton from './AudioControls/NextButton';
 
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
@@ -19,7 +21,9 @@ const MobileAudioPlayer = forwardRef(({
   showLoadingAnimation = false,
   lyricsModal = false,
   isScrolledBottom = false,
-  scrollOpacityBottom = 0
+  scrollOpacityBottom = 0,
+  handlePrevClick,
+  onNext
 }, ref) => {
   
   const handleMobilePlayPause = useCallback((shouldPlay) => {
@@ -52,11 +56,20 @@ const MobileAudioPlayer = forwardRef(({
         </div>
         <p className="audio-player__artist">{artistName}</p>
       </div>
-      <PlayPauseButton 
-        isPlaying={isPlaying} 
-        setIsPlaying={handleMobilePlayPause} 
-        className="small" 
-      />
+      
+      <div 
+        className="audio-player__controls"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <PrevButton onPrev={handlePrevClick} iconSize={20} />
+        <PlayPauseButton 
+          isPlaying={isPlaying} 
+          setIsPlaying={handleMobilePlayPause} 
+          className="small"
+          iconSize={20}
+        />
+        <NextButton onNext={onNext} iconSize={20} />
+      </div>
     </div>
   );
 });

@@ -261,15 +261,32 @@ audio {
   &--mobile {
     display: flex;
     justify-content: space-between;
+    align-items: center;
 
     .audio-player__text {
       padding: 8px 0;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .audio-player__controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1;
     }
 
     .icon-button.play-pause {
       background-color: $color-black;
       padding: 0 20px;
       z-index: 1;
+    }
+
+    .icon-button--prev,
+    .icon-button--next {
+      background-color: transparent;
+      padding: 4px;
+      color: $color-white;
     }
 
     .rhap_container {

@@ -3,7 +3,7 @@ import { IoPlaySkipForwardSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './NextButton.scss';
 
-const NextButton = ({ onNext }) => {
+const NextButton = ({ onNext, iconSize = 24 }) => {
   const [isNextActive, setIsNextActive] = useState(false);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ const NextButton = ({ onNext }) => {
       ariaLabel={'Next Track'}
       text="Next"
     >
-      <IoPlaySkipForwardSharp size={24} />
+      <IoPlaySkipForwardSharp size={iconSize} />
     </IconButton>
   );
 };

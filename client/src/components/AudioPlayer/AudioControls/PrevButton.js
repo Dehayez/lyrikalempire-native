@@ -3,7 +3,7 @@ import { IoPlaySkipBackSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './PrevButton.scss';
 
-const PrevButton = ({ onPrev }) => {
+const PrevButton = ({ onPrev, iconSize = 24 }) => {
   const [isPrevActive, setIsPrevActive] = useState(false);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ const PrevButton = ({ onPrev }) => {
       ariaLabel={'Previous Track'}
       text="Prev"
     >
-      <IoPlaySkipBackSharp size={24} />
+      <IoPlaySkipBackSharp size={iconSize} />
     </IconButton>
   );
 };
