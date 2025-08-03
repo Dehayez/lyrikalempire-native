@@ -52,17 +52,17 @@
     }
 
     &--error {
-      stroke: $color-error;
+      stroke: $color-warning;
     }
 
     &--ready {
-      stroke: $color-success;
+      stroke: $color-primary;
     }
   }
 
   // Error X
   &__error {
-    stroke: $color-error;
+    stroke: $color-warning;
     stroke-width: 6;
     stroke-linecap: round;
     opacity: 0;
@@ -72,7 +72,7 @@
   // Success ✓
   &__success {
     fill: none;
-    stroke: $color-success;
+    stroke: $color-primary;
     stroke-width: 6;
     stroke-linecap: round;
     stroke-linejoin: round;

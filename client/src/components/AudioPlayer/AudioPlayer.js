@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import H5AudioPlayer from 'react-h5-audio-player';
 import { isMobileOrTablet, slideOut } from '../../utils';
 import { 
@@ -12,6 +12,8 @@ import {
   useOs
 } from '../../hooks';
 import { usePlaylist, useUser } from '../../contexts';
+import { audioErrorRecovery } from '../../services/audioErrorRecovery';
+import { AudioErrorBoundary } from './AudioErrorBoundary';
 
 import { ContextMenu } from '../ContextMenu';
 
@@ -60,6 +62,21 @@ const AudioPlayer = ({
     onSessionUpdateRef.current = onSessionUpdate;
   }, [onSessionUpdate]);
 
+  // Cleanup performance optimization refs on unmount
+  useEffect(() => {
+    return () => {
+      if (progressUpdateRef.current) {
+        cancelAnimationFrame(progressUpdateRef.current);
+      }
+      if (volumeUpdateRef.current) {
+        clearTimeout(volumeUpdateRef.current);
+      }
+      if (errorRecoveryRef.current) {
+        clearTimeout(errorRecoveryRef.current);
+      }
+    };
+  }, []);
+
   // Refs for error handling and Safari-specific issues
   const errorCountRef = useRef(0);
   const lastErrorTimeRef = useRef(0);
@@ -69,6 +86,11 @@ const AudioPlayer = ({
   const maxRetries = 3;
   const retryDelayRef = useRef(1000);
   const urlRetryTimerRef = useRef(null);
+
+  // Performance optimization refs
+  const progressUpdateRef = useRef(null);
+  const volumeUpdateRef = useRef(null);
+  const errorRecoveryRef = useRef(null);
 
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
@@ -91,6 +113,17 @@ const AudioPlayer = ({
     repeat,
     playlist: currentPlaylist
   });
+
+  // Enhanced volume handling with debouncing
+  const handleVolumeChangeDebounced = useCallback((newVolume) => {
+    // Debounce volume updates
+    if (volumeUpdateRef.current) {
+      clearTimeout(volumeUpdateRef.current);
+    }
+    volumeUpdateRef.current = setTimeout(() => {
+      audioPlayer.handleVolumeChange?.(newVolume);
+    }, 100);
+  }, [audioPlayer.handleVolumeChange]);
 
   // Extract the properties we need for backward compatibility
   const {
@@ -121,6 +154,40 @@ const AudioPlayer = ({
     // Interactions
     updateCurrentTime,
   } = audioPlayer;
+
+  // Enhanced error recovery (moved after volume extraction)
+  const handleErrorWithRecovery = useCallback(async (error) => {
+    // Cancel any pending error recovery
+    if (errorRecoveryRef.current) {
+      clearTimeout(errorRecoveryRef.current);
+    }
+
+    // Attempt recovery
+    const recovery = await audioErrorRecovery.handleError(error, currentBeat, {
+      isPlaying,
+      volume,
+      loadingPhase: 'playback'
+    });
+
+    if (recovery.success) {
+      switch (recovery.strategy) {
+        case 'skip':
+          onNext?.();
+          break;
+        case 'retry':
+          errorRecoveryRef.current = setTimeout(() => {
+            // Retry playback
+            if (audioPlayer.play) {
+              audioPlayer.play();
+            }
+          }, recovery.retryDelay);
+          break;
+        // ... handle other strategies
+      }
+    }
+
+    console.error('Audio error with recovery:', error, recovery);
+  }, [currentBeat, isPlaying, volume, onNext, audioPlayer]);
 
   // Get audio player state
   const {
@@ -609,20 +676,29 @@ const AudioPlayer = ({
   }, []);
 
   return (
-    <>
-      {/* Main audio player */}
-      <H5AudioPlayer
-        ref={playerRef}
-        src={audioSrc || undefined}
-        autoPlayAfterSrcChange={false}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onCanPlay={handleCanPlay}
-        onError={handleError}
-        {...preventDefaultAudioEvents}
-        className="audio-player__main-player"
-        style={{ display: 'none' }} // Hide the main player
-      />
+    <AudioErrorBoundary
+      currentBeat={currentBeat}
+      onRetry={() => {
+        if (audioPlayer.play) {
+          audioPlayer.play();
+        }
+      }}
+      onNext={onNext}
+    >
+      <>
+        {/* Main audio player */}
+        <H5AudioPlayer
+          ref={playerRef}
+          src={audioSrc || undefined}
+          autoPlayAfterSrcChange={false}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onCanPlay={handleCanPlay}
+          onError={handleErrorWithRecovery}
+          {...preventDefaultAudioEvents}
+          className="audio-player__main-player"
+          style={{ display: 'none' }} // Hide the main player
+        />
 
       {/* Mobile player */}
       {shouldShowMobilePlayer && (
@@ -665,7 +741,7 @@ const AudioPlayer = ({
           currentTime={currentTimeState}
           duration={duration}
           volume={volume}
-          handleVolumeChange={handleVolumeChange}
+          handleVolumeChange={handleVolumeChangeDebounced}
           toggleLyricsModal={toggleLyricsModal}
           handleEllipsisClick={handleEllipsisClick}
           waveformRef={waveformRefDesktop}
@@ -699,7 +775,7 @@ const AudioPlayer = ({
         currentTime={currentTimeState}
         duration={duration}
         volume={volume}
-        handleVolumeChange={handleVolumeChange}
+        handleVolumeChange={handleVolumeChangeDebounced}
         toggleFullPagePlayer={toggleFullPagePlayer}
         isFullPageVisible={isFullPageVisible}
         handleDragStart={handleDragStart}
@@ -729,7 +805,8 @@ const AudioPlayer = ({
           items={contextMenuItems}
         />
       )}
-    </>
+      </>
+    </AudioErrorBoundary>
   );
 };
 

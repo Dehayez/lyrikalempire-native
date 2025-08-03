@@ -1,8 +1,8 @@
 import React from 'react';
-import { LoadingIndicator } from './LoadingIndicator';
+import LoadingIndicator from './LoadingIndicator';
 import './AudioErrorBoundary.scss';
 
-class AudioErrorBoundary extends React.Component {
+export class AudioErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = {

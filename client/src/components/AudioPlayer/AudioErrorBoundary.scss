@@ -4,7 +4,7 @@
   position: relative;
   width: 100%;
   padding: 20px;
-  background: rgba($color-error-dark, 0.1);
+  background: rgba($color-warning-dark, 0.1);
   border-radius: 8px;
   backdrop-filter: blur(10px);
   
@@ -19,7 +19,7 @@
   &__message {
     h3 {
       margin: 0 0 8px;
-      color: $color-error;
+      color: $color-warning;
       font-size: 18px;
       font-weight: 600;
     }
@@ -88,7 +88,7 @@
       padding: 8px;
       background: rgba($color-black, 0.3);
       border-radius: 4px;
-      color: $color-error-light;
+      color: $color-warning;
       font-size: 12px;
       overflow-x: auto;
       white-space: pre-wrap;
