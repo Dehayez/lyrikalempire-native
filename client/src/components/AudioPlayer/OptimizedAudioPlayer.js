@@ -35,7 +35,7 @@ const OptimizedAudioPlayer = memo(({
     duration: currentBeat?.duration
   }), [currentBeat]);
 
-  // Audio state management
+  // Audio state management with gapless playback
   const {
     audioSrc,
     isLoading,
@@ -44,7 +44,9 @@ const OptimizedAudioPlayer = memo(({
     error,
     playerRef,
     handleReady,
-    handleError: handleAudioError
+    handleError: handleAudioError,
+    handleTimeUpdate,
+    preloadNextTrack
   } = useAudioState2({
     currentBeat,
     playlist,
@@ -56,6 +58,9 @@ const OptimizedAudioPlayer = memo(({
       progressUpdateRef.current = requestAnimationFrame(() => {
         // Update loading UI
       });
+    },
+    onError: (error) => {
+      onError?.(error);
     }
   });
 

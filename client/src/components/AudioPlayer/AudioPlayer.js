@@ -76,6 +76,9 @@ const AudioPlayer = ({
   // Get user context
   const { user } = useUser();
 
+  // Get current playlist
+  const currentPlaylist = playlists.find(p => p.title === playedPlaylistTitle)?.beats || [];
+
   // Get audio player functionality (now includes audioCore and audioInteractions)
   const audioPlayer = useAudioPlayer({
     currentBeat,
@@ -86,6 +89,7 @@ const AudioPlayer = ({
     onPrev,
     shuffle,
     repeat,
+    playlist: currentPlaylist
   });
 
   // Extract the properties we need for backward compatibility

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useAudioCore } from './useAudioCore';
 import { useAudioInteractions } from './useAudioInteractions';
 
@@ -10,7 +10,8 @@ export const useAudioPlayer = ({
   onNext, 
   onPrev, 
   shuffle, 
-  repeat
+  repeat,
+  playlist = []
 }) => {
   // Use the specialized hooks
   const audioCore = useAudioCore(currentBeat);
@@ -22,6 +23,11 @@ export const useAudioPlayer = ({
     repeat,
     audioCore
   });
+
+  // Set up gapless playback with playlist
+  useEffect(() => {
+    audioCore.setupGaplessPlayback(playlist);
+  }, [playlist, audioCore.setupGaplessPlayback]);
 
   // Beat management functions
   const handlePlay = useCallback((beat, play, beats) => {

@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
+import { gaplessPlaybackService } from '../../services/gaplessPlaybackService';
 
 // Browser detection utilities
 const isSafari = () => {
@@ -14,6 +15,8 @@ export const useAudioCore = (currentBeat) => {
   const lastUserInteractionRef = useRef(0);
   const lastMobileInteractionRef = useRef(0);
   const pendingPlayPromiseRef = useRef(null);
+  const currentBeatRef = useRef(currentBeat);
+  const playlistRef = useRef([]);
   
   // Initialize audio context for Safari
   const initAudioContext = useCallback(() => {
@@ -219,6 +222,69 @@ export const useAudioCore = (currentBeat) => {
       }
     }
   }, [updateUserInteraction, initAudioContext]);
+
+  // Gapless playback and smart preloading functionality
+  const setupGaplessPlayback = useCallback((playlist) => {
+    playlistRef.current = playlist || [];
+    
+    // Set up track end handler for gapless transitions
+    const handleTrackEnd = () => {
+      const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current?.id);
+      if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
+        const nextBeat = playlistRef.current[currentIndex + 1];
+        // Trigger next track transition
+        gaplessPlaybackService.transitionToNext();
+      }
+    };
+
+    gaplessPlaybackService.onTrackEnd = handleTrackEnd;
+  }, []);
+
+  const preloadNextTrack = useCallback(() => {
+    if (!currentBeatRef.current || !playlistRef.current.length) return;
+
+    const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current.id);
+    if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
+      const nextBeat = playlistRef.current[currentIndex + 1];
+      if (nextBeat?.audioSrc) {
+        gaplessPlaybackService.preloadNext(nextBeat.audioSrc);
+      }
+    }
+  }, []);
+
+  const handleTimeUpdate = useCallback((currentTime, duration) => {
+    if (!duration) return;
+
+    const progress = currentTime / duration;
+    // Start preloading when current track is at 85%
+    if (progress >= 0.85) {
+      preloadNextTrack();
+    }
+  }, [preloadNextTrack]);
+
+  // Enhanced play function with gapless support
+  const playWithGapless = useCallback(async () => {
+    if (!currentBeatRef.current?.audioSrc) return Promise.resolve();
+
+    try {
+      // Use gapless service for playback
+      const success = await gaplessPlaybackService.play(currentBeatRef.current.audioSrc);
+      if (success) {
+        // Start preloading next track
+        preloadNextTrack();
+      }
+      return success;
+    } catch (error) {
+      console.error('Error in gapless playback:', error);
+      // Fallback to regular play
+      return play();
+    }
+  }, [play, preloadNextTrack]);
+
+  // Update current beat reference and set up gapless playback
+  useEffect(() => {
+    currentBeatRef.current = currentBeat;
+  }, [currentBeat]);
 
   // Track user interactions globally for Safari
   useEffect(() => {
@@ -470,6 +536,11 @@ export const useAudioCore = (currentBeat) => {
     // Safari-specific helpers
     prepareForNewTrack,
     hasRecentUserInteraction,
-    initAudioContext
+    initAudioContext,
+    // Gapless playback and smart preloading
+    setupGaplessPlayback,
+    preloadNextTrack,
+    handleTimeUpdate,
+    playWithGapless
   };
 }; 
