@@ -1,0 +1,118 @@
+@import '../../globals/variables';
+
+.loading-indicator {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  // Size variants
+  &--small {
+    width: 24px;
+    height: 24px;
+  }
+
+  &--medium {
+    width: 40px;
+    height: 40px;
+  }
+
+  &--large {
+    width: 64px;
+    height: 64px;
+  }
+
+  // SVG styling
+  &__svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  &__background {
+    fill: none;
+    stroke: $color-gray-dark;
+    stroke-width: 6;
+  }
+
+  &__progress {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.3s ease;
+
+    // Phase colors
+    &--loading {
+      stroke: $color-primary;
+    }
+
+    &--buffering {
+      stroke: $color-primary-light;
+    }
+
+    &--error {
+      stroke: $color-error;
+    }
+
+    &--ready {
+      stroke: $color-success;
+    }
+  }
+
+  // Error X
+  &__error {
+    stroke: $color-error;
+    stroke-width: 6;
+    stroke-linecap: round;
+    opacity: 0;
+    animation: fade-in 0.3s ease forwards;
+  }
+
+  // Success ✓
+  &__success {
+    fill: none;
+    stroke: $color-success;
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    animation: draw-check 0.6s ease forwards;
+  }
+
+  // Text
+  &__text {
+    position: absolute;
+    top: 100%;
+    margin-top: 8px;
+    font-size: 12px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  &__phase {
+    color: $color-gray-light;
+  }
+
+  &__percentage {
+    margin-left: 4px;
+    color: $color-primary;
+  }
+}
+
+// Animations
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes draw-check {
+  from {
+    opacity: 0;
+    stroke-dasharray: 0 100;
+  }
+  to {
+    opacity: 1;
+    stroke-dasharray: 100 100;
+  }
+}
