@@ -65,6 +65,7 @@ const AudioPlayer = ({
   // Cleanup performance optimization refs on unmount
   useEffect(() => {
     return () => {
+      console.log('🧹 [CLEANUP] Cleaning up audio player refs');
       if (progressUpdateRef.current) {
         cancelAnimationFrame(progressUpdateRef.current);
       }
@@ -121,6 +122,7 @@ const AudioPlayer = ({
       clearTimeout(volumeUpdateRef.current);
     }
     volumeUpdateRef.current = setTimeout(() => {
+      console.log('🔊 [VOLUME] Debounced volume change to:', newVolume);
       audioPlayer.handleVolumeChange?.(newVolume);
     }, 100);
   }, [audioPlayer.handleVolumeChange]);
@@ -157,6 +159,8 @@ const AudioPlayer = ({
 
   // Enhanced error recovery (moved after volume extraction)
   const handleErrorWithRecovery = useCallback(async (error) => {
+    console.log('⚠️ [ERROR RECOVERY] Audio error detected:', error);
+    
     // Cancel any pending error recovery
     if (errorRecoveryRef.current) {
       clearTimeout(errorRecoveryRef.current);
@@ -169,12 +173,16 @@ const AudioPlayer = ({
       loadingPhase: 'playback'
     });
 
+    console.log('🔄 [ERROR RECOVERY] Recovery strategy:', recovery.strategy);
+
     if (recovery.success) {
       switch (recovery.strategy) {
         case 'skip':
+          console.log('⏭️ [ERROR RECOVERY] Skipping to next track');
           onNext?.();
           break;
         case 'retry':
+          console.log(`🔄 [ERROR RECOVERY] Retrying in ${recovery.retryDelay}ms`);
           errorRecoveryRef.current = setTimeout(() => {
             // Retry playback
             if (audioPlayer.play) {
@@ -186,7 +194,7 @@ const AudioPlayer = ({
       }
     }
 
-    console.error('Audio error with recovery:', error, recovery);
+    console.error('❌ [ERROR RECOVERY] Audio error with recovery:', error, recovery);
   }, [currentBeat, isPlaying, volume, onNext, audioPlayer]);
 
   // Get audio player state
@@ -694,6 +702,10 @@ const AudioPlayer = ({
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onCanPlay={handleCanPlay}
+          onEnded={() => {
+            console.log('🎵 [AUDIO PLAYER] Track ended, calling onNext');
+            onNext?.();
+          }}
           onError={handleErrorWithRecovery}
           {...preventDefaultAudioEvents}
           className="audio-player__main-player"

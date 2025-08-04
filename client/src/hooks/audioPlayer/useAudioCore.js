@@ -226,12 +226,23 @@ export const useAudioCore = (currentBeat) => {
   // Gapless playback and smart preloading functionality
   const setupGaplessPlayback = useCallback((playlist) => {
     playlistRef.current = playlist || [];
+    console.log('🎵 [AUDIO CORE] Gapless playback setup with', playlist.length, 'tracks');
     
-    // Set up track end handler for gapless transitions
+    // Check if we're on mobile - gapless might not work well on mobile
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobileDevice) {
+      console.log('📱 [AUDIO CORE] Mobile device detected - using fallback track progression');
+      // On mobile, let the normal onEnded handler handle track progression
+      gaplessPlaybackService.onTrackEnd = null;
+      return;
+    }
+    
+    // Set up track end handler for gapless transitions (desktop only)
     const handleTrackEnd = () => {
       const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current?.id);
       if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
         const nextBeat = playlistRef.current[currentIndex + 1];
+        console.log('🔄 [AUDIO CORE] Track ended, transitioning to:', nextBeat.title);
         // Trigger next track transition
         gaplessPlaybackService.transitionToNext();
       }
@@ -243,10 +254,18 @@ export const useAudioCore = (currentBeat) => {
   const preloadNextTrack = useCallback(() => {
     if (!currentBeatRef.current || !playlistRef.current.length) return;
 
+    // Check if we're on mobile - disable preloading on mobile
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobileDevice) {
+      console.log('📱 [AUDIO CORE] Mobile device - skipping preload');
+      return;
+    }
+
     const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current.id);
     if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
       const nextBeat = playlistRef.current[currentIndex + 1];
       if (nextBeat?.audioSrc) {
+        console.log('🎵 [AUDIO CORE] Preloading next track:', nextBeat.title);
         gaplessPlaybackService.preloadNext(nextBeat.audioSrc);
       }
     }
@@ -258,6 +277,7 @@ export const useAudioCore = (currentBeat) => {
     const progress = currentTime / duration;
     // Start preloading when current track is at 85%
     if (progress >= 0.85) {
+      console.log(`📊 [AUDIO CORE] Track at ${Math.round(progress * 100)}% - triggering preload`);
       preloadNextTrack();
     }
   }, [preloadNextTrack]);

@@ -36,11 +36,14 @@ export const useGaplessAudio = ({
     const nextTrack = getNextTrack();
     if (!nextTrack) return;
 
+    console.log('📥 [PRELOAD] Starting preload for:', nextTrack.title);
+    
     try {
       setLoadingPhase('preloading_next');
       await gaplessPlaybackService.preloadNext(nextTrack.audioSrc);
+      console.log('✅ [PRELOAD] Preload completed for:', nextTrack.title);
     } catch (error) {
-      console.error('Error preloading next track:', error);
+      console.error('❌ [PRELOAD] Error preloading next track:', error);
       onError?.(error);
     }
   }, [getNextTrack, onError]);
@@ -51,6 +54,7 @@ export const useGaplessAudio = ({
 
     const progress = currentTime / duration;
     if (progress >= gaplessPlaybackService.preloadThreshold) {
+      console.log(`📊 [PRELOAD] Track at ${Math.round(progress * 100)}% - triggering preload`);
       preloadNextTrack();
     }
   }, [preloadNextTrack]);

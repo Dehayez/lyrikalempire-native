@@ -26,6 +26,7 @@ export const useAudioPlayer = ({
 
   // Set up gapless playback with playlist
   useEffect(() => {
+    console.log('🎵 [AUDIO PLAYER] Setting up gapless playback with playlist:', playlist.length, 'tracks');
     audioCore.setupGaplessPlayback(playlist);
   }, [playlist, audioCore.setupGaplessPlayback]);
 
