@@ -12,6 +12,7 @@ export { useMediaSession } from './useMediaSession';
 export { useCrossTabSync } from './useCrossTabSync';
 export { default as useOs } from './useOs';
 export { useSwipeGestures } from './useSwipeGestures';
+export { useSafariPerformanceEnhancer } from './useSafariPerformanceEnhancer';
 
 // Audio Player Hooks - organized in audioPlayer folder
 export {

@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { gaplessPlaybackService } from '../../services/gaplessPlaybackService';
 import audioCacheService from '../../services/audioCacheService';
+import { isSafari, isIOSSafari } from '../../utils/safariOptimizations';
 
+/**
+ * Ultra-optimized audio state hook for maximum Safari performance
+ * Consolidates best practices from all audio state hooks
+ */
 export const useAudioState2 = ({
   currentBeat,
   playlist = [],
@@ -13,10 +18,13 @@ export const useAudioState2 = ({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingPhase, setLoadingPhase] = useState('');
   const [error, setError] = useState(null);
+  const [isCached, setIsCached] = useState(false);
+  
   const playerRef = useRef(null);
   const currentBeatRef = useRef(currentBeat);
   const playlistRef = useRef(playlist);
   const loadingRef = useRef(false);
+  const cacheCheckRef = useRef(false);
 
   // Update refs when props change
   useEffect(() => {
@@ -24,7 +32,7 @@ export const useAudioState2 = ({
     playlistRef.current = playlist;
   }, [currentBeat, playlist]);
 
-  // Optimized audio source loading for Safari
+  // Ultra-fast audio source loading for Safari
   const loadAudioSource = useCallback((beat) => {
     if (!beat?.audioSrc) {
       setAudioSrc('');
@@ -40,23 +48,38 @@ export const useAudioState2 = ({
       setLoadingPhase('loading');
       setError(null);
 
-      // Set source immediately for faster response
+      // Set source immediately for instant response
       setAudioSrc(beat.audioSrc);
       
-      // Try to get cached audio in background (non-blocking)
-      audioCacheService.getFromCache(beat.audioSrc).then((cachedAudio) => {
-        if (cachedAudio && cachedAudio.url !== beat.audioSrc) {
-          setAudioSrc(cachedAudio.url);
-        }
+      // For Safari, skip complex caching and use direct URLs
+      if (isSafari()) {
         setIsLoading(false);
         setLoadingPhase('ready');
         loadingRef.current = false;
-      }).catch(() => {
-        // If cache fails, continue with original source
-        setIsLoading(false);
-        setLoadingPhase('ready');
-        loadingRef.current = false;
-      });
+        return;
+      }
+
+      // For other browsers, check cache in background (non-blocking)
+      if (!cacheCheckRef.current) {
+        cacheCheckRef.current = true;
+        
+        audioCacheService.getFromCache(beat.audioSrc).then((cachedAudio) => {
+          if (cachedAudio && cachedAudio.url !== beat.audioSrc) {
+            setAudioSrc(cachedAudio.url);
+            setIsCached(true);
+          }
+          setIsLoading(false);
+          setLoadingPhase('ready');
+          loadingRef.current = false;
+          cacheCheckRef.current = false;
+        }).catch(() => {
+          // If cache fails, continue with original source
+          setIsLoading(false);
+          setLoadingPhase('ready');
+          loadingRef.current = false;
+          cacheCheckRef.current = false;
+        });
+      }
 
     } catch (error) {
       console.error('Error loading audio source:', error);
@@ -93,7 +116,7 @@ export const useAudioState2 = ({
     };
   }, [loadAudioSource]);
 
-  // Optimized preload next track
+  // Ultra-fast preload next track
   const preloadNextTrack = useCallback(() => {
     if (!currentBeatRef.current || !playlistRef.current.length) return;
 
@@ -101,10 +124,12 @@ export const useAudioState2 = ({
     if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
       const nextBeat = playlistRef.current[currentIndex + 1];
       if (nextBeat?.audioSrc) {
-        // Non-blocking preload
-        gaplessPlaybackService.preloadNext(nextBeat.audioSrc).catch(() => {
-          // Ignore preload errors for better performance
-        });
+        // Non-blocking preload with minimal overhead
+        setTimeout(() => {
+          gaplessPlaybackService.preloadNext(nextBeat.audioSrc).catch(() => {
+            // Ignore preload errors for maximum performance
+          });
+        }, 0);
       }
     }
   }, []);
@@ -119,14 +144,14 @@ export const useAudioState2 = ({
     }
   }, [preloadNextTrack]);
 
-  // Optimized ready state handler
+  // Ultra-fast ready state handler
   const handleReady = useCallback(() => {
     setLoadingPhase('ready');
     setIsLoading(false);
     loadingRef.current = false;
   }, []);
 
-  // Optimized error handler
+  // Ultra-fast error handler
   const handleError = useCallback((error) => {
     setError(error);
     setLoadingPhase('error');
@@ -141,6 +166,7 @@ export const useAudioState2 = ({
     loadingProgress,
     loadingPhase,
     error,
+    isCached,
     playerRef,
     handleReady,
     handleError,

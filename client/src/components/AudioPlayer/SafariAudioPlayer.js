@@ -1,18 +1,9 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import H5AudioPlayer from 'react-h5-audio-player';
-import { useSafariAudio } from '../../hooks/audioPlayer/useSafariAudio';
-import { 
-  setupSafariAudioElement, 
-  playSafariAudio, 
-  pauseSafariAudio,
-  switchSafariTrack,
-  setSafariVolume,
-  monitorSafariPerformance
-} from '../../utils/safariOptimizations';
+import React, { useCallback, useEffect, useRef, useMemo } from 'react';
+import { isSafari, isIOSSafari } from '../../utils/safariOptimizations';
 
 /**
- * Optimized audio player component for Safari with reduced latency
- * and improved performance for track switching
+ * Ultra-optimized audio player for Safari with direct audio element manipulation
+ * Bypasses complex libraries for maximum performance
  */
 const SafariAudioPlayer = ({
   audioSrc,
@@ -27,127 +18,125 @@ const SafariAudioPlayer = ({
   onReady,
   className
 }) => {
-  const playerRef = useRef(null);
+  const audioRef = useRef(null);
   const isPlayingRef = useRef(false);
-  const performanceMonitor = useRef(null);
+  const volumeRef = useRef(volume);
+  const srcRef = useRef(audioSrc);
 
-  const {
-    initAudioContext,
-    updateInteraction,
-    hasRecentInteraction,
-    unlockAudio,
-    setupAudioElement,
-    isIOS
-  } = useSafariAudio(playerRef);
+  // Create audio element once for maximum performance
+  const audioElement = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    
+    const audio = new Audio();
+    
+    // Ultra-optimized Safari setup
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
+    audio.setAttribute('preload', 'metadata');
+    audio.setAttribute('crossorigin', 'anonymous');
+    audio.crossOrigin = 'anonymous';
+    audio.style.display = 'none';
+    
+    // iOS-specific optimizations
+    if (isIOSSafari()) {
+      audio.setAttribute('x-webkit-airplay', 'allow');
+      audio.setAttribute('muted', 'false');
+    }
+    
+    return audio;
+  }, []);
 
-  /**
-   * Optimized play handler with performance monitoring
-   */
+  // Ultra-fast play handler
   const handlePlay = useCallback(() => {
-    performanceMonitor.current = monitorSafariPerformance();
+    if (!audioElement) return;
     
     try {
-      updateInteraction();
-      
-      const audio = playerRef.current?.audio?.current;
-      if (!audio) return;
-
-      // Quick unlock check for iOS
-      if (isIOS && !hasRecentInteraction()) {
-        unlockAudio();
-      }
-
-      // Initialize audio context (non-blocking)
-      initAudioContext();
-
-      // Use optimized play function
-      playSafariAudio(audio).then((success) => {
-        if (success) {
-          isPlayingRef.current = true;
-          onPlay?.();
-        }
-        if (performanceMonitor.current) {
-          performanceMonitor.current.end();
-        }
-      }).catch((error) => {
-        // Only log critical errors
-        if (error.name !== 'NotAllowedError') {
-          console.warn('Safari play failed:', error);
-        }
-        if (performanceMonitor.current) {
-          performanceMonitor.current.end();
-        }
+      // Direct play without any checks for maximum speed
+      audioElement.play().then(() => {
+        isPlayingRef.current = true;
+        onPlay?.();
+      }).catch(() => {
+        // Silent fail for maximum performance
       });
-
     } catch (error) {
-      // Silent fail for better performance
-      if (performanceMonitor.current) {
-        performanceMonitor.current.end();
-      }
+      // Silent fail for maximum performance
     }
-  }, [initAudioContext, updateInteraction, hasRecentInteraction, unlockAudio, isIOS, onPlay]);
+  }, [audioElement, onPlay]);
 
-  /**
-   * Optimized pause handler
-   */
+  // Ultra-fast pause handler
   const handlePause = useCallback(() => {
-    const audio = playerRef.current?.audio?.current;
-    if (!audio) return;
-
+    if (!audioElement) return;
+    
     try {
-      pauseSafariAudio(audio);
+      audioElement.pause();
       isPlayingRef.current = false;
       onPause?.();
     } catch (error) {
-      // Silent fail for better performance
+      // Silent fail for maximum performance
     }
-  }, [onPause]);
+  }, [audioElement, onPause]);
 
-  /**
-   * Optimized track switching
-   */
-  const handleTrackSwitch = useCallback((newSrc) => {
-    const audio = playerRef.current?.audio?.current;
-    if (!audio || audio.src === newSrc) return;
-
-    performanceMonitor.current = monitorSafariPerformance();
+  // Ultra-fast volume handler
+  const handleVolumeChange = useCallback((newVolume) => {
+    if (!audioElement || Math.abs(volumeRef.current - newVolume) < 0.01) return;
     
     try {
-      switchSafariTrack(audio, newSrc);
-      if (performanceMonitor.current) {
-        performanceMonitor.current.end();
-      }
+      audioElement.volume = Math.max(0, Math.min(1, newVolume));
+      volumeRef.current = newVolume;
     } catch (error) {
-      // Silent fail for better performance
-      if (performanceMonitor.current) {
-        performanceMonitor.current.end();
-      }
+      // Silent fail for maximum performance
     }
-  }, []);
+  }, [audioElement]);
 
-  /**
-   * Simplified error handler
-   */
-  const handleError = useCallback((e) => {
-    const audio = e.target;
-    const error = audio?.error;
-
-    // Only log critical errors for better performance
-    if (error && error.code !== 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
-      console.error('Safari audio error:', {
-        code: error?.code,
-        message: error?.message,
-        src: audio?.src
-      });
-    }
+  // Ultra-fast source change handler
+  const handleSourceChange = useCallback((newSrc) => {
+    if (!audioElement || srcRef.current === newSrc) return;
     
-    onError?.(error);
-  }, [onError]);
+    try {
+      // Pause immediately
+      audioElement.pause();
+      
+      // Set new source
+      audioElement.src = newSrc;
+      srcRef.current = newSrc;
+      
+      // Load metadata for faster playback
+      audioElement.load();
+    } catch (error) {
+      // Silent fail for maximum performance
+    }
+  }, [audioElement]);
 
-  // Optimized play state updates
+  // Set up event listeners once
   useEffect(() => {
-    const audio = playerRef.current?.audio?.current;
-    if (!audio) return;
+    if (!audioElement) return;
+
+    // Ultra-fast event handlers
+    const handleCanPlay = () => onReady?.();
+    const handleEnded = () => onEnded?.();
+    const handleError = (e) => onError?.(e.target.error);
+    const handleTimeUpdate = () => onTimeUpdate?.(audioElement.currentTime, audioElement.duration);
+    const handleDurationChange = () => onDurationChange?.(audioElement.duration);
+
+    // Add event listeners
+    audioElement.addEventListener('canplay', handleCanPlay, { passive: true });
+    audioElement.addEventListener('ended', handleEnded, { passive: true });
+    audioElement.addEventListener('error', handleError, { passive: true });
+    audioElement.addEventListener('timeupdate', handleTimeUpdate, { passive: true });
+    audioElement.addEventListener('durationchange', handleDurationChange, { passive: true });
+
+    return () => {
+      audioElement.removeEventListener('canplay', handleCanPlay);
+      audioElement.removeEventListener('ended', handleEnded);
+      audioElement.removeEventListener('error', handleError);
+      audioElement.removeEventListener('timeupdate', handleTimeUpdate);
+      audioElement.removeEventListener('durationchange', handleDurationChange);
+    };
+  }, [audioElement, onReady, onEnded, onError, onTimeUpdate, onDurationChange]);
+
+  // Ultra-fast play state updates
+  useEffect(() => {
+    if (!audioElement) return;
 
     if (isPlaying && !isPlayingRef.current) {
       handlePlay();
@@ -156,45 +145,26 @@ const SafariAudioPlayer = ({
     }
   }, [isPlaying, handlePlay, handlePause]);
 
-  // Optimized volume updates
+  // Ultra-fast volume updates
   useEffect(() => {
-    const audio = playerRef.current?.audio?.current;
-    if (audio) {
-      setSafariVolume(audio, volume);
-    }
-  }, [volume]);
+    handleVolumeChange(volume);
+  }, [volume, handleVolumeChange]);
 
-  // Optimized source updates
+  // Ultra-fast source updates
   useEffect(() => {
-    if (audioSrc) {
-      handleTrackSwitch(audioSrc);
-    }
-  }, [audioSrc, handleTrackSwitch]);
+    handleSourceChange(audioSrc);
+  }, [audioSrc, handleSourceChange]);
 
-  // Initial setup (once)
+  // Store ref for external access
   useEffect(() => {
-    setupAudioElement();
-  }, [setupAudioElement]);
+    audioRef.current = audioElement;
+  }, [audioElement]);
 
+  // Hidden audio element
   return (
-    <H5AudioPlayer
-      ref={playerRef}
-      src={audioSrc}
-      autoPlay={false}
-      volume={volume}
-      onPlay={handlePlay}
-      onPause={handlePause}
-      onEnded={onEnded}
-      onTimeUpdate={onTimeUpdate}
-      onDurationChange={onDurationChange}
-      onError={handleError}
-      onCanPlay={onReady}
-      showJumpControls={false}
-      customProgressBarSection={[]}
-      customControlsSection={[]}
-      className={className}
-      style={{ display: 'none' }}
-    />
+    <div style={{ display: 'none' }} className={className}>
+      {/* Audio element is created programmatically for maximum performance */}
+    </div>
   );
 };
 
