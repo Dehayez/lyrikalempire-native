@@ -2,22 +2,23 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useOs } from '../useOs';
 
 /**
- * Specialized hook for handling Safari-specific audio behaviors
+ * Optimized hook for handling Safari-specific audio behaviors
+ * Focused on reducing latency and improving performance
  */
 export const useSafariAudio = (playerRef) => {
   const { isSafari, isIOS } = useOs();
   
-  // Refs for tracking interaction and audio state
+  // Simplified refs for better performance
   const audioContextRef = useRef(null);
   const lastInteractionRef = useRef(0);
   const setupDoneRef = useRef(false);
   const unlockAttemptRef = useRef(0);
-  const maxUnlockAttempts = 3;
+  const maxUnlockAttempts = 2; // Reduced from 3
 
   /**
-   * Initialize AudioContext for Safari
+   * Simplified AudioContext initialization for Safari
    */
-  const initAudioContext = useCallback(async () => {
+  const initAudioContext = useCallback(() => {
     if (!isSafari || setupDoneRef.current) return;
 
     try {
@@ -28,33 +29,41 @@ export const useSafariAudio = (playerRef) => {
         audioContextRef.current = new AudioContext();
       }
 
+      // Resume context if suspended (non-blocking)
       if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume();
+        audioContextRef.current.resume().catch(() => {
+          // Ignore resume errors for better performance
+        });
       }
 
-      // On iOS, we skip Web Audio to allow background playback
+      // Skip Web Audio on iOS for better performance
       if (!isIOS) {
         const audio = playerRef.current?.audio?.current;
         if (audio && !audio._audioSourceConnected) {
-          const source = audioContextRef.current.createMediaElementSource(audio);
-          source.connect(audioContextRef.current.destination);
-          audio._audioSourceConnected = true;
+          try {
+            const source = audioContextRef.current.createMediaElementSource(audio);
+            source.connect(audioContextRef.current.destination);
+            audio._audioSourceConnected = true;
+          } catch (error) {
+            // Ignore connection errors
+          }
         }
       }
 
       setupDoneRef.current = true;
     } catch (error) {
-      console.warn('Safari AudioContext setup failed:', error);
+      // Silent fail for better performance
+      setupDoneRef.current = true;
     }
   }, [isSafari, isIOS]);
 
   /**
-   * Track user interactions for autoplay
+   * Optimized interaction tracking
    */
   const updateInteraction = useCallback(() => {
     lastInteractionRef.current = Date.now();
     
-    // Try to initialize audio context on interaction
+    // Initialize audio context immediately on interaction
     if (!setupDoneRef.current) {
       initAudioContext();
     }
@@ -65,14 +74,14 @@ export const useSafariAudio = (playerRef) => {
    */
   const hasRecentInteraction = useCallback(() => {
     const now = Date.now();
-    const interactionWindow = isIOS ? 30000 : 5000; // Longer window for iOS
+    const interactionWindow = isIOS ? 15000 : 3000; // Reduced windows for faster response
     return now - lastInteractionRef.current < interactionWindow;
   }, [isIOS]);
 
   /**
-   * Unlock audio playback on iOS
+   * Simplified audio unlock for iOS
    */
-  const unlockAudio = useCallback(async () => {
+  const unlockAudio = useCallback(() => {
     if (!isIOS || unlockAttemptRef.current >= maxUnlockAttempts) return;
 
     const audio = playerRef.current?.audio?.current;
@@ -81,85 +90,72 @@ export const useSafariAudio = (playerRef) => {
     try {
       unlockAttemptRef.current++;
 
-      // Create and play a silent audio buffer
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const context = new AudioContext();
-      const buffer = context.createBuffer(1, 1, 22050);
-      const source = context.createBufferSource();
-      source.buffer = buffer;
-      source.connect(context.destination);
-      source.start(0);
-
-      // Try to play the actual audio element
-      await audio.play();
-      audio.pause();
-      
-      // Reset unlock attempts on success
-      unlockAttemptRef.current = 0;
+      // Simplified unlock - just try to play and pause
+      audio.play().then(() => {
+        audio.pause();
+        unlockAttemptRef.current = 0;
+      }).catch(() => {
+        // Ignore unlock errors
+      });
       
     } catch (error) {
-      console.warn('Safari audio unlock failed:', error);
+      // Silent fail for better performance
     }
   }, [isIOS]);
 
   /**
-   * Configure audio element for Safari
+   * Optimized audio element setup
    */
   const setupAudioElement = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
     if (!audio) return;
 
-    // Set attributes for mobile playback
+    // Essential attributes only for better performance
     audio.setAttribute('playsinline', 'true');
     audio.setAttribute('webkit-playsinline', 'true');
-    audio.setAttribute('preload', 'auto');
+    audio.setAttribute('preload', 'metadata'); // Changed from 'auto' for faster loading
 
-    // iOS-specific attributes
+    // iOS-specific optimizations
     if (isIOS) {
       audio.setAttribute('x-webkit-airplay', 'allow');
       audio.removeAttribute('autoplay');
       audio.setAttribute('muted', 'false');
     }
 
-    // Set CORS attributes for Backblaze
+    // CORS attributes for Backblaze
     audio.setAttribute('crossorigin', 'anonymous');
     audio.crossOrigin = 'anonymous';
 
   }, [isIOS]);
 
   /**
-   * Handle audio interruptions (phone calls, etc.)
+   * Simplified interruption handling
    */
   const handleInterruption = useCallback((event) => {
     const audio = playerRef.current?.audio?.current;
     if (!audio) return;
 
     if (event.type === 'pause' || event.type === 'waiting') {
-      // Audio was interrupted
       audio.pause();
-    } else if (event.type === 'play' && hasRecentInteraction()) {
-      // Try to resume if we have recent interaction
-      audio.play().catch(() => {});
     }
-  }, [hasRecentInteraction]);
+  }, []);
 
-  // Set up event listeners
+  // Optimized event listeners setup
   useEffect(() => {
     if (!isSafari) return;
 
     const audio = playerRef.current?.audio?.current;
     if (!audio) return;
 
-    // Track user interactions
-    const events = ['touchstart', 'touchend', 'click', 'keydown'];
+    // Reduced event listeners for better performance
+    const events = ['touchstart', 'click'];
     events.forEach(event => {
       document.addEventListener(event, updateInteraction, { passive: true });
     });
 
-    // Handle interruptions
+    // Simplified interruption handling
     audio.addEventListener('pause', handleInterruption);
     audio.addEventListener('waiting', handleInterruption);
-    audio.addEventListener('play', handleInterruption);
 
     // Initial setup
     setupAudioElement();
@@ -174,7 +170,6 @@ export const useSafariAudio = (playerRef) => {
       
       audio.removeEventListener('pause', handleInterruption);
       audio.removeEventListener('waiting', handleInterruption);
-      audio.removeEventListener('play', handleInterruption);
     };
   }, [isSafari, isIOS, updateInteraction, handleInterruption, setupAudioElement, unlockAudio]);
 

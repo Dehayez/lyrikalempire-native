@@ -1,10 +1,18 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import H5AudioPlayer from 'react-h5-audio-player';
 import { useSafariAudio } from '../../hooks/audioPlayer/useSafariAudio';
+import { 
+  setupSafariAudioElement, 
+  playSafariAudio, 
+  pauseSafariAudio,
+  switchSafariTrack,
+  setSafariVolume,
+  monitorSafariPerformance
+} from '../../utils/safariOptimizations';
 
 /**
- * Specialized audio player component for Safari with better error handling
- * and background playback support
+ * Optimized audio player component for Safari with reduced latency
+ * and improved performance for track switching
  */
 const SafariAudioPlayer = ({
   audioSrc,
@@ -20,8 +28,8 @@ const SafariAudioPlayer = ({
   className
 }) => {
   const playerRef = useRef(null);
-  const playAttemptRef = useRef(0);
-  const maxPlayAttempts = 3;
+  const isPlayingRef = useRef(false);
+  const performanceMonitor = useRef(null);
 
   const {
     initAudioContext,
@@ -33,117 +41,137 @@ const SafariAudioPlayer = ({
   } = useSafariAudio(playerRef);
 
   /**
-   * Handle play with retry logic
+   * Optimized play handler with performance monitoring
    */
-  const handlePlay = useCallback(async () => {
+  const handlePlay = useCallback(() => {
+    performanceMonitor.current = monitorSafariPerformance();
+    
     try {
       updateInteraction();
       
       const audio = playerRef.current?.audio?.current;
       if (!audio) return;
 
-      // Check if we need to unlock audio
+      // Quick unlock check for iOS
       if (isIOS && !hasRecentInteraction()) {
-        await unlockAudio();
+        unlockAudio();
       }
 
-      // Initialize audio context
-      await initAudioContext();
+      // Initialize audio context (non-blocking)
+      initAudioContext();
 
-      // Try to play
-      await audio.play();
-      playAttemptRef.current = 0;
-      onPlay?.();
+      // Use optimized play function
+      playSafariAudio(audio).then((success) => {
+        if (success) {
+          isPlayingRef.current = true;
+          onPlay?.();
+        }
+        if (performanceMonitor.current) {
+          performanceMonitor.current.end();
+        }
+      }).catch((error) => {
+        // Only log critical errors
+        if (error.name !== 'NotAllowedError') {
+          console.warn('Safari play failed:', error);
+        }
+        if (performanceMonitor.current) {
+          performanceMonitor.current.end();
+        }
+      });
 
     } catch (error) {
-      console.warn('Safari play failed:', error);
-
-      // Retry logic for autoplay blocks
-      if (error.name === 'NotAllowedError' && playAttemptRef.current < maxPlayAttempts) {
-        playAttemptRef.current++;
-        
-        // Wait for interaction and try again
-        const cleanup = () => {
-          document.removeEventListener('touchend', retry);
-          document.removeEventListener('click', retry);
-        };
-
-        const retry = async () => {
-          cleanup();
-          await handlePlay();
-        };
-
-        document.addEventListener('touchend', retry, { once: true });
-        document.addEventListener('click', retry, { once: true });
+      // Silent fail for better performance
+      if (performanceMonitor.current) {
+        performanceMonitor.current.end();
       }
     }
   }, [initAudioContext, updateInteraction, hasRecentInteraction, unlockAudio, isIOS, onPlay]);
 
   /**
-   * Handle pause
+   * Optimized pause handler
    */
   const handlePause = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
     if (!audio) return;
 
     try {
-      audio.pause();
+      pauseSafariAudio(audio);
+      isPlayingRef.current = false;
       onPause?.();
     } catch (error) {
-      console.warn('Safari pause failed:', error);
+      // Silent fail for better performance
     }
   }, [onPause]);
 
   /**
-   * Handle errors with better reporting
+   * Optimized track switching
+   */
+  const handleTrackSwitch = useCallback((newSrc) => {
+    const audio = playerRef.current?.audio?.current;
+    if (!audio || audio.src === newSrc) return;
+
+    performanceMonitor.current = monitorSafariPerformance();
+    
+    try {
+      switchSafariTrack(audio, newSrc);
+      if (performanceMonitor.current) {
+        performanceMonitor.current.end();
+      }
+    } catch (error) {
+      // Silent fail for better performance
+      if (performanceMonitor.current) {
+        performanceMonitor.current.end();
+      }
+    }
+  }, []);
+
+  /**
+   * Simplified error handler
    */
   const handleError = useCallback((e) => {
     const audio = e.target;
     const error = audio?.error;
 
-    // Enhanced error info for debugging
-    const errorInfo = {
-      code: error?.code,
-      message: error?.message,
-      name: error?.name,
-      readyState: audio?.readyState,
-      networkState: audio?.networkState,
-      src: audio?.src,
-      currentTime: audio?.currentTime,
-      paused: audio?.paused,
-      ended: audio?.ended,
-      seeking: audio?.seeking,
-      duration: audio?.duration,
-      playbackRate: audio?.playbackRate,
-      defaultPlaybackRate: audio?.defaultPlaybackRate,
-      played: audio?.played?.length,
-      buffered: audio?.buffered?.length,
-      volume: audio?.volume,
-      muted: audio?.muted
-    };
-
-    console.error('Safari audio error:', errorInfo);
-    onError?.(error, errorInfo);
+    // Only log critical errors for better performance
+    if (error && error.code !== 4) { // MEDIA_ERR_SRC_NOT_SUPPORTED
+      console.error('Safari audio error:', {
+        code: error?.code,
+        message: error?.message,
+        src: audio?.src
+      });
+    }
+    
+    onError?.(error);
   }, [onError]);
 
-  // Update play state
+  // Optimized play state updates
   useEffect(() => {
-    if (isPlaying) {
+    const audio = playerRef.current?.audio?.current;
+    if (!audio) return;
+
+    if (isPlaying && !isPlayingRef.current) {
       handlePlay();
-    } else {
+    } else if (!isPlaying && isPlayingRef.current) {
       handlePause();
     }
   }, [isPlaying, handlePlay, handlePause]);
 
-  // Update volume
+  // Optimized volume updates
   useEffect(() => {
     const audio = playerRef.current?.audio?.current;
     if (audio) {
-      audio.volume = volume;
+      setSafariVolume(audio, volume);
     }
   }, [volume]);
 
-  // Initial setup
+  // Optimized source updates
+  useEffect(() => {
+    if (audioSrc) {
+      handleTrackSwitch(audioSrc);
+    }
+  }, [audioSrc, handleTrackSwitch]);
+
+  // Initial setup (once)
   useEffect(() => {
     setupAudioElement();
   }, [setupAudioElement]);

@@ -16,6 +16,7 @@ export const useAudioState2 = ({
   const playerRef = useRef(null);
   const currentBeatRef = useRef(currentBeat);
   const playlistRef = useRef(playlist);
+  const loadingRef = useRef(false);
 
   // Update refs when props change
   useEffect(() => {
@@ -23,36 +24,46 @@ export const useAudioState2 = ({
     playlistRef.current = playlist;
   }, [currentBeat, playlist]);
 
-  // Handle audio source loading
-  const loadAudioSource = useCallback(async (beat) => {
+  // Optimized audio source loading for Safari
+  const loadAudioSource = useCallback((beat) => {
     if (!beat?.audioSrc) {
       setAudioSrc('');
       return;
     }
+
+    // Prevent multiple simultaneous loads
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
     try {
       setIsLoading(true);
       setLoadingPhase('loading');
       setError(null);
 
-      // Try to get cached audio first
-      const cachedAudio = await audioCacheService.getFromCache(beat.audioSrc);
-      if (cachedAudio) {
-        setAudioSrc(cachedAudio.url);
+      // Set source immediately for faster response
+      setAudioSrc(beat.audioSrc);
+      
+      // Try to get cached audio in background (non-blocking)
+      audioCacheService.getFromCache(beat.audioSrc).then((cachedAudio) => {
+        if (cachedAudio && cachedAudio.url !== beat.audioSrc) {
+          setAudioSrc(cachedAudio.url);
+        }
         setIsLoading(false);
         setLoadingPhase('ready');
-        return;
-      }
+        loadingRef.current = false;
+      }).catch(() => {
+        // If cache fails, continue with original source
+        setIsLoading(false);
+        setLoadingPhase('ready');
+        loadingRef.current = false;
+      });
 
-      // If not cached, use original URL
-      setAudioSrc(beat.audioSrc);
-      setIsLoading(false);
-      setLoadingPhase('ready');
     } catch (error) {
       console.error('Error loading audio source:', error);
       setError(error);
       setIsLoading(false);
       setLoadingPhase('error');
+      loadingRef.current = false;
       onError?.(error);
     }
   }, [onError]);
@@ -62,7 +73,7 @@ export const useAudioState2 = ({
     loadAudioSource(currentBeat);
   }, [currentBeat, loadAudioSource]);
 
-  // Set up gapless playback
+  // Simplified gapless playback setup
   useEffect(() => {
     const handleTrackEnd = () => {
       const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current?.id);
@@ -82,7 +93,7 @@ export const useAudioState2 = ({
     };
   }, [loadAudioSource]);
 
-  // Preload next track
+  // Optimized preload next track
   const preloadNextTrack = useCallback(() => {
     if (!currentBeatRef.current || !playlistRef.current.length) return;
 
@@ -90,12 +101,15 @@ export const useAudioState2 = ({
     if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
       const nextBeat = playlistRef.current[currentIndex + 1];
       if (nextBeat?.audioSrc) {
-        gaplessPlaybackService.preloadNext(nextBeat.audioSrc);
+        // Non-blocking preload
+        gaplessPlaybackService.preloadNext(nextBeat.audioSrc).catch(() => {
+          // Ignore preload errors for better performance
+        });
       }
     }
   }, []);
 
-  // Handle time updates for preloading
+  // Optimized time updates for preloading
   const handleTimeUpdate = useCallback((currentTime, duration) => {
     if (!duration) return;
 
@@ -105,17 +119,19 @@ export const useAudioState2 = ({
     }
   }, [preloadNextTrack]);
 
-  // Handle ready state
+  // Optimized ready state handler
   const handleReady = useCallback(() => {
     setLoadingPhase('ready');
     setIsLoading(false);
+    loadingRef.current = false;
   }, []);
 
-  // Handle errors
+  // Optimized error handler
   const handleError = useCallback((error) => {
     setError(error);
     setLoadingPhase('error');
     setIsLoading(false);
+    loadingRef.current = false;
     onError?.(error);
   }, [onError]);
 

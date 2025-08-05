@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IoPlaySharp, IoPauseSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './PlayPauseButton.scss';
@@ -6,17 +6,19 @@ import './PlayPauseButton.scss';
 const PlayPauseButton = ({ isPlaying, setIsPlaying, className, iconSize = 24 }) => {
   const [animatePlayPause, setAnimatePlayPause] = useState(false);
 
-  const handlePlayPauseClick = (e) => {
-    togglePlayPause();
-    e.stopPropagation();
-  };
-
-  const togglePlayPause = () => {
+  // Optimized toggle function for Safari
+  const togglePlayPause = useCallback(() => {
     const newPlayState = !isPlaying;
     setIsPlaying(newPlayState);
     setAnimatePlayPause(true);
-    setTimeout(() => setAnimatePlayPause(false), 200);
-  };
+    // Reduced timeout for faster visual feedback
+    setTimeout(() => setAnimatePlayPause(false), 150);
+  }, [isPlaying, setIsPlaying]);
+
+  const handlePlayPauseClick = useCallback((e) => {
+    togglePlayPause();
+    e.stopPropagation();
+  }, [togglePlayPause]);
 
   useEffect(() => {
     const setMediaSession = () => {
@@ -41,7 +43,8 @@ const PlayPauseButton = ({ isPlaying, setIsPlaying, className, iconSize = 24 }) 
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    // Optimized event listeners for Safari
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     setMediaSession();
 
     return () => {
@@ -51,7 +54,7 @@ const PlayPauseButton = ({ isPlaying, setIsPlaying, className, iconSize = 24 }) 
         navigator.mediaSession.setActionHandler('pause', null);
       }
     };
-  }, [isPlaying, setIsPlaying]);
+  }, [isPlaying, togglePlayPause]);
 
   return (
     <IconButton

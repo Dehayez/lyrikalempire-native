@@ -26,68 +26,61 @@ export const useAudioPlayer = ({
 
   // Set up gapless playback with playlist
   useEffect(() => {
-    console.log('🎵 [AUDIO PLAYER] Setting up gapless playback with playlist:', playlist.length, 'tracks');
     audioCore.setupGaplessPlayback(playlist);
   }, [playlist, audioCore.setupGaplessPlayback]);
 
-  // Beat management functions
+  // Optimized beat management functions for Safari
   const handlePlay = useCallback((beat, play, beats) => {
     if (!beat) {
       setCurrentBeat(null);
       setIsPlaying(false);
-    } else if (currentBeat?.id === beat.id) {
-      // Same beat - just toggle play/pause
-      if (audioCore.prepareForNewTrack) {
-        audioCore.prepareForNewTrack();
-      }
+      return;
+    }
+
+    if (currentBeat?.id === beat.id) {
+      // Same beat - just toggle play/pause (immediate)
       setIsPlaying(play);
     } else {
-      // Different beat - change track
-      if (audioCore.prepareForNewTrack) {
-        audioCore.prepareForNewTrack();
-      }
-      
-      // Pause current audio to prevent overlap
+      // Different beat - change track (optimized for Safari)
+      // Pause current audio immediately
       if (audioCore.playerRef.current?.audio?.current) {
         audioCore.pause();
       }
       
+      // Update beat and play state immediately (no delay)
       setCurrentBeat(beat);
-      setTimeout(() => {
-        setIsPlaying(play);
-      }, 50);
+      setIsPlaying(play);
     }
   }, [currentBeat?.id, setCurrentBeat, setIsPlaying, audioCore]);
 
+  // Optimized next track handler
   const handleNext = useCallback((beats) => {
-    if (audioCore.prepareForNewTrack) {
-      audioCore.prepareForNewTrack();
-    }
+    if (!beats.length) return;
     
     let nextIndex;
     if (shuffle) {
       do {
         nextIndex = Math.floor(Math.random() * beats.length);
-      } while (nextIndex === beats.findIndex(b => b.id === currentBeat.id) && beats.length > 1);
+      } while (nextIndex === beats.findIndex(b => b.id === currentBeat?.id) && beats.length > 1);
     } else {
-      nextIndex = (beats.findIndex(b => b.id === currentBeat.id) + 1) % beats.length;
+      const currentIndex = beats.findIndex(b => b.id === currentBeat?.id);
+      nextIndex = (currentIndex + 1) % beats.length;
     }
     
     const nextBeat = beats[nextIndex];
     handlePlay(nextBeat, true, beats);
-  }, [shuffle, currentBeat?.id, handlePlay, audioCore]);
+  }, [shuffle, currentBeat?.id, handlePlay]);
 
+  // Optimized previous track handler
   const handlePrev = useCallback((beats) => {
-    if (audioCore.prepareForNewTrack) {
-      audioCore.prepareForNewTrack();
-    }
+    if (!beats.length) return;
     
-    const currentIndex = beats.findIndex(b => b.id === currentBeat.id);
+    const currentIndex = beats.findIndex(b => b.id === currentBeat?.id);
     const prevIndex = (currentIndex - 1 + beats.length) % beats.length;
     const prevBeat = beats[prevIndex];
     
     handlePlay(prevBeat, true, beats);
-  }, [currentBeat?.id, handlePlay, audioCore]);
+  }, [currentBeat?.id, handlePlay]);
 
   // Destructure audioInteractions to exclude conflicting setCurrentTime
   const { setCurrentTimeState, ...audioInteractionsWithoutSetCurrentTime } = audioInteractions;

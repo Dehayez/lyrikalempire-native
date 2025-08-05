@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IoPlaySkipForwardSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './NextButton.scss';
@@ -6,14 +6,18 @@ import './NextButton.scss';
 const NextButton = ({ onNext, iconSize = 24 }) => {
   const [isNextActive, setIsNextActive] = useState(false);
 
+  // Optimized click handler for Safari
+  const handleClick = useCallback(() => {
+    setIsNextActive(true);
+    onNext();
+    // Reduced timeout for faster visual feedback
+    setTimeout(() => setIsNextActive(false), 150);
+  }, [onNext]);
+
   useEffect(() => {
     const setMediaSession = () => {
       if ('mediaSession' in navigator) {
-        navigator.mediaSession.setActionHandler('nexttrack', () => {
-          setIsNextActive(true);
-          onNext();
-          setTimeout(() => setIsNextActive(false), 200);
-        });
+        navigator.mediaSession.setActionHandler('nexttrack', handleClick);
       }
     };
 
@@ -23,8 +27,7 @@ const NextButton = ({ onNext, iconSize = 24 }) => {
       }
 
       if (event.code === 'MediaTrackNext') {
-        setIsNextActive(true);
-        onNext();
+        handleClick();
       }
     };
 
@@ -34,8 +37,9 @@ const NextButton = ({ onNext, iconSize = 24 }) => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Optimized event listeners for Safari
+    window.addEventListener('keydown', handleKeyDown, { passive: true });
+    window.addEventListener('keyup', handleKeyUp, { passive: true });
     setMediaSession();
 
     return () => {
@@ -45,7 +49,7 @@ const NextButton = ({ onNext, iconSize = 24 }) => {
         navigator.mediaSession.setActionHandler('nexttrack', null);
       }
     };
-  }, [onNext]);
+  }, [handleClick]);
 
   return (
     <IconButton
@@ -53,7 +57,7 @@ const NextButton = ({ onNext, iconSize = 24 }) => {
       onMouseDown={() => setIsNextActive(true)}
       onMouseUp={() => setIsNextActive(false)}
       onMouseLeave={() => setIsNextActive(false)}
-      onClick={onNext}
+      onClick={handleClick}
       ariaLabel={'Next Track'}
       text="Next"
     >

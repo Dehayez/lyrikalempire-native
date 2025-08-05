@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IoPlaySkipBackSharp } from "react-icons/io5";
 import IconButton from '../../Buttons/IconButton';
 import './PrevButton.scss';
@@ -6,14 +6,18 @@ import './PrevButton.scss';
 const PrevButton = ({ onPrev, iconSize = 24 }) => {
   const [isPrevActive, setIsPrevActive] = useState(false);
 
+  // Optimized click handler for Safari
+  const handleClick = useCallback(() => {
+    setIsPrevActive(true);
+    onPrev();
+    // Reduced timeout for faster visual feedback
+    setTimeout(() => setIsPrevActive(false), 150);
+  }, [onPrev]);
+
   useEffect(() => {
     const setMediaSession = () => {
       if ('mediaSession' in navigator) {
-        navigator.mediaSession.setActionHandler('previoustrack', () => {
-          setIsPrevActive(true);
-          onPrev();
-          setTimeout(() => setIsPrevActive(false), 200);
-        });
+        navigator.mediaSession.setActionHandler('previoustrack', handleClick);
       }
     };
 
@@ -23,8 +27,7 @@ const PrevButton = ({ onPrev, iconSize = 24 }) => {
       }
 
       if (event.code === 'MediaTrackPrevious') {
-        setIsPrevActive(true);
-        onPrev();
+        handleClick();
       }
     };
 
@@ -34,8 +37,9 @@ const PrevButton = ({ onPrev, iconSize = 24 }) => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Optimized event listeners for Safari
+    window.addEventListener('keydown', handleKeyDown, { passive: true });
+    window.addEventListener('keyup', handleKeyUp, { passive: true });
     setMediaSession();
 
     return () => {
@@ -45,7 +49,7 @@ const PrevButton = ({ onPrev, iconSize = 24 }) => {
         navigator.mediaSession.setActionHandler('previoustrack', null);
       }
     };
-  }, [onPrev]);
+  }, [handleClick]);
 
   return (
     <IconButton
@@ -53,7 +57,7 @@ const PrevButton = ({ onPrev, iconSize = 24 }) => {
       onMouseDown={() => setIsPrevActive(true)}
       onMouseUp={() => setIsPrevActive(false)}
       onMouseLeave={() => setIsPrevActive(false)}
-      onClick={onPrev}
+      onClick={handleClick}
       ariaLabel={'Previous Track'}
       text="Prev"
     >
