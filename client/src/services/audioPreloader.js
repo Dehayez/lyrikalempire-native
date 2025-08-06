@@ -1,4 +1,4 @@
-import { audioCacheService } from './audioCacheService2';
+import audioCacheService from './audioCacheService';
 import { getSignedUrl } from './beatService';
 
 class AudioPreloader {
@@ -24,8 +24,8 @@ class AudioPreloader {
       }
 
       // Check cache first
-      const cached = await audioCacheService.getFromCache(cacheKey);
-      if (cached) return cached.url;
+      const cached = await audioCacheService.getAudio(beat.user_id, beat.audio);
+      if (cached) return cached;
 
       // Get signed URL
       const signedUrl = await getSignedUrl(beat.user_id, beat.audio);

@@ -60,6 +60,9 @@ class AudioCacheService {
           }
         },
       });
+      
+      // TEMPORARILY: Clear cache on initialization for debugging
+      await this.clearCache();
     } catch (error) {
       // Silently fail initialization
     }
@@ -87,6 +90,11 @@ class AudioCacheService {
 
   // Get audio from cache (memory first, then IndexedDB)
   async getAudio(userId, fileName) {
+    // TEMPORARILY DISABLED - Return null to force fresh URL fetching
+    return null;
+    
+    // Original implementation commented out for debugging
+    /*
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
       const isOffline = !navigator.onLine;
@@ -138,6 +146,7 @@ class AudioCacheService {
     } catch (error) {
       return null;
     }
+    */
   }
 
   // Store audio in cache
@@ -268,6 +277,11 @@ class AudioCacheService {
 
   // Check if audio is cached
   async isAudioCached(userId, fileName) {
+    // TEMPORARILY DISABLED - Always return false to force fresh URL fetching
+    return false;
+    
+    // Original implementation commented out for debugging
+    /*
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
       
@@ -295,6 +309,7 @@ class AudioCacheService {
     } catch (error) {
       return false;
     }
+    */
   }
 
   // Clear all cached audio
@@ -320,6 +335,8 @@ class AudioCacheService {
         // Silently handle error
       }
     }
+    
+    console.log('🧹 [CACHE DEBUG] All audio cache cleared');
   }
 
   // Get cache statistics
@@ -421,6 +438,11 @@ class AudioCacheService {
 
   // Preload audio for a beat
   async preloadAudio(userId, fileName, signedUrl) {
+    // TEMPORARILY DISABLED - Always return signed URL directly
+    return signedUrl;
+    
+    // Original implementation commented out for debugging
+    /*
     try {
       const cacheKey = this.getCacheKey(userId, fileName);
       
@@ -483,6 +505,7 @@ class AudioCacheService {
       this.markUrlAsFailed(signedUrl);
       return signedUrl; // Fallback to original URL on error
     }
+    */
   }
 
   // Cleanup resources

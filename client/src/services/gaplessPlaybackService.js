@@ -16,6 +16,13 @@ class GaplessPlaybackService {
 
   async loadAudioBuffer(url) {
     try {
+      // TEMPORARILY DISABLED - Skip cache checking for debugging
+      // Fetch and decode directly
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      return await this.audioContext.decodeAudioData(arrayBuffer);
+      
+      /*
       // Check cache first
       const cachedAudio = await audioCacheService.getFromCache(url);
       if (cachedAudio) {
@@ -27,6 +34,7 @@ class GaplessPlaybackService {
       const response = await fetch(url);
       const arrayBuffer = await response.arrayBuffer();
       return await this.audioContext.decodeAudioData(arrayBuffer);
+      */
     } catch (error) {
       console.error('Error loading audio buffer:', error);
       throw error;

@@ -51,6 +51,12 @@ export const useAudioState2 = ({
       // Set source immediately for instant response
       setAudioSrc(beat.audioSrc);
       
+      console.log('🎵 [AUDIO STATE] Loading audio source:', {
+        beatId: beat.id,
+        audioSrc: beat.audioSrc?.substring(0, 100) + '...',
+        timestamp: new Date().toISOString()
+      });
+      
       // For Safari, skip complex caching and use direct URLs
       if (isSafari()) {
         setIsLoading(false);
@@ -63,6 +69,13 @@ export const useAudioState2 = ({
       if (!cacheCheckRef.current) {
         cacheCheckRef.current = true;
         
+        // TEMPORARILY DISABLED - Skip cache checking for debugging
+        setIsLoading(false);
+        setLoadingPhase('ready');
+        loadingRef.current = false;
+        cacheCheckRef.current = false;
+        
+        /*
         audioCacheService.getFromCache(beat.audioSrc).then((cachedAudio) => {
           if (cachedAudio && cachedAudio.url !== beat.audioSrc) {
             setAudioSrc(cachedAudio.url);
@@ -79,6 +92,7 @@ export const useAudioState2 = ({
           loadingRef.current = false;
           cacheCheckRef.current = false;
         });
+        */
       }
 
     } catch (error) {
@@ -149,6 +163,8 @@ export const useAudioState2 = ({
     setLoadingPhase('ready');
     setIsLoading(false);
     loadingRef.current = false;
+    
+    console.log('✅ [AUDIO STATE] Audio ready to play');
   }, []);
 
   // Ultra-fast error handler
@@ -157,6 +173,8 @@ export const useAudioState2 = ({
     setLoadingPhase('error');
     setIsLoading(false);
     loadingRef.current = false;
+    
+    console.error('❌ [AUDIO STATE] Audio error:', error);
     onError?.(error);
   }, [onError]);
 

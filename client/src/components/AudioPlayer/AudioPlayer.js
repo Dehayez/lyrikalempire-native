@@ -166,6 +166,11 @@ const AudioPlayer = ({
       clearTimeout(errorRecoveryRef.current);
     }
 
+    // TEMPORARILY DISABLED - Skip error recovery for debugging
+    console.log('🔄 [ERROR RECOVERY] Error recovery temporarily disabled for debugging');
+    console.error('❌ [ERROR RECOVERY] Audio error (recovery disabled):', error);
+    
+    /*
     // Attempt recovery
     const recovery = await audioErrorRecovery.handleError(error, currentBeat, {
       isPlaying,
@@ -195,6 +200,7 @@ const AudioPlayer = ({
     }
 
     console.error('❌ [ERROR RECOVERY] Audio error with recovery:', error, recovery);
+    */
   }, [currentBeat, isPlaying, volume, onNext, audioPlayer]);
 
   // Get audio player state
@@ -711,6 +717,13 @@ const AudioPlayer = ({
           className="audio-player__main-player"
           style={{ display: 'none' }} // Hide the main player
         />
+        
+        {/* Debug info */}
+        {audioSrc && (
+          <div style={{ display: 'none' }}>
+            <p>Debug: Audio source set to: {audioSrc.substring(0, 100)}...</p>
+          </div>
+        )}
 
       {/* Mobile player */}
       {shouldShowMobilePlayer && (

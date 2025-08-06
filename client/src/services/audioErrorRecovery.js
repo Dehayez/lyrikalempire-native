@@ -1,4 +1,4 @@
-import { audioCacheService } from './audioCacheService2';
+import audioCacheService from './audioCacheService';
 
 class AudioErrorRecovery {
   constructor() {
@@ -104,8 +104,9 @@ class AudioErrorRecovery {
 
         case 'cache':
           // Try to get from cache
-          recovery.result = audioCacheService.getFromCache(
-            audioCacheService.getCacheKey(beat.user_id, beat.audio)
+          recovery.result = audioCacheService.getAudio(
+            beat.user_id,
+            beat.audio
           );
           break;
 
