@@ -226,13 +226,10 @@ export const useAudioCore = (currentBeat) => {
   // Gapless playback and smart preloading functionality
   const setupGaplessPlayback = useCallback((playlist) => {
     playlistRef.current = playlist || [];
-    console.log('🎵 [AUDIO CORE] Gapless playback setup with', playlist.length, 'tracks');
     
     // Check if we're on mobile - gapless might not work well on mobile
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     if (isMobileDevice) {
-      console.log('📱 [AUDIO CORE] Mobile device detected - using fallback track progression');
-      // On mobile, let the normal onEnded handler handle track progression
       gaplessPlaybackService.onTrackEnd = null;
       return;
     }

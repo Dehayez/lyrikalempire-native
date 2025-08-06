@@ -20,7 +20,7 @@ export const getBeats = async (user_id) => {
   return result;
 };
 
-export const addBeat = async (beat, audioFile, user_id, onProgress) => {
+export const addBeat = async (beat, audioFile, user_id) => {
   const formData = new FormData();
 
   for (const key in beat) {
@@ -36,13 +36,7 @@ export const addBeat = async (beat, audioFile, user_id, onProgress) => {
   formData.append('user_id', user_id);
 
   return await apiRequest('post', '', API_URL, formData, null, true, 
-    {'Content-Type': 'multipart/form-data'},
-    (progressEvent) => {
-      if (onProgress) {
-        const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-        onProgress(percentage);
-      }
-    }
+    {'Content-Type': 'multipart/form-data'}
   );
 };
 
@@ -86,7 +80,7 @@ export const getBeatsByAssociation = async (associationType, associationIds, all
   return allBeats ? fetchedBeats.filter(beat => allBeats.some(b => b.id === beat.id)) : fetchedBeats;
 };
 
-export const replaceAudio = async (beatId, audioFile, userId, duration, onProgress) => {
+export const replaceAudio = async (beatId, audioFile, userId, duration) => {
   const formData = new FormData();
   formData.append('audio', audioFile, audioFile.name);
   formData.append('userId', userId);
@@ -94,11 +88,6 @@ export const replaceAudio = async (beatId, audioFile, userId, duration, onProgre
 
   return await apiRequest('put', `/${beatId}/replace-audio`, API_URL, formData, null, true, {
     'Content-Type': 'multipart/form-data'
-  }, (progressEvent) => {
-    if (onProgress) {
-      const percentage = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-      onProgress(percentage);
-    }
   });
 };
 

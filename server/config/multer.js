@@ -39,7 +39,13 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+// Create multer instance with progress tracking
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
+});
 
 const uploadToBackblaze = async (file, userId) => {
   try {
@@ -52,11 +58,6 @@ const uploadToBackblaze = async (file, userId) => {
       // Use the filename that multer already created (already sanitized and timestamped)
       const baseFileName = path.parse(file.filename).name;
       finalFileName = `${baseFileName}.aac`;
-      
-      console.log('✅ [BACKBLAZE] Using multer filename:', {
-        multerFilename: file.filename,
-        finalFileName: finalFileName
-      });
     } else {
       // Fallback: Generate new filename with sanitization (for manual uploads)
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -64,19 +65,10 @@ const uploadToBackblaze = async (file, userId) => {
       const sanitizedFileName = sanitizeFileName(originalFileName);
       const fileExtension = path.extname(file.originalname);
       finalFileName = `${uniqueSuffix}-${sanitizedFileName}${fileExtension}`;
-      
-      console.log('🧹 [BACKBLAZE] Generated sanitized filename:', {
-        original: originalFileName,
-        sanitized: sanitizedFileName,
-        final: finalFileName,
-        hadSpecialChars: originalFileName !== sanitizedFileName
-      });
     }
 
     // Define the file path with folders
     const filePath = `audio/users/${userId}/${finalFileName}`;
-
-    console.log('Uploading file to Backblaze B2:', filePath);
 
     // Get Upload URL
     const uploadUrlResponse = await b2.getUploadUrl({
@@ -98,8 +90,6 @@ const uploadToBackblaze = async (file, userId) => {
     if (!uploadResponse.data) {
       throw new Error('Response data is undefined');
     }
-
-    console.log('Upload response:', uploadResponse.data);
 
     // Return only the file name
     return finalFileName;

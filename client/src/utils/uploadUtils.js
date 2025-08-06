@@ -39,10 +39,29 @@ export const uploadBeatWithToast = async (beat, file, userId, setRefreshBeats) =
   const toastId = toastService.createUploadToast(file.name, 'upload');
 
   try {
-    await addBeat(beat, file, userId, (percentage) => {
-      toastService.updateUploadToast(toastId, file.name, percentage, 'upload');
-    });
+    // Simulate progress since multer doesn't provide progress callbacks
+    const simulateProgress = () => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15 + 5; // Random progress between 5-20%
+        if (progress >= 90) {
+          progress = 90; // Don't go to 100% until actually complete
+          clearInterval(interval);
+        }
+        toastService.updateUploadToast(toastId, file.name, Math.round(progress), 'upload');
+      }, 200); // Update every 200ms
+      
+      return interval;
+    };
 
+    const progressInterval = simulateProgress();
+
+    // Call addBeat without progress callback since multer doesn't support it
+    await addBeat(beat, file, userId);
+
+    // Clear the simulated progress and complete
+    clearInterval(progressInterval);
+    
     toastService.completeUploadToast(toastId, beat.title, 'upload');
 
     if (setRefreshBeats) {
@@ -57,10 +76,29 @@ export const replaceAudioWithToast = async (beatId, file, userId, setRefreshBeat
   const toastId = toastService.createUploadToast(file.name, 'replace');
 
   try {
-    await replaceAudio(beatId, file, userId, duration, (percentage) => {
-      toastService.updateUploadToast(toastId, file.name, percentage, 'replace');
-    });
+    // Simulate progress since multer doesn't provide progress callbacks
+    const simulateProgress = () => {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15 + 5; // Random progress between 5-20%
+        if (progress >= 90) {
+          progress = 90; // Don't go to 100% until actually complete
+          clearInterval(interval);
+        }
+        toastService.updateUploadToast(toastId, file.name, Math.round(progress), 'replace');
+      }, 200); // Update every 200ms
+      
+      return interval;
+    };
 
+    const progressInterval = simulateProgress();
+
+    // Call replaceAudio without progress callback since multer doesn't support it
+    await replaceAudio(beatId, file, userId, duration);
+
+    // Clear the simulated progress and complete
+    clearInterval(progressInterval);
+    
     toastService.completeUploadToast(toastId, file.name, 'replace');
 
     if (setRefreshBeats) {

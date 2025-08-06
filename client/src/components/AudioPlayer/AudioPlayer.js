@@ -65,7 +65,6 @@ const AudioPlayer = ({
   // Cleanup performance optimization refs on unmount
   useEffect(() => {
     return () => {
-      console.log('🧹 [CLEANUP] Cleaning up audio player refs');
       if (progressUpdateRef.current) {
         cancelAnimationFrame(progressUpdateRef.current);
       }
@@ -122,7 +121,6 @@ const AudioPlayer = ({
       clearTimeout(volumeUpdateRef.current);
     }
     volumeUpdateRef.current = setTimeout(() => {
-      console.log('🔊 [VOLUME] Debounced volume change to:', newVolume);
       audioPlayer.handleVolumeChange?.(newVolume);
     }, 100);
   }, [audioPlayer.handleVolumeChange]);
@@ -555,18 +553,6 @@ const AudioPlayer = ({
 
   // Custom handlers for audio events
   const handleCanPlay = useCallback((e) => {
-    console.log('🎉 [AUDIO DEBUG] CanPlay event fired - audio is ready to play:', {
-      beatId: currentBeat?.id,
-      readyState: e?.target?.readyState,
-      networkState: e?.target?.networkState,
-      duration: e?.target?.duration,
-      currentTime: e?.target?.currentTime,
-      buffered: e?.target?.buffered?.length ? Array.from({length: e.target.buffered.length}, (_, i) => ({
-        start: e.target.buffered.start(i),
-        end: e.target.buffered.end(i)
-      })) : []
-    });
-    
     // Mark as loaded to prevent duplicate play attempts
     hasLoadedRef.current = true;
     
@@ -585,8 +571,6 @@ const AudioPlayer = ({
     
     // For Safari, we need to manually trigger play if autoPlay is true
     if (isSafari && isPlaying && audioCore.isPaused()) {
-      console.log('🦁 [AUDIO DEBUG] Safari auto-play triggered after canPlay event');
-      // Add a small delay for Safari to properly initialize the audio
       setTimeout(() => {
         audioCore.play().catch(error => {
           console.error('❌ [AUDIO DEBUG] Safari: Error playing audio on canplay event:', error);
@@ -614,12 +598,6 @@ const AudioPlayer = ({
         4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
       }[error?.code] || 'Unknown error code'
     });
-    
-    // Skip errors for empty src (during initialization)
-    if (!audioSrc || audioSrc === '') {
-      console.log('⏭️ [AUDIO DEBUG] Skipping error for empty audio source (initialization)');
-      return;
-    }
     
     // Handle Safari-specific errors
     if (isSafari && error) {
@@ -709,7 +687,6 @@ const AudioPlayer = ({
           onPause={() => setIsPlaying(false)}
           onCanPlay={handleCanPlay}
           onEnded={() => {
-            console.log('🎵 [AUDIO PLAYER] Track ended, calling onNext');
             onNext?.();
           }}
           onError={handleErrorWithRecovery}

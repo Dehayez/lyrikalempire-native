@@ -82,7 +82,7 @@ class ToastService {
         </div>
       ),
       progress: percentage / 100,
-      ...TOAST_CONFIGS[toastId ? TOAST_TYPES.SUCCESS : TOAST_TYPES.SUCCESS]
+      ...TOAST_CONFIGS[TOAST_TYPES.SUCCESS]
     });
   }
 
@@ -187,6 +187,24 @@ class ToastService {
   // Get upload toast info
   getUploadToastInfo(toastId) {
     return this.uploadToasts.get(toastId);
+  }
+
+  // Test function to check if progress bar works
+  testProgressBar() {
+    const toastId = this.createUploadToast('test.mp3', 'upload');
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 10;
+      this.updateUploadToast(toastId, 'test.mp3', progress, 'upload');
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          this.completeUploadToast(toastId, 'test.mp3', 'upload');
+        }, 1000);
+      }
+    }, 500);
   }
 }
 
