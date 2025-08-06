@@ -6,7 +6,14 @@ import { IoCloseSharp } from 'react-icons/io5';
 import { isMobileOrTablet } from '../../utils';
 import './DraggableModal.scss';
 
-Modal.setAppElement('#root');
+// Set app element only once to avoid conflicts
+if (typeof window !== 'undefined') {
+  try {
+    Modal.setAppElement('#root');
+  } catch (error) {
+    // App element already set, ignore
+  }
+}
 
 const modalStyle = {
   overlay: {
@@ -30,7 +37,19 @@ const modalStyle = {
   },
 };
 
-const DraggableModal = ({ isOpen, setIsOpen, title, children, onConfirm, onCancel, onCloseNoReset, confirmButtonText = "Save", cancelButtonText = "Cancel", cancelButtonType = "transparent", confirmButtonType = "primary" }) => {
+const DraggableModal = ({ 
+  isOpen, 
+  setIsOpen, 
+  title, 
+  children, 
+  onConfirm, 
+  onCancel, 
+  onCloseNoReset, 
+  confirmButtonText = "Save", 
+  cancelButtonText = "Cancel", 
+  cancelButtonType = "transparent", 
+  confirmButtonType = "primary" 
+}) => {
   const draggableRef = useRef(null);
 
   useEffect(() => {
@@ -46,6 +65,15 @@ const DraggableModal = ({ isOpen, setIsOpen, title, children, onConfirm, onCance
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onConfirm]);
+
+  // Cleanup modal when component unmounts
+  useEffect(() => {
+    return () => {
+      if (isOpen) {
+        setIsOpen(false);
+      }
+    };
+  }, [isOpen, setIsOpen]);
 
   const handleCancel = () => {
     setIsOpen(false);
