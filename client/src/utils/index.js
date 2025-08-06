@@ -10,7 +10,7 @@ export { sortBeats } from './sortBeats';
 export * from './animationUtils';
 export * from './audioCacheUtils';
 export * from './stateUtils';
-export * from './toastUtils';
+export { toastService, TOAST_TYPES } from './toastUtils';
 export * from './uploadUtils';
 export { formatTime, createSlides, syncAllPlayers, toggleFullPagePlayer } from './audioPlayerUtils';
 export * from './browserUtils';

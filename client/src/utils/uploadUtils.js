@@ -1,4 +1,4 @@
-import { createUploadToast, updateUploadToast, completeUploadToast, errorUploadToast } from './toastUtils';
+import { toastService } from './toastUtils';
 import { addBeat, replaceAudio } from '../services';
 
 // Helper function to handle common error processing
@@ -31,19 +31,19 @@ const handleUploadError = (error, context = 'upload') => {
     errorMessage = 'No response from the server. Please check your internet connection and try again.';
   }
 
-  errorUploadToast(errorMessage);
+  toastService.errorUploadToast(errorMessage);
   throw error;
 };
 
 export const uploadBeatWithToast = async (beat, file, userId, setRefreshBeats) => {
-  const toastId = createUploadToast(file.name, 'upload');
+  const toastId = toastService.createUploadToast(file.name, 'upload');
 
   try {
     await addBeat(beat, file, userId, (percentage) => {
-      updateUploadToast(toastId, file.name, percentage, 'upload');
+      toastService.updateUploadToast(toastId, file.name, percentage, 'upload');
     });
 
-    completeUploadToast(toastId, beat.title, 'upload');
+    toastService.completeUploadToast(toastId, beat.title, 'upload');
 
     if (setRefreshBeats) {
       setRefreshBeats((prev) => !prev);
@@ -54,14 +54,14 @@ export const uploadBeatWithToast = async (beat, file, userId, setRefreshBeats) =
 };
 
 export const replaceAudioWithToast = async (beatId, file, userId, setRefreshBeats, duration) => {
-  const toastId = createUploadToast(file.name, 'replace');
+  const toastId = toastService.createUploadToast(file.name, 'replace');
 
   try {
     await replaceAudio(beatId, file, userId, duration, (percentage) => {
-      updateUploadToast(toastId, file.name, percentage, 'replace');
+      toastService.updateUploadToast(toastId, file.name, percentage, 'replace');
     });
 
-    completeUploadToast(toastId, file.name, 'replace');
+    toastService.completeUploadToast(toastId, file.name, 'replace');
 
     if (setRefreshBeats) {
       setRefreshBeats((prev) => !prev);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { Toaster } from './components';
 import { IoPersonSharp } from "react-icons/io5";
 import classNames from 'classnames';
 
@@ -16,7 +16,6 @@ import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, Keyword
 import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queue, Playlists, RightSidePanel, LeftSidePanel, History, PlaylistDetail, LyricsModal, IconButton, PlayingIndicator } from './components';
 import NotFound from './components/NotFound';
 
-import 'react-toastify/dist/ReactToastify.css';
 import './App.scss';
 
 // Load audio cache debug utilities (development only)
@@ -293,7 +292,7 @@ function App() {
             Drop files to upload
           </div>
         )}
-        <ToastContainer />
+        <Toaster />
         {currentBeat && (
           <LyricsModal 
             beatId={currentBeat.id} 

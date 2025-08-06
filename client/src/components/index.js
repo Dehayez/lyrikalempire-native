@@ -22,3 +22,4 @@ export * from './SidePanel';
 export * from './StatCard';
 export * from './Tooltip';
 export * from './Warning';
+export * from './Toaster';

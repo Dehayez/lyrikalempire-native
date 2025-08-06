@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCheckmarkSharp, IoCloseSharp } from "react-icons/io5";
-import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button, CodeInput } from '../components';
 import userService from '../services/userService';
+import { toastService } from '../utils/toastUtils';
 
 const ConfirmEmailPage = () => {
   const location = useLocation();
@@ -20,20 +19,10 @@ const ConfirmEmailPage = () => {
     try {
       await userService.verifyConfirmationCode(email, code);
       setIsCodeValid(true);
-      toast.dark(<div><strong>Confirmation code validated</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--success",
-      });
+      toastService.confirmationCodeValidated();
       navigate('/login');
     } catch (error) {
-      toast.dark(<div><strong>Invalid confirmation code</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--warning",
-      });
+      toastService.invalidConfirmationCode();
     }
   };
 

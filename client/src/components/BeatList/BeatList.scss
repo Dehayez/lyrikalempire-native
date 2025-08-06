@@ -265,39 +265,9 @@
   }
 }
 
-.toaster--mode {
-  background-color: $color-gray-dark !important;
-  color: $color-white !important;
-  margin-bottom: 5px !important;
-  min-height: 48px !important;
-  justify-content: center !important;
-  border-radius: 4px !important;
-  margin-left: 2em;
-  margin-right: 2em;
-  opacity: .9;
+// Toast styles moved to Toaster.scss
 
-  .Toastify__toast-body {
-    flex: none;
-    margin: 0;
-    padding: 0 20px;
-  }
-}
-
-.Toastify__toast-icon {
-  transform: none !important;
-  margin-top: -2px;
-}
-
-@media (max-width: 480px) {
-  .toaster--edit-mode {
-    margin-left: 5em;
-    margin-right: 5em;
-
-    &--desktop {
-      margin-bottom: 138px !important;
-    }
-  }
-}
+// Toast mobile styles moved to Toaster.scss
 
 .drop-line {
   position: absolute;

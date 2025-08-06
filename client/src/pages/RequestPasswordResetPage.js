@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCheckmarkSharp } from "react-icons/io5";
-import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button } from '../components';
 import userService from '../services/userService';
+import { toastService } from '../utils/toastUtils';
 
 const RequestPasswordResetPage = () => {
   const [email, setEmail] = useState('');
@@ -15,20 +14,10 @@ const RequestPasswordResetPage = () => {
     e.preventDefault();
     try {
       await userService.requestPasswordReset(email);
-      toast.dark(<div><strong>Password reset code sent</strong>. Please check your email.</div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--success",
-      });
+      toastService.success('Password reset code sent. Please check your email.');
       navigate('/reset-password', { state: { email } });
     } catch (error) {
-      toast.dark(<div><strong>Error sending password reset code</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--error",
-      });
+      toastService.warning('Error sending password reset code');
     }
   };
 

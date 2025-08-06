@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCloseSharp } from "react-icons/io5";
-import { isAuthPage, uploadBeatWithToast, errorUploadToast } from '../utils';
+import { isAuthPage, uploadBeatWithToast } from '../utils';
+import { toastService } from '../utils/toastUtils';
 
 export const useDragAndDrop = (setRefreshBeats, user_id) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -28,7 +28,7 @@ export const useDragAndDrop = (setRefreshBeats, user_id) => {
   
     files.forEach(async (file) => {
       if (file.type === 'audio/aiff') {
-        errorUploadToast('AIF files are not supported');
+        toastService.aifNotSupported();
         setActiveUploads((activeUploads) => activeUploads - 1);
         return;
       }
@@ -70,18 +70,11 @@ export const useDragAndDrop = (setRefreshBeats, user_id) => {
 
       if (nonAudioFiles.length > 0) {
         setShowToast(true);
-        const message = nonAudioFiles.length === 1
-          ? `<strong>${nonAudioFiles[0].name} is not uploaded</strong><br /> Only audio files are accepted`
-          : `<strong>${nonAudioFiles.length} files are not uploaded</strong><br /> Only audio files are accepted`;
-
-        toast.dark(
-          <div dangerouslySetInnerHTML={{ __html: message }} />, {
-            autoClose: 3000,
-            pauseOnFocusLoss: false,
-            icon: <IoCloseSharp size={24} />,
-            className: "Toastify__toast--warning",
-          }
-        );
+        if (nonAudioFiles.length === 1) {
+          toastService.unsupportedFileFormat(nonAudioFiles[0].name);
+        } else {
+          toastService.multipleUnsupportedFiles(nonAudioFiles.length);
+        }
       }
     }
   }, [autoSubmitFiles, user_id]);

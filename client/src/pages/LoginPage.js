@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCheckmarkSharp, IoCloseSharp } from "react-icons/io5";
 import { GoogleLogin } from 'react-google-login';
-import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button } from '../components';
 import { useUser } from '../contexts/UserContext';
-import userService from '../services/userService'; 
+import userService from '../services/userService';
+import { toastService } from '../utils/toastUtils'; 
 
 const LoginPage = () => {
   const [identifier, setIdentifier] = useState('');
@@ -27,12 +26,7 @@ const LoginPage = () => {
     try {
       await login(identifier, password);
     } catch (error) {
-      toast.dark(<div><strong>{error.message}</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--warning",
-      });
+      toastService.loginFailed(error.message);
     }
   };
 
@@ -53,22 +47,12 @@ const LoginPage = () => {
       await loginWithGoogle(tokenId);
       navigate('/');
     } catch (error) {
-      toast.dark(<div><strong>{error.message}</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--warning",
-      });
+      toastService.loginFailed(error.message);
     }
   };
 
   const handleGoogleFailure = (error) => {
-    toast.dark(<div><strong>Google Sign-In failed</strong></div>, {
-      autoClose: 3000,
-      pauseOnFocusLoss: false,
-      icon: <IoCloseSharp size={24} />,
-      className: "Toastify__toast--warning",
-    });
+    toastService.warning('Google Sign-In failed');
   };
 
   return (

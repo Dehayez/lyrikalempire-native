@@ -470,15 +470,15 @@ const AudioPlayer = ({
         addBeatsToPlaylist(playlistId, [currentBeat.id])
           .then(() => {
             // Show success message
-            import('react-toastify').then(({ toast }) => {
+            import('../../components/Toaster').then(({ toastService }) => {
               const playlist = playlists.find(p => p.id === playlistId);
-              toast.success(`Added "${currentBeat.title}" to "${playlist?.title || 'playlist'}"`);
+              toastService.addToPlaylist(currentBeat.title, playlist?.title || 'playlist');
             });
           })
           .catch((error) => {
             console.error('Error adding beat to playlist:', error);
-            import('react-toastify').then(({ toast }) => {
-              toast.error('Failed to add track to playlist');
+            import('../../components/Toaster').then(({ toastService }) => {
+              toastService.warning('Failed to add track to playlist');
             });
           });
       });
@@ -494,14 +494,14 @@ const AudioPlayer = ({
         import('../../services/playlistService').then(({ removeBeatFromPlaylist }) => {
           removeBeatFromPlaylist(playlist.id, currentBeat.id)
             .then(() => {
-              import('react-toastify').then(({ toast }) => {
-                toast.success(`Removed "${currentBeat.title}" from "${playedPlaylistTitle}"`);
+              import('../../components/Toaster').then(({ toastService }) => {
+                toastService.removeFromPlaylist(currentBeat.title, playedPlaylistTitle);
               });
             })
             .catch((error) => {
               console.error('Error removing beat from playlist:', error);
-              import('react-toastify').then(({ toast }) => {
-                toast.error('Failed to remove track from playlist');
+              import('../../components/Toaster').then(({ toastService }) => {
+                toastService.warning('Failed to remove track from playlist');
               });
             });
         });
@@ -513,8 +513,8 @@ const AudioPlayer = ({
   const handleAddToQueue = useCallback(() => {
     if (currentBeat && addToCustomQueue) {
       addToCustomQueue(currentBeat);
-      import('react-toastify').then(({ toast }) => {
-        toast.success(`Added "${currentBeat.title}" to queue`);
+      import('../../components/Toaster').then(({ toastService }) => {
+        toastService.addToQueue(currentBeat.title);
       });
     }
   }, [currentBeat, addToCustomQueue]);

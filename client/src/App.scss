@@ -98,25 +98,7 @@
   }
 }
 
-.Toastify__toast--warning {
-  .Toastify__progress-bar {
-    background: $color-warning;
-  
-    &--bg {
-      background: $color-warning-dark;
-    }
-  }
-}
-
-.Toastify__toast--success {
-  .Toastify__progress-bar {
-    background: $color-yellow;
-  
-    &--bg {
-      background: $color-yellow-dark;
-    }
-  }
-}
+// Toast styles moved to Toaster.scss
 
 .view-toggle-container {
   display: flex;

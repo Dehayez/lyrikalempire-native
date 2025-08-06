@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCheckmarkSharp } from "react-icons/io5";
 import { GoogleLogin } from 'react-google-login';
-import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button, Warning } from '../components';
 import { useUser } from '../contexts/UserContext';
 import userService from '../services/userService';
+import { toastService } from '../utils/toastUtils';
 
 const RegisterPage = () => {
   const [username, setUsername] = useState('');
@@ -76,21 +75,11 @@ const RegisterPage = () => {
 
     try {
       await userService.register({ username, email, password });
-      toast.dark(<div><strong>Registration successful</strong>. Check your email to confirm your account.</div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--success",
-      });
+      toastService.registrationSuccess();
       navigate('/confirm-email', { state: { email } });
     } catch (error) {
       if (error.message === 'Database is not reachable. Please try again later.') {
-        toast.dark(<div><strong>{error.message}</strong></div>, {
-          autoClose: 3000,
-          pauseOnFocusLoss: false,
-          icon: <IoCheckmarkSharp size={24} />,
-          className: "Toastify__toast--error",
-        });
+        toastService.serverError();
       } else if (error.response && error.response.data && error.response.data.error) {
         const errorMessage = error.response.data.error;
         console.log('Received error message:', errorMessage);
@@ -109,12 +98,7 @@ const RegisterPage = () => {
           setIsUsernameValid(false);
         }
       } else {
-        toast.dark(<div><strong>Registration failed</strong></div>, {
-          autoClose: 3000,
-          pauseOnFocusLoss: false,
-          icon: <IoCheckmarkSharp size={24} />,
-          className: "Toastify__toast--error",
-        });
+        toastService.registrationFailed();
       }
       setErrorMessages(newErrorMessages);
     }

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import { IoCheckmarkSharp, IoCloseSharp } from "react-icons/io5";
-import 'react-toastify/dist/ReactToastify.css';
 import './Auth.scss';
 import { FormInput, Button, CodeInput } from '../components';
 import userService from '../services/userService';
+import { toastService } from '../utils/toastUtils';
 
 const ResetPasswordPage = () => {
   const location = useLocation();
@@ -28,19 +27,9 @@ const ResetPasswordPage = () => {
     try {
       await userService.verifyResetCode(email, code);
       setIsCodeValid(true);
-      toast.dark(<div><strong>Reset code validated</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--success",
-      });
+      toastService.success('Reset code validated');
     } catch (error) {
-      toast.dark(<div><strong>Invalid reset code</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--warning",
-      });
+      toastService.warning('Invalid reset code');
     }
   };
 
@@ -48,32 +37,17 @@ const ResetPasswordPage = () => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.dark(<div><strong>Passwords do not match</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--warning",
-      });
+      toastService.warning('Passwords do not match');
       return;
     }
 
     try {
       const code = resetCode.join('');
       await userService.resetPassword(email, code, password);
-      toast.dark(<div><strong>Password reset successfully</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCheckmarkSharp size={24} />,
-        className: "Toastify__toast--success",
-      });
+      toastService.success('Password reset successfully');
       navigate('/login');
     } catch (error) {
-      toast.dark(<div><strong>Error resetting password</strong></div>, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        icon: <IoCloseSharp size={24} />,
-        className: "Toastify__toast--error",
-      });
+      toastService.warning('Error resetting password');
     }
   };
 
