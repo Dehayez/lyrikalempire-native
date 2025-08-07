@@ -467,28 +467,26 @@ const handlePlayPause = useCallback((beat) => {
       <React.Fragment key={beat.id}>
         {hoverIndex === absoluteIndex && hoverPosition === 'top' && <tr className="drop-line" />}
         <BeatRow
+          key={beat.uniqueKey || beat.id}
           beat={beat}
-          currentBeat={currentBeat}
           index={indexValue}
+          moveBeat={moveBeat}
           handlePlayPause={handlePlayPause}
           handleUpdate={handleUpdate}
-          handleDelete={handleDelete}
-          selectedBeat={selectedBeat}
           isPlaying={isPlaying}
-          handleBeatClick={handleBeatClick}
+          onBeatClick={onBeatClick}
           selectedBeats={selectedBeats}
+          handleBeatClick={handleBeatClick}
           openConfirmModal={openConfirmModal}
           beats={beats}
+          activeContextMenu={activeContextMenu}
+          setActiveContextMenu={setActiveContextMenu}
+          currentBeat={currentBeat}
           addToCustomQueue={addToCustomQueue}
           searchText={searchText}
           mode={mode}
-          setActiveContextMenu={setActiveContextMenu}
-          activeContextMenu={activeContextMenu}
-          onBeatClick={onBeatClick}
           deleteMode={deleteMode}
           onUpdateBeat={onUpdateBeat}
-          onUpdate={onUpdate}
-          moveBeat={moveBeat}
           playlistId={playlistId}
           setBeats={setBeats}
           setHoverIndex={setHoverIndex}

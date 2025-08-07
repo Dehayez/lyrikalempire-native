@@ -83,8 +83,8 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
   };
 
   const getNextItemForShuffle = () => {
-    if (queue.length > 1) {
-      return queue.slice(1).map((item, index) => ({
+    if (queue.length > 0) {
+      return queue.map((item, index) => ({
         ...item,
         uniqueKey: item.uniqueKey || `non-shuffle-${item.id}-${index}`
       }));
@@ -102,18 +102,18 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
 
   return (
     <div className="queue">
-      {queue.length > 0 && (
+      {currentBeat && (
         <div className='queue__section'> 
           <h3 className="queue__subtitle">Now Playing</h3>
           <ul className="queue__list">
           <li
             className={`queue__list-item queue__list-item--playing`}
-            key={queue[0].id}
-            onContextMenu={(e) => handleRightClick(e, queue[0], 0)}
+            key={currentBeat.id}
+            onContextMenu={(e) => handleRightClick(e, currentBeat, 0)}
             onClick={(e) => {
-              handleBeatClick(queue[0]);
+              handleBeatClick(currentBeat);
               if (isMobileOrTablet()) {
-                handleBeatClick(queue[0]);
+                handleBeatClick(currentBeat);
               }
             }}
             onMouseEnter={(e) => {
@@ -131,17 +131,17 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
               }
             }}
           >
-            {queue[0].title}
+            {currentBeat.title}
             <button 
               className={`icon-button icon-button--menu interactive-button ${isMobileOrTablet() ? 'icon-button--menu--mobile' : ''}`} 
-              onClick={(e) => handleMenuButtonClick(e, queue[0], 0)}
+              onClick={(e) => handleMenuButtonClick(e, currentBeat, 0)}
             >
               <IoEllipsisHorizontal fontSize={24} />
             </button>
 
-            {activeContextMenu === `${queue[0].id}-0` && (
+            {activeContextMenu === `${currentBeat.id}-0` && (
               <ContextMenu
-                beat={queue[0]}
+                beat={currentBeat}
                 position={{ top: contextMenuY, left: contextMenuX }}
                 setActiveContextMenu={setActiveContextMenu}
                 items={[
@@ -153,7 +153,7 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
                     subItems: playlists.map(playlist => ({
                       text: playlist.title,
                       onClick: () => {
-                        handleAddBeatToPlaylist(playlist.id, queue[0].id);
+                        handleAddBeatToPlaylist(playlist.id, currentBeat.id);
                       },
                     })),
                   },
@@ -162,7 +162,7 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
                     iconClass: 'add-queue',
                     text: 'Add to queue',
                     buttonClass: 'add-queue',
-                    onClick: () => handleAddToCustomQueueClick(queue[0]),
+                    onClick: () => handleAddToCustomQueueClick(currentBeat),
                   },
                 ]}
               />
@@ -251,11 +251,11 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
         </div>
       )}
 
-      {queue.length > 1 && (
+      {queue.length > 0 && (
         <div className='queue__section'>
           <h3 className="queue__subtitle">Up Next</h3>
           <ul className="queue__list">
-          {(isShuffleEnabled ? getNextItemForShuffle() : queue.slice(1).map((item, index) => ({
+          {(isShuffleEnabled ? getNextItemForShuffle() : queue.map((item, index) => ({
             ...item,
             uniqueKey: `non-shuffle-${item.id}-${index}`
           }))).map((beat, index) => (

@@ -103,6 +103,7 @@ function App() {
     if (shouldUpdateQueue) {
       logQueue(beats, shuffle, beat);
     }
+    
     handlePlay(beat, play, beats, setSelectedBeat, setBeats, currentBeat, setCurrentBeat, setIsPlaying);
     updateHistory(beat);
     if (window.electron) {
@@ -232,6 +233,7 @@ function App() {
   const handleBeatClick = (beat) => {
     setCurrentBeat(beat);
     setIsPlaying(true);
+    
     // Broadcast beat change to other tabs
     if (emitBeatChange) {
       emitBeatChange({
