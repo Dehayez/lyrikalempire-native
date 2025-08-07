@@ -284,10 +284,20 @@ const handlePlayPause = useCallback((beat) => {
 }, [selectedBeat, isPlaying, onPlay, filteredAndSortedBeats, playlistId, setPlaylistId]);
 
   const handleConfirm = async () => {
+    console.log('🗑️ [handleConfirm] Starting delete process');
+    console.log('🗑️ [handleConfirm] beatsToDelete:', beatsToDelete);
+    console.log('🗑️ [handleConfirm] beatsToDelete.length:', beatsToDelete.length);
+    console.log('🗑️ [handleConfirm] selectedBeats:', selectedBeats);
+    console.log('🗑️ [handleConfirm] selectedBeats.length:', selectedBeats.length);
+    
     if (beatsToDelete.length > 0) {
+      console.log('🗑️ [handleConfirm] Deleting beats...');
+      
       if (onDeleteFromPlaylist) {
+        console.log('🗑️ [handleConfirm] Using onDeleteFromPlaylist');
         await onDeleteFromPlaylist(beatsToDelete);
       } else {
+        console.log('🗑️ [handleConfirm] Using handleDelete for each beat');
         await Promise.all(beatsToDelete.map(beatId => handleDelete(beatId)));
       }
   
@@ -300,6 +310,7 @@ const handlePlayPause = useCallback((beat) => {
         ? <div><strong>{titlesToDelete[0]}</strong> has been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>
         : <div><strong>{beatsToDelete.length} tracks</strong> have been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>;
   
+      console.log('🗑️ [handleConfirm] Refreshing beats...');
       setRefreshBeats(prev => !prev);
   
       setIsOpen(false);
@@ -310,12 +321,25 @@ const handlePlayPause = useCallback((beat) => {
         pauseOnFocusLoss: false,
         className: "Toastify__toast--warning",
       });
+      
+      console.log('🗑️ [handleConfirm] Delete process completed');
+    } else {
+      console.log('🗑️ [handleConfirm] No beats to delete');
+      console.log('🗑️ [handleConfirm] This might be because beatsToDelete state is empty');
     }
   };
 
   const openConfirmModal = () => {
+    console.log('🗑️ [openConfirmModal] Opening confirm modal');
+    console.log('🗑️ [openConfirmModal] selectedBeats:', selectedBeats);
+    console.log('🗑️ [openConfirmModal] selectedBeats length:', selectedBeats.length);
+    
     setIsOpen(true);
-    setBeatsToDelete(selectedBeats.map(beat => beat.id));
+    const beatIds = selectedBeats.map(beat => beat.id);
+    setBeatsToDelete(beatIds);
+    
+    console.log('🗑️ [openConfirmModal] Set beatsToDelete:', beatIds);
+    console.log('🗑️ [openConfirmModal] Modal should now be open');
   };
   
   const toggleEdit = () => {
@@ -536,6 +560,27 @@ const handlePlayPause = useCallback((beat) => {
     setBeats
   ]);
 
+  // Track modal state changes
+  useEffect(() => {
+    console.log('🗑️ [Modal State] isOpen changed to:', isOpen);
+    if (isOpen) {
+      console.log('🗑️ [Modal State] Modal opened, beatsToDelete:', beatsToDelete);
+    }
+  }, [isOpen, beatsToDelete]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Enter' && selectedBeats.length > 0) {
+        handlePlayPause(selectedBeats[0]);
+      }
+      if (!inputFocused && (event.key === 'Delete' || event.key === 'Backspace') && selectedBeats.length > 0) {
+        openConfirmModal();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBeats, handlePlayPause, inputFocused]);
+
   return (
     <SimpleBar
       scrollableNodeProps={{ ref: containerRef }}
@@ -552,7 +597,14 @@ const handlePlayPause = useCallback((beat) => {
           headerContent ? (
             headerContent
           ) : (
-            <h2 className='beat-list__title'>All Tracks</h2>
+            <h2 className='beat-list__title'>
+              All Tracks
+              {selectedBeats.length > 0 && (
+                <span className='beat-list__selection-count'>
+                  ({selectedBeats.length} selected)
+                </span>
+              )}
+            </h2>
           )
         }
         <div className='beat-list__actions'>
@@ -619,8 +671,15 @@ const handlePlayPause = useCallback((beat) => {
         message={<span>Are you sure you want to {deleteMode === 'playlist' ? 'remove' : 'delete'} {beatsToDelete.length > 1 ? `${beatsToDelete.length} tracks` : 'this track'}{deleteMode === 'playlist' ? <> from <strong>{playlistName}</strong></> : ''}?</span>}
         confirmButtonText={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'}`}
         cancelButtonText="Cancel" 
-        onConfirm={handleConfirm} 
-        onCancel={() => setIsOpen(false)}
+        onConfirm={() => {
+          console.log('🗑️ [ConfirmModal] Confirm button clicked');
+          console.log('🗑️ [ConfirmModal] Current beatsToDelete:', beatsToDelete);
+          handleConfirm();
+        }} 
+        onCancel={() => {
+          console.log('🗑️ [ConfirmModal] Cancel button clicked');
+          setIsOpen(false);
+        }}
       />
     </SimpleBar>
   );

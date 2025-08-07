@@ -85,16 +85,16 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedBeats, beats, currentBeat]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (tableRef.current && !tableRef.current.contains(event.target)) {
-        setSelectedBeats([]);
-      }
-    };
+  // useEffect(() => {
+  //   const handleClickOutside = (event) => {
+  //     if (tableRef.current && !tableRef.current.contains(event.target)) {
+  //       setSelectedBeats([]);
+  //     }
+  //   };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [tableRef]);
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => document.removeEventListener("mousedown", handleClickOutside);
+  // }, [tableRef]);
 
   return { selectedBeats, handleBeatClick, setSelectedBeats };
 };

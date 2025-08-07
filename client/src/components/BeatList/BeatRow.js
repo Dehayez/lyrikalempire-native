@@ -190,12 +190,6 @@ const BeatRow = ({
     handleUpdate(id, field, value);
   }, [handleUpdate]);
 
-  const handleClick = useCallback(() => {
-    if (onBeatClick) {
-      onBeatClick(beat);
-    }
-  }, [beat, onBeatClick]);
-
   const handleMenuClick = useCallback((e, beatItem) => {
     e.preventDefault();
     if (!selectedBeats.some(selectedBeat => selectedBeat.id === beatItem.id)) {
@@ -373,7 +367,14 @@ const BeatRow = ({
 
   // Build the component's click handler conditionally
   const rowClickHandler = mode !== "edit" 
-    ? (isMobileOrTablet() ? handleClick : (e) => handleBeatClick(beat, e)) 
+    ? (e) => {
+        // Handle selection
+        handleBeatClick(beat, e);
+        // Also handle play if no modifier keys are pressed
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && onBeatClick) {
+          onBeatClick(beat);
+        }
+      }
     : undefined;
 
   // Handle right-click for context menu
