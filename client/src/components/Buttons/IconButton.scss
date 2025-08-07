@@ -12,6 +12,10 @@
     font-size: 24px;
     transition: transform 0.2s ease-in-out;
 
+    &:focus {
+        outline: none;
+    }
+
     &__bottom-label {
         font-size: 12px;
         font-weight: 600;
