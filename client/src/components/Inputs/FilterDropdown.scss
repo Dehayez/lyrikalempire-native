@@ -106,6 +106,17 @@
     border-radius: 6px;
     background-color: $color-gray-dark;
     box-shadow: $box-shadow;
+    
+    // Smooth transition for desktop dropdowns
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    
+    // Visible state
+    &.filter-dropdown__wrapper--visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
 
     // Mobile styles - make it full width at bottom like context menu
     &--mobile {
@@ -120,6 +131,11 @@
       border-radius: 20px 20px 0 0;
       z-index: 3;
       padding-bottom: $safe-area-inset-bottom;
+      
+      // Reset desktop transitions for mobile
+      opacity: 1;
+      transform: none;
+      transition: none;
 
       // Add the drag handle like context menu
       &::after {

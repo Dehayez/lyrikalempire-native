@@ -14,6 +14,9 @@ import './FilterDropdown.scss';
 export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref) => {
   const dropdownRefs = useRef({});
   const listRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
+  const autoHideTimeoutRef = useRef(null);
+  const originalBodyOverflow = useRef(null);
 
   const initialSelectedItems = getInitialStateForFilters(filters, []);
   const initialDropdownState = getInitialStateForFilters(filters, false);
@@ -37,6 +40,62 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
     selectedItems,
     isDropdownOpen
   });
+
+  // Disable background scroll when dropdown is open
+  const disableBackgroundScroll = () => {
+    if (!isMobileOrTablet()) {
+      originalBodyOverflow.current = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+  };
+
+  // Re-enable background scroll
+  const enableBackgroundScroll = () => {
+    if (!isMobileOrTablet()) {
+      document.body.style.overflow = originalBodyOverflow.current || '';
+    }
+  };
+
+  // Start auto-hide timer for dropdown
+  const startAutoHideTimer = (filterType) => {
+    if (!isMobileOrTablet()) {
+      // Clear any existing auto-hide timeout
+      if (autoHideTimeoutRef.current) {
+        clearTimeout(autoHideTimeoutRef.current);
+      }
+      
+      autoHideTimeoutRef.current = setTimeout(() => {
+        handleSmoothClose(filterType);
+      }, 100);
+    }
+  };
+
+  // Handle mouse enter on dropdown or label container
+  const handleDropdownMouseEnter = () => {
+    if (!isMobileOrTablet()) {
+      // Clear any existing timeouts
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      if (autoHideTimeoutRef.current) {
+        clearTimeout(autoHideTimeoutRef.current);
+        autoHideTimeoutRef.current = null;
+      }
+    }
+  };
+
+  // Handle mouse leave on dropdown or label container
+  const handleDropdownMouseLeave = () => {
+    if (!isMobileOrTablet()) {
+      // Start the auto-hide timer when mouse leaves
+      Object.keys(isDropdownOpen).forEach(filterType => {
+        if (isDropdownOpen[filterType]) {
+          startAutoHideTimer(filterType);
+        }
+      });
+    }
+  };
 
   const handleSelect = (filterType, item) => {
     const isSelected = selectedItems[filterType]?.some(selectedItem => selectedItem.id === item.id);
@@ -100,12 +159,51 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
             // Position the dropdown
             wrapper.style.left = `${left}px`;
             wrapper.style.top = `${top}px`;
+            
+            // Add visible class after positioning for smooth transition
+            requestAnimationFrame(() => {
+              wrapper.classList.add('filter-dropdown__wrapper--visible');
+            });
           }
         }, 0);
       }
       
       return newState;
     });
+  };
+
+  // Handle smooth closing with transition
+  const handleSmoothClose = (filterType) => {
+    if (isMobileOrTablet()) {
+      // Mobile uses existing slide animation
+      closeAllDropdowns();
+      return;
+    }
+
+    const dropdownRef = dropdownRefs.current[filterType];
+    const wrapper = dropdownRef?.querySelector('.filter-dropdown__wrapper');
+    
+    if (wrapper) {
+      // Remove visible class to trigger transition
+      wrapper.classList.remove('filter-dropdown__wrapper--visible');
+      
+      // Wait for transition to complete before removing from DOM
+      setTimeout(() => {
+        setIsDropdownOpen(prevState => {
+          const newState = { ...prevState };
+          delete newState[filterType];
+          return newState;
+        });
+        setSearchTerms(prevState => {
+          const newState = { ...prevState };
+          delete newState[filterType];
+          return newState;
+        });
+        enableBackgroundScroll();
+      }, 200); // Match transition duration
+    } else {
+      closeAllDropdowns();
+    }
   };
 
   const handleClear = (filterType) => {
@@ -133,6 +231,16 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
   };
 
   const closeAllDropdowns = () => {
+    // Clear any existing timeouts
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    if (autoHideTimeoutRef.current) {
+      clearTimeout(autoHideTimeoutRef.current);
+      autoHideTimeoutRef.current = null;
+    }
+
     if (isMobileOrTablet()) {
       const overlay = document.querySelector('.filter-dropdown__overlay');
       const activeDropdown = document.querySelector('.filter-dropdown__wrapper');
@@ -140,14 +248,17 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
         slideOut(activeDropdown, overlay, () => {
           setIsDropdownOpen({});
           setSearchTerms({});
+          enableBackgroundScroll();
         });
       } else {
         setIsDropdownOpen({});
         setSearchTerms({});
+        enableBackgroundScroll();
       }
     } else {
       setIsDropdownOpen({});
       setSearchTerms({});
+      enableBackgroundScroll();
     }
   };
 
@@ -228,6 +339,19 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
     }
   }, [hasOpenDropdown]);
 
+  // Effect to handle background scroll when dropdown opens/closes
+  useEffect(() => {
+    if (hasOpenDropdown) {
+      disableBackgroundScroll();
+    } else {
+      enableBackgroundScroll();
+    }
+
+    return () => {
+      enableBackgroundScroll();
+    };
+  }, [hasOpenDropdown]);
+
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
     
@@ -275,6 +399,19 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
     };
   }, [handleDragMove]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+      if (autoHideTimeoutRef.current) {
+        clearTimeout(autoHideTimeoutRef.current);
+      }
+      enableBackgroundScroll();
+    };
+  }, []);
+
   return (
     <div className="filter-dropdown-container" ref={ref}>
       {/* Mobile overlay */}
@@ -295,6 +432,8 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
             <span
               onClick={(e) => toggleDropdown(name, e)}
               className={`filter-dropdown__label-container ${isDropdownOpen[name] ? 'filter-dropdown__label-container--active' : ''}`}
+              onMouseEnter={handleDropdownMouseEnter}
+              onMouseLeave={handleDropdownMouseLeave}
             >
               {label && (
                 <span className="filter-dropdown__label-text">
@@ -304,7 +443,7 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
               <IoChevronDownSharp className="filter-dropdown__label-icon" />
             </span>
 
-                        {isDropdownOpen[name] && (
+            {isDropdownOpen[name] && (
               isMobileOrTablet() ? (
                 <Portal>
                   <div 
@@ -370,6 +509,8 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
                 <div 
                   className="filter-dropdown__wrapper"
                   onClick={(e) => e.stopPropagation()}
+                  onMouseEnter={handleDropdownMouseEnter}
+                  onMouseLeave={handleDropdownMouseLeave}
                 >
                   <div className="filter-dropdown__search">
                     <input
@@ -383,29 +524,29 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
                       onClick={(e) => e.stopPropagation()}
                     />
                   </div>
-                                  <SimpleBar className="filter-dropdown__list">
-                  <div ref={listRef}>
-                    {getFilteredOptions(options, name).map(option => {
-                      const optionId = `${id}-${option.id}`;
-                      return (
-                        <div key={option.id} className="filter-dropdown__option">
-                          <input
-                            type="checkbox"
-                            id={optionId}
-                            name={name}
-                            value={option.id}
-                            checked={selectedItems[name]?.some(selectedItem => selectedItem.id === option.id)}
-                            onChange={() => handleSelect(name, option)}
-                            className="filter-dropdown__option-input"
-                          />
-                          <span onClick={() => handleSelect(name, option)} className="filter-dropdown__option-text">
-                            {option.name} <span className="filter-dropdown__option-text-count">{option.count}</span>
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </SimpleBar>
+                  <SimpleBar className="filter-dropdown__list">
+                    <div ref={listRef}>
+                      {getFilteredOptions(options, name).map(option => {
+                        const optionId = `${id}-${option.id}`;
+                        return (
+                          <div key={option.id} className="filter-dropdown__option">
+                            <input
+                              type="checkbox"
+                              id={optionId}
+                              name={name}
+                              value={option.id}
+                              checked={selectedItems[name]?.some(selectedItem => selectedItem.id === option.id)}
+                              onChange={() => handleSelect(name, option)}
+                              className="filter-dropdown__option-input"
+                            />
+                            <span onClick={() => handleSelect(name, option)} className="filter-dropdown__option-text">
+                              {option.name} <span className="filter-dropdown__option-text-count">{option.count}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SimpleBar>
                   <div className="filter-dropdown__actions">
                     <Button size="small" variant="transparent" className="filter-dropdown__clear-button" onClick={() => handleClear(name)}>Clear</Button>
                     <Button size="small" className="filter-dropdown__close-button" variant='primary' onClick={(e) => toggleDropdown(name, e)}>Done</Button>
