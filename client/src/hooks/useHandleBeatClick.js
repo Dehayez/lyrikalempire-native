@@ -41,6 +41,16 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Don't clear selection if clicking on modals, context menus, or other UI elements
+      const target = event.target;
+      const isModal = target.closest('.modal') || target.closest('.context-menu') || target.closest('.tooltip');
+      const isButton = target.closest('button') || target.closest('[role="button"]');
+      const isDropdown = target.closest('.filter-dropdown') || target.closest('.dropdown');
+      
+      if (isModal || isButton || isDropdown) {
+        return;
+      }
+      
       if (tableRef.current && !tableRef.current.contains(event.target)) {
         setSelectedBeats([]);
       }
