@@ -65,7 +65,7 @@ audio {
     pointer-events: none;
     opacity: var(--scroll-opacity-bottom, 0);
     transition: opacity 0.1s ease;
-    z-index: 1;
+    z-index: 0;
   }
 
   &--desktop {
