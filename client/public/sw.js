@@ -46,6 +46,18 @@ self.addEventListener('activate', (event) => {
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
+
+  // Bypass service worker for cross-origin audio (e.g., Backblaze signed URLs)
+  // and for Range requests to avoid Safari issues with streamed media
+  const isAudioPath = url.pathname.includes('/audio/') || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.aac');
+  const isCrossOrigin = url.origin !== self.location.origin;
+  const hasRangeHeader = request.headers && request.headers.has && request.headers.has('range');
+
+  if ((isAudioPath && isCrossOrigin) || hasRangeHeader) {
+    // Let the network handle it directly without caching/proxying
+    return; // Do not call respondWith → default browser fetch path
+  }
   
   // Handle audio files differently for better streaming
   if (request.url.includes('/audio/') || request.url.includes('.mp3') || request.url.includes('.aac')) {
