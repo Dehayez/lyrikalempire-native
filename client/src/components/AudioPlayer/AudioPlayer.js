@@ -360,6 +360,15 @@ const AudioPlayer = ({
     setCurrentBeat
   });
 
+  // Immediately reset time/progress on beat change (click or programmatic)
+  useEffect(() => {
+    // Ensure UI shows 00:00 instantly and prevent carryover
+    setCurrentTimeState(0);
+    setProgress(0);
+    audioCore.setCurrentTime(0);
+    syncAllPlayers(true);
+  }, [currentBeat?.id]);
+
   // Set up media session
   useMediaSession({
     handlePlayPause,
