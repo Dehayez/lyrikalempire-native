@@ -14,6 +14,9 @@ import { useSafariPerformanceEnhancer } from './hooks/useSafariPerformanceEnhanc
 
 import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, KeywordsPage, FeaturesPage, LoginPage, RegisterPage, ConfirmEmailPage, RequestPasswordResetPage, ResetPasswordPage, ProfilePage } from './pages';
 import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queue, Playlists, RightSidePanel, LeftSidePanel, History, PlaylistDetail, LyricsModal, IconButton, PlayingIndicator } from './components';
+import PerformancePanel from './components/PerformancePanel/PerformancePanel';
+import { IoSpeedometer } from 'react-icons/io5';
+import networkThrottleService from './services/networkThrottleService';
 import NotFound from './components/NotFound';
 
 import './App.scss';
@@ -47,6 +50,16 @@ function App() {
   const [shuffle, setShuffle] = useState(() => getInitialState('shuffle', false));
   const [repeat, setRepeat] = useState(() => getInitialState('repeat', 'Disabled Repeat'));
   const [lyricsModal, setLyricsModal] = useState(getInitialState('lyricsModal', false));
+  // Performance testing state
+  const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(() => getInitialState('isPerformancePanelOpen', false));
+  const [isThrottlingEnabled, setIsThrottlingEnabled] = useState(() => getInitialState('isThrottlingEnabled', false));
+  const [networkThrottlePreset, setNetworkThrottlePreset] = useState(() => getInitialState('networkThrottlePreset', 'Custom'));
+  const [networkThrottleConfig, setNetworkThrottleConfig] = useState(() => getInitialState('networkThrottleConfig', {
+    latency: 100,
+    downloadSpeed: 1024 * 1024,
+    uploadSpeed: 512 * 1024,
+    packetLoss: 0,
+  }));
   const [isScrolledBottom, setIsScrolledBottom] = useState(false);
   const [scrollOpacityBottom, setScrollOpacityBottom] = useState(0);
   const [sessionProps, setSessionProps] = useState({
@@ -97,7 +110,32 @@ function App() {
     closeSidePanel,
   } = usePanels();
   
-  useLocalStorageSync({ shuffle, repeat, currentBeat, selectedBeat, isLeftPanelVisible, isRightPanelVisible, viewState, customQueue, sortConfig, lyricsModal });
+  useLocalStorageSync({
+    shuffle,
+    repeat,
+    currentBeat,
+    selectedBeat,
+    isLeftPanelVisible,
+    isRightPanelVisible,
+    viewState,
+    customQueue,
+    sortConfig,
+    lyricsModal,
+    // performance settings
+    isPerformancePanelOpen,
+    isThrottlingEnabled,
+    networkThrottleConfig,
+    networkThrottlePreset,
+  });
+
+  // Auto-apply throttling setting on load
+  useEffect(() => {
+    if (isThrottlingEnabled) {
+      networkThrottleService.enable(networkThrottleConfig);
+    } else {
+      networkThrottleService.disable();
+    }
+  }, [isThrottlingEnabled]);
   
   const handlePlayWrapper = (beat, play, beats, shouldUpdateQueue = false) => {
     if (shouldUpdateQueue) {
@@ -424,6 +462,15 @@ function App() {
                         >
                           <IoPersonSharp />
                         </IconButton>
+                         <IconButton
+                           className='beat-list__action-button--profile'
+                           onClick={() => setIsPerformancePanelOpen((v) => !v)}
+                           text={'Performance'}
+                           tooltipPosition='left'
+                           ariaLabel={'Open performance testing panel'}
+                         >
+                           <IoSpeedometer />
+                         </IconButton>
                     </div>
                   </div>
                   {viewState === "queue" ? (
@@ -454,6 +501,17 @@ function App() {
             setIsOpen={setIsOpen} 
             droppedFiles={droppedFiles} 
             clearDroppedFiles={clearDroppedFiles} 
+          />
+          {/* Performance Testing Panel */}
+          <PerformancePanel
+            isOpen={isPerformancePanelOpen}
+            onClose={() => setIsPerformancePanelOpen(false)}
+            networkConfig={networkThrottleConfig}
+            onUpdateNetworkConfig={setNetworkThrottleConfig}
+            selectedPreset={networkThrottlePreset}
+            onChangePreset={setNetworkThrottlePreset}
+            isThrottlingEnabled={isThrottlingEnabled}
+            onToggleThrottling={setIsThrottlingEnabled}
           />
         </div>
         {!isAuthRoute &&

@@ -1,0 +1,108 @@
+@import '../../globals/variables';
+
+.performance-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 80px;
+  width: 360px;
+  max-width: calc(100% - 32px);
+  background: $color-black;
+  border: 1px solid $color-gray-mid;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 1000;
+  color: $color-white;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid $color-gray-mid;
+  }
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  &__close {
+    background: transparent;
+    border: none;
+    color: $color-gray-default;
+    font-size: 20px;
+    cursor: pointer;
+    &:hover { color: $color-white; }
+  }
+
+  &__content {
+    padding: 12px 16px 16px;
+  }
+
+  &__section { margin-top: 12px; }
+  &__section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: $color-gray-light;
+  }
+
+  &__throttle-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  &__preset-selector { display: flex; align-items: center; gap: 6px; }
+
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: $color-gray-dark;
+    color: $color-white;
+    border: 1px solid $color-gray-mid;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    &--active { background: $color-gray-mid; }
+  }
+
+  &__config-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  &__config-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+
+  &__metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+  }
+
+  &__metric { display: flex; justify-content: space-between; gap: 8px; }
+  &__metric-label { color: $color-gray-default; }
+  &__metric-value { font-weight: 600; }
+
+  &__actions { display: flex; gap: 8px; }
+  &__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: $color-gray-dark;
+    color: $color-white;
+    border: 1px solid $color-gray-mid;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+}
+

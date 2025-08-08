@@ -13,7 +13,9 @@ export const useLocalStorageSync = ({
   isRightPanelVisible, viewState, customQueue, sortConfig,
   mode, searchText, urlKey, currentPage,
   volume, currentTime, selectedItems, isDropdownOpen, lyricsModal, dimensions,
-  waveform, isFullPage, position, activeSlideIndex
+  waveform, isFullPage, position, activeSlideIndex,
+  // Performance/testing settings
+  isPerformancePanelOpen, isThrottlingEnabled, networkThrottleConfig, networkThrottlePreset
 }) => {
   useLocalStorageEffect('shuffle', shuffle);
   useLocalStorageEffect('repeat', repeat);
@@ -37,4 +39,9 @@ export const useLocalStorageSync = ({
   useLocalStorageEffect('isFullPage', isFullPage);
   useLocalStorageEffect('modalPosition', position);
   useLocalStorageEffect('activeSlideIndex', activeSlideIndex);
+  // Performance/testing settings
+  useLocalStorageEffect('isPerformancePanelOpen', isPerformancePanelOpen);
+  useLocalStorageEffect('isThrottlingEnabled', isThrottlingEnabled);
+  useLocalStorageEffect('networkThrottleConfig', networkThrottleConfig);
+  useLocalStorageEffect('networkThrottlePreset', networkThrottlePreset);
 };
