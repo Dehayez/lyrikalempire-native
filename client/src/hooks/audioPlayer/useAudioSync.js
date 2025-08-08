@@ -305,10 +305,9 @@ export const useAudioSync = ({
       }
     };
 
-    const handleEndedWithRetry = () => {
-      setTimeout(() => {
-        handleEnded();
-      }, 100);
+    const handleEndedImmediate = () => {
+      // Call ended handler without delay to reset UI instantly
+      handleEnded();
     };
 
     // Attach event listeners
@@ -320,7 +319,7 @@ export const useAudioSync = ({
       ['play', handlePlay],
       ['pause', handlePause],
       ['volumechange', handleVolumeChange],
-      ['ended', handleEndedWithRetry]
+      ['ended', handleEndedImmediate]
     ];
 
     eventListeners.forEach(([event, handler]) => {
