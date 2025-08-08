@@ -31,6 +31,7 @@ function App() {
   const navigate = useNavigate();
   const { user } = useUser();
   const { username } = user;
+  const isPerfAllowed = Number(user?.id) === 39;
   const { emitBeatChange } = useWebSocket();
   const { isDraggingOver, droppedFiles, clearDroppedFiles } = useDragAndDrop(setRefreshBeats, user.id);
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
@@ -128,14 +129,14 @@ function App() {
     networkThrottlePreset,
   });
 
-  // Auto-apply throttling setting on load
+  // Auto-apply throttling setting on load (only for allowed user)
   useEffect(() => {
-    if (isThrottlingEnabled) {
+    if (isPerfAllowed && isThrottlingEnabled) {
       networkThrottleService.enable(networkThrottleConfig);
     } else {
       networkThrottleService.disable();
     }
-  }, [isThrottlingEnabled]);
+  }, [isPerfAllowed, isThrottlingEnabled, networkThrottleConfig]);
   
   const handlePlayWrapper = (beat, play, beats, shouldUpdateQueue = false) => {
     if (shouldUpdateQueue) {
@@ -462,15 +463,17 @@ function App() {
                         >
                           <IoPersonSharp />
                         </IconButton>
-                         <IconButton
-                           className='beat-list__action-button--profile'
-                           onClick={() => setIsPerformancePanelOpen((v) => !v)}
-                           text={'Performance'}
-                           tooltipPosition='left'
-                           ariaLabel={'Open performance testing panel'}
-                         >
-                           <IoSpeedometer />
-                         </IconButton>
+                        {isPerfAllowed && (
+                          <IconButton
+                            className='beat-list__action-button--profile'
+                            onClick={() => setIsPerformancePanelOpen((v) => !v)}
+                            text={'Performance'}
+                            tooltipPosition='left'
+                            ariaLabel={'Open performance testing panel'}
+                          >
+                            <IoSpeedometer />
+                          </IconButton>
+                        )}
                     </div>
                   </div>
                   {viewState === "queue" ? (
@@ -502,17 +505,19 @@ function App() {
             droppedFiles={droppedFiles} 
             clearDroppedFiles={clearDroppedFiles} 
           />
-          {/* Performance Testing Panel */}
-          <PerformancePanel
-            isOpen={isPerformancePanelOpen}
-            onClose={() => setIsPerformancePanelOpen(false)}
-            networkConfig={networkThrottleConfig}
-            onUpdateNetworkConfig={setNetworkThrottleConfig}
-            selectedPreset={networkThrottlePreset}
-            onChangePreset={setNetworkThrottlePreset}
-            isThrottlingEnabled={isThrottlingEnabled}
-            onToggleThrottling={setIsThrottlingEnabled}
-          />
+          {/* Performance Testing Panel - only for user id 39 */}
+          {isPerfAllowed && (
+            <PerformancePanel
+              isOpen={isPerformancePanelOpen}
+              onClose={() => setIsPerformancePanelOpen(false)}
+              networkConfig={networkThrottleConfig}
+              onUpdateNetworkConfig={setNetworkThrottleConfig}
+              selectedPreset={networkThrottlePreset}
+              onChangePreset={setNetworkThrottlePreset}
+              isThrottlingEnabled={isThrottlingEnabled}
+              onToggleThrottling={setIsThrottlingEnabled}
+            />
+          )}
         </div>
         {!isAuthRoute &&
           <AudioPlayer 
