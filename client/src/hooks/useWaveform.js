@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { isMobileOrTablet } from '../utils';
 
@@ -12,6 +12,9 @@ export const useWaveform = ({
   playerRef,
   isFullPageVisible
 }) => {
+  const retryCountRef = useRef(0);
+  const objectUrlRef = useRef(null);
+  const maxRetries = 2;
   // Initialize and load waveform
   useEffect(() => {
     const controller = new AbortController();
@@ -20,8 +23,17 @@ export const useWaveform = ({
     const loadWaveform = async () => {
       const container = isFullPage ? waveformRefFullPage.current : waveformRefDesktop.current;
 
+      // Avoid initializing on hidden full-page container
+      if (isFullPage && !isFullPageVisible) return;
+
       if (container && audioSrc && waveform) {
+        // Ensure container has a measurable width to avoid 0px canvas
+        if (container.clientWidth === 0) {
+          setTimeout(loadWaveform, 120);
+          return;
+        }
         if (wavesurfer.current) {
+          try { wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
           wavesurfer.current.destroy();
           window.globalWavesurfer = null; // Clean up global reference
         }
@@ -49,15 +61,38 @@ export const useWaveform = ({
           if (!response.ok) throw new Error('Network response was not ok');
           const blob = await response.blob();
           const url = URL.createObjectURL(blob);
+          objectUrlRef.current = url;
           wavesurfer.current.load(url);
           wavesurfer.current.setVolume(0);
-          
-          wavesurfer.current.on('ready', () => {
+
+          // Handle successful decode/ready once
+          const handleReady = () => {
+            try { wavesurfer.current && wavesurfer.current.un && wavesurfer.current.un('ready', handleReady); } catch (_) {}
             const mainAudio = playerRef.current?.audio.current;
             const duration = wavesurfer.current.getDuration();
             if (mainAudio && !isNaN(mainAudio.currentTime) && duration > 0) {
               wavesurfer.current.seekTo(mainAudio.currentTime / duration);
             }
+            // Ensure proper sizing after container becomes visible
+            try {
+              wavesurfer.current.drawer && wavesurfer.current.drawer.updateSize && wavesurfer.current.drawer.updateSize();
+              wavesurfer.current.drawBuffer && wavesurfer.current.drawBuffer();
+            } catch (_) {}
+          };
+          wavesurfer.current.on('ready', handleReady);
+
+          // Basic error handling with limited retries
+          wavesurfer.current.on('error', (err) => {
+            if (retryCountRef.current >= maxRetries) return;
+            retryCountRef.current += 1;
+            try { wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
+            try { wavesurfer.current.destroy(); } catch (_) {}
+            window.globalWavesurfer = null;
+            setTimeout(() => {
+              // If the effect is already cleaned up, do nothing
+              if (signal.aborted) return;
+              loadWaveform();
+            }, 200);
           });
         } catch (error) {
           if (error.name !== 'AbortError') console.error("Error loading audio source:", error);
@@ -73,6 +108,7 @@ export const useWaveform = ({
       };
     } else {
       if (wavesurfer.current) {
+        try { wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
         wavesurfer.current.destroy();
         wavesurfer.current = null;
         window.globalWavesurfer = null; // Clean up global reference
@@ -80,6 +116,12 @@ export const useWaveform = ({
     }
 
     return () => {
+      try { wavesurfer.current && wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
+      try { wavesurfer.current && wavesurfer.current.destroy && wavesurfer.current.destroy(); } catch (_) {}
+      if (objectUrlRef.current) {
+        try { URL.revokeObjectURL(objectUrlRef.current); } catch (_) {}
+        objectUrlRef.current = null;
+      }
       controller.abort();
     };
   }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, playerRef]);
@@ -121,4 +163,36 @@ export const useWaveform = ({
 
     return () => clearTimeout(timer);
   }, [waveform, isFullPage, isFullPageVisible, waveformRefDesktop, waveformRefFullPage]);
+
+  // Ensure waveform resizes/redraws when container visibility/size changes
+  useEffect(() => {
+    if (!waveform || !wavesurfer.current) return;
+
+    const redraw = () => {
+      try {
+        wavesurfer.current.drawer && wavesurfer.current.drawer.updateSize && wavesurfer.current.drawer.updateSize();
+        wavesurfer.current.drawBuffer && wavesurfer.current.drawBuffer();
+      } catch (_) {}
+    };
+
+    // Redraw shortly after visibility toggle
+    const t = setTimeout(redraw, 120);
+
+    // Redraw on window resize
+    let frame = null;
+    const onResize = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        redraw();
+      });
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', onResize);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [waveform, isFullPageVisible, isFullPage, wavesurfer]);
 }; 
