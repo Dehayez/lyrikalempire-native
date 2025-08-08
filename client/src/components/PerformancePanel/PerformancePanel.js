@@ -67,6 +67,12 @@ const PerformancePanel = ({
     if (onUpdateNetworkConfig) onUpdateNetworkConfig(newConfig);
     else setUncontrolledNetworkConfig(newConfig);
     localStorage.setItem('networkThrottleConfig', JSON.stringify(newConfig));
+    // switch to Custom when any field changes
+    if (selectedPreset !== 'Custom') {
+      if (onChangePreset) onChangePreset('Custom');
+      else setUncontrolledPreset('Custom');
+      localStorage.setItem('networkThrottlePreset', 'Custom');
+    }
     
     if (isThrottlingEnabled) {
       networkThrottleService.enable(newConfig);
@@ -177,11 +183,11 @@ const PerformancePanel = ({
               <label>Latency (ms)</label>
               <input
                 type="range"
-                min="0"
-                max="2000"
-                step="50"
-                value={networkConfig.latency}
-                onChange={(e) => handleConfigChange('latency', parseInt(e.target.value))}
+                min={0}
+                max={2000}
+                step={50}
+                value={Number(networkConfig.latency) || 0}
+                onChange={(e) => handleConfigChange('latency', parseInt(e.target.value, 10))}
               />
               <span>{formatLatency(networkConfig.latency)}</span>
             </div>
@@ -190,11 +196,11 @@ const PerformancePanel = ({
               <label>Download Speed</label>
               <input
                 type="range"
-                min="1024"
-                max="10 * 1024 * 1024"
-                step="1024 * 1024"
-                value={networkConfig.downloadSpeed}
-                onChange={(e) => handleConfigChange('downloadSpeed', parseInt(e.target.value))}
+                min={1024}
+                max={10 * 1024 * 1024}
+                step={1024 * 1024}
+                value={Number(networkConfig.downloadSpeed) || 1024}
+                onChange={(e) => handleConfigChange('downloadSpeed', parseInt(e.target.value, 10))}
               />
               <span>{formatSpeed(networkConfig.downloadSpeed)}</span>
             </div>
@@ -203,11 +209,11 @@ const PerformancePanel = ({
               <label>Upload Speed</label>
               <input
                 type="range"
-                min="1024"
-                max="5 * 1024 * 1024"
-                step="512 * 1024"
-                value={networkConfig.uploadSpeed}
-                onChange={(e) => handleConfigChange('uploadSpeed', parseInt(e.target.value))}
+                min={1024}
+                max={5 * 1024 * 1024}
+                step={512 * 1024}
+                value={Number(networkConfig.uploadSpeed) || 1024}
+                onChange={(e) => handleConfigChange('uploadSpeed', parseInt(e.target.value, 10))}
               />
               <span>{formatSpeed(networkConfig.uploadSpeed)}</span>
             </div>
@@ -216,11 +222,11 @@ const PerformancePanel = ({
               <label>Packet Loss (%)</label>
               <input
                 type="range"
-                min="0"
-                max="20"
-                step="1"
-                value={networkConfig.packetLoss * 100}
-                onChange={(e) => handleConfigChange('packetLoss', parseInt(e.target.value) / 100)}
+                min={0}
+                max={20}
+                step={1}
+                value={Number(networkConfig.packetLoss * 100) || 0}
+                onChange={(e) => handleConfigChange('packetLoss', parseInt(e.target.value, 10) / 100)}
               />
               <span>{(networkConfig.packetLoss * 100).toFixed(1)}%</span>
             </div>
