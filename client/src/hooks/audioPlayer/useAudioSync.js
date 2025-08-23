@@ -211,6 +211,13 @@ export const useAudioSync = ({
     const mainAudio = audioCore.playerRef.current?.audio.current;
     if (!mainAudio) return;
     
+    // Only handle events that correspond to the currently selected beat
+    const isEventForCurrentBeat = () => {
+      const src = mainAudio?.src || '';
+      const beatKey = currentBeat?.audio || '';
+      return !!beatKey && src.includes(beatKey);
+    };
+
     // Ensure non-master tabs have their audio muted
     if (!isCurrentSessionMaster && mainAudio) {
       mainAudio.muted = true;
@@ -234,6 +241,7 @@ export const useAudioSync = ({
     };
 
     const handleLoadedMetadata = () => {
+      if (!isEventForCurrentBeat()) return;
       // Reset progress when new audio metadata loads to prevent carryover from previous song
       setCurrentTimeState(0);
       setProgress(0);
@@ -243,6 +251,7 @@ export const useAudioSync = ({
     };
 
     const handleLoadedData = () => {
+      if (!isEventForCurrentBeat()) return;
       // Ensure progress starts at 0 for new audio data
       if (mainAudio.currentTime > 0) {
         audioCore.setCurrentTime(0);
@@ -266,6 +275,7 @@ export const useAudioSync = ({
     };
 
     const handleCanPlay = () => {
+      if (!isEventForCurrentBeat()) return;
       syncAllPlayers(true);
       
       // Check if we should start playback
@@ -282,6 +292,7 @@ export const useAudioSync = ({
     };
 
     const handlePlay = () => {
+      if (!isEventForCurrentBeat()) return;
       setIsPlaying(true);
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
@@ -290,6 +301,7 @@ export const useAudioSync = ({
     };
 
     const handlePause = () => {
+      if (!isEventForCurrentBeat()) return;
       setIsPlaying(false);
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'paused';

@@ -365,6 +365,8 @@ const AudioPlayer = ({
     // Ensure UI shows 00:00 instantly and prevent carryover
     setCurrentTimeState(0);
     setProgress(0);
+    // Pause any current playback to prevent previous track resuming during load
+    try { audioCore.pause(); } catch (e) {}
     audioCore.setCurrentTime(0);
     syncAllPlayers(true);
   }, [currentBeat?.id]);
