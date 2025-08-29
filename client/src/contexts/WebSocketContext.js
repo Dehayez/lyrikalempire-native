@@ -16,6 +16,8 @@ export const WebSocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    // disable websocket
+    return;
     // Connect to WebSocket server - use dynamic URL based on current domain
     const wsUrl = process.env.NODE_ENV === 'production' 
       ? window.location.origin  // Use the same origin as the current page
