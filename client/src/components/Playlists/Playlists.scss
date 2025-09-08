@@ -51,7 +51,9 @@
             align-items: center;
             padding: 16px 12px;
             border-radius: 4px;
+            border: 2px solid transparent;
             transition: all 0.2s ease;
+            position: relative;
 
             &:hover {
                 background-color: $color-gray-dark;
@@ -70,10 +72,9 @@
             }
 
             &--drag-over {
-                background-color: $color-yellow;
-                color: $color-black;
-                transform: scale(1.02);
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                border: 2px solid $color-primary;
+                background-color: $color-primary-light;
+                cursor: copy;
             }
         }
     }
