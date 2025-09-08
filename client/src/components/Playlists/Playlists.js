@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useDrop } from 'react-dnd';
 import { IoAddSharp, IoRemoveCircleOutline, IoPencil, IoVolumeMediumSharp } from "react-icons/io5";
 import { Home, HomeFill } from '../../assets/icons';
 
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { eventBus, isMobileOrTablet } from '../../utils';
-import { getPlaylistById, deletePlaylist } from '../../services';
+import { getPlaylistById, deletePlaylist, addBeatsToPlaylist } from '../../services';
 
 import { Button, IconButton } from '../Buttons';
 import ConfirmModal from '../ConfirmModal/ConfirmModal';
 import { ContextMenu } from '../ContextMenu';
 import { UpdatePlaylistForm } from './UpdatePlaylistForm';
+import PlaylistItem from './PlaylistItem';
 
 import './Playlists.scss';
 
@@ -133,40 +135,22 @@ const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
       ) : (
       <ul className='playlists__list'>
         {playlists.map((playlist, index) => (
-          <li 
-            key={index} 
-            className={`playlists__list-item${playedPlaylistId === playlist.id ? ' playlists__list-item--playing' : ''}${playlist.id === currentPlaylistId ? ' playlists__list-item--active' : ''}`}
-            onClick={() => playListClick(playlist.id)}
-            onContextMenu={(e) => handleRightClick(e, playlist, index)}
-            style={{ textDecoration: 'none' }}
-          >
-            <div>{playlist.title}</div>
-           {playedPlaylistId === playlist.id && isPlaying && <IoVolumeMediumSharp/>}
-
-            {activeContextMenu === `${playlist.id}-${index}` && (
-              <ContextMenu
-                beat={playlist}
-                position={{ top: contextMenuY, left: contextMenuX }}
-                setActiveContextMenu={setActiveContextMenu}
-                items={[
-                  {
-                    icon: IoRemoveCircleOutline,
-                    iconClass: 'delete-playlist',
-                    text: 'Delete playlist',
-                    buttonClass: 'delete-playlist',
-                    onClick: () => openConfirmModal(playlist.id),
-                  },
-                  {
-                    icon: IoPencil,
-                    iconClass: 'edit-playlist',
-                    text: 'Edit details',
-                    buttonClass: 'edit-playlist',
-                    onClick: () => handleOpenUpdateForm(playlist),
-                  }
-                ]}
-              />
-            )}
-          </li>
+          <PlaylistItem
+            key={index}
+            playlist={playlist}
+            index={index}
+            playedPlaylistId={playedPlaylistId}
+            currentPlaylistId={currentPlaylistId}
+            isPlaying={isPlaying}
+            onPlaylistClick={playListClick}
+            onRightClick={handleRightClick}
+            activeContextMenu={activeContextMenu}
+            contextMenuX={contextMenuX}
+            contextMenuY={contextMenuY}
+            setActiveContextMenu={setActiveContextMenu}
+            onOpenConfirmModal={openConfirmModal}
+            onOpenUpdateForm={handleOpenUpdateForm}
+          />
         ))}
       </ul>)}
       {playlistToUpdate && (

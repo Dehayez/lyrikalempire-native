@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import classNames from 'classnames';
 import { IoAddSharp } from 'react-icons/io5';
 
@@ -100,7 +98,6 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
   return (
     <>
       {playlist && (
-            <DndProvider backend={HTML5Backend}>
                 <BeatList
                   key={beats.length}
                   externalBeats={sortedBeatsFromPlaylist}
@@ -140,7 +137,6 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
                     </div>
                   }
                 />
-            </DndProvider>
       )}
       {isOpen &&
         <UpdatePlaylistForm

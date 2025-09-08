@@ -84,15 +84,23 @@ const BeatRow = ({
   const [disableFocus, setDisableFocus] = useState(mode !== 'edit');
   
   // Drag and drop configuration
-  const toDragAndDrop = location.pathname !== '/' && (mode === 'lock' || mode === 'listen');
+  const isPlaylistPage = location.pathname !== '/';
+  const toDragAndDrop = isPlaylistPage && (mode === 'lock' || mode === 'listen');
+  const canDragToPlaylist = location.pathname === '/' && mode === 'listen';
   
   const [{ isDragging }, drag] = useDrag({
     type: 'BEAT',
-    item: { type: 'BEAT', id: beat.id, index },
+    item: { 
+      type: 'BEAT', 
+      id: beat.id, 
+      index,
+      title: beat.title,
+      isFromHomePage: location.pathname === '/'
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    canDrag: () => toDragAndDrop,
+    canDrag: () => toDragAndDrop || canDragToPlaylist,
   });
 
   const [, drop] = useDrop({
@@ -142,6 +150,8 @@ const BeatRow = ({
   // Connect drag and drop refs
   if (toDragAndDrop) {
     drag(drop(ref));
+  } else if (canDragToPlaylist) {
+    drag(ref);
   }
 
   // Dynamic text for delete/remove operation
