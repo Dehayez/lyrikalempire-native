@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import classNames from 'classnames';
+import { IoAddSharp } from 'react-icons/io5';
 
 import { usePlaylist } from '../../contexts';
 import { getPlaylistById, getBeatsByPlaylistId, removeBeatFromPlaylist, updateBeatOrder } from '../../services';
@@ -10,7 +11,8 @@ import { eventBus } from '../../utils';
 import { useSort } from '../../hooks/useSort';
 
 import { BeatList } from '../BeatList';
-import { UpdatePlaylistForm } from './UpdatePlaylistForm'; 
+import { UpdatePlaylistForm } from './UpdatePlaylistForm';
+import { IconButton } from '../Buttons'; 
 
 import './PlaylistDetail.scss';
 
@@ -120,11 +122,21 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
                   setBeats={setBeats}
                   isBeatCachedSync={isBeatCachedSync}
                   headerContent={
-                    <div className='playlist__text' onClick={() => setIsOpen(true)}>
-                      <h2 className='playlist__title'>{playlist.title}</h2>
-                      <p className={classNames('playlist__description', { 'has-description': playlist.description })}>
-                        {playlist.description}
-                      </p>
+                    <div className='playlist__header'>
+                      <div className='playlist__text' onClick={() => setIsOpen(true)}>
+                        <h2 className='playlist__title'>{playlist.title}</h2>
+                        <p className={classNames('playlist__description', { 'has-description': playlist.description })}>
+                          {playlist.description}
+                        </p>
+                      </div>
+                      <IconButton
+                        className="playlist__action-button"
+                        onClick={() => console.log('Button clicked!')}
+                        text="Add to playlist"
+                        tooltipPosition="left"
+                      >
+                        <IoAddSharp />
+                      </IconButton>
                     </div>
                   }
                 />

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "main.js",
   "scripts": {
-    "start": "open-cli /Applications/MAMP/MAMP.app && wait-on http://localhost:8888 && concurrently \"yarn --cwd ./server start\" \"yarn --cwd ./client start\"",
+    "dev": "open-cli /Applications/MAMP/MAMP.app && wait-on http://localhost:8888 && concurrently \"yarn --cwd ./server start\" \"yarn --cwd ./client start\"",
     "build": "cd client && yarn build && cd .. && git add . && git commit -m \"Build\" && git push",
     "electron": "wait-on http://localhost:3000 && electron ."
   },

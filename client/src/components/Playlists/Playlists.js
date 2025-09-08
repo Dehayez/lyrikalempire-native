@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { IoAddSharp, IoRemoveCircleOutline, IoPencil, IoVolumeMediumSharp } from "react-icons/io5";
+import { Home, HomeFill } from '../../assets/icons';
 
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { eventBus, isMobileOrTablet } from '../../utils';
@@ -15,7 +16,10 @@ import './Playlists.scss';
 
 const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { playlists, playedPlaylistId, currentPlaylistId, updatePlaylist, handleAddPlaylist } = usePlaylist();
+  
+  const isHomePage = location.pathname === '/';
 
   const [activeContextMenu, setActiveContextMenu] = useState(null);
   const [contextMenuX, setContextMenuX] = useState(0);
@@ -102,6 +106,14 @@ const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
     <div className="playlists">
       <div className="playlists__header">
       <div className="playlists__header-left">
+        <IconButton
+          className="playlists__home-button"
+          onClick={() => navigate('/')}
+          text="Home"
+          tooltipPosition="right"
+        >
+          {isHomePage ? <HomeFill /> : <Home />}
+        </IconButton>
         <h2 className="playlists__title">Playlists</h2>
       </div>
         <IconButton
