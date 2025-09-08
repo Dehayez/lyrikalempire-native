@@ -17,11 +17,20 @@
     background-color: $color-gray-dark;
   }
 
-  &--playing.beat-row--edit {
-    & .beat-row__input, & .select-wrapper__select {
-      &:hover {
-        background-color: $color-primary-light;
-        border: 1px solid $color-primary;
+  // Playing state - must have priority over all other states
+  &--playing {
+    background-color: $color-primary-bg !important;
+    
+    &:hover {
+      background-color: $color-primary-bg !important;
+    }
+
+    &.beat-row--edit {
+      & .beat-row__input, & .select-wrapper__select {
+        &:hover {
+          background-color: $color-primary-light;
+          border: 1px solid $color-primary;
+        }
       }
     }
   }
@@ -101,12 +110,6 @@
     padding: 8px 0;
   }
 
-  &--playing {
-    background-color: $color-primary-bg;
-    &:hover {
-      background-color: $color-primary-bg;
-    }
-  }
 
   &--focused {
     background-color: $color-gray-dark-active;
@@ -127,6 +130,18 @@
 
   &:hover {
     background-color: $color-gray-dark-hover;
+  }
+}
+
+// Playing state overrides selected states
+.beat-row--playing.beat-row--selected, 
+.beat-row--playing.beat-row--selected-top, 
+.beat-row--playing.beat-row--selected-bottom, 
+.beat-row--playing.beat-row--selected-middle {
+  background-color: $color-primary-bg !important;
+
+  &:hover {
+    background-color: $color-primary-bg !important;
   }
 
   &-top {

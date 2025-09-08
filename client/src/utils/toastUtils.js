@@ -108,11 +108,19 @@ class ToastService {
 
   // Playlist-related toasts
   addToPlaylist(beatTitle, playlistTitle) {
-    return this.success(`Added "${beatTitle}" to "${playlistTitle}"`);
+    return this.success(
+      <div>
+        Added <strong>{beatTitle}</strong> to <strong>{playlistTitle}</strong>
+      </div>
+    );
   }
 
   removeFromPlaylist(beatTitle, playlistTitle) {
-    return this.success(`Removed "${beatTitle}" from "${playlistTitle}"`);
+    return this.success(
+      <div>
+        Removed <strong>{beatTitle}</strong> from <strong>{playlistTitle}</strong>
+      </div>
+    );
   }
 
   addToQueue(beatTitle) {
