@@ -35,7 +35,13 @@
       .tooltip__addbeat {
         visibility: visible;
         opacity: 1;
+        transition-delay: 0.6s;
       }
+    }
+
+    .tooltip,
+    .tooltip__addbeat {
+      transition-delay: 0s;
     }
 
     &--active {
