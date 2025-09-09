@@ -836,13 +836,15 @@ const AudioPlayer = ({
       )}
 
       {/* Duplicate confirmation modal */}
-      <DuplicateConfirmModal
-        isOpen={duplicateModal.isOpen}
-        beatTitle={duplicateModal.beatTitle}
-        playlistTitle={duplicateModal.playlistTitle}
-        onConfirm={handleDuplicateConfirm}
-        onCancel={handleDuplicateCancel}
-      />
+      {duplicateModal.isOpen && (
+        <DuplicateConfirmModal
+          isOpen={duplicateModal.isOpen}
+          beatTitle={duplicateModal.beatTitle}
+          playlistTitle={duplicateModal.playlistTitle}
+          onConfirm={handleDuplicateConfirm}
+          onCancel={handleDuplicateCancel}
+        />
+      )}
       </>
     </AudioErrorBoundary>
   );

@@ -20,6 +20,7 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
   const [isOpen, setIsOpen] = useState(false);
   const [playlist, setPlaylist] = useState(() => playlists.find(p => p.id === id));
   const [beats, setBeats] = useState([]);
+
   const { sortedItems: sortedBeatsFromPlaylist } = useSort(beats);
   
   // Track original order for potential restoration
@@ -162,7 +163,7 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
           isOpen={isOpen}
           setIsOpen={setIsOpen}
           onClose={() => setIsOpen(false)}
-          onConfirm={() =>  refreshPlaylist()}
+          onConfirm={() => refreshPlaylist()}
         />
       }
     </>

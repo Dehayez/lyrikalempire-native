@@ -53,6 +53,7 @@ const DraggableModal = ({
 }) => {
   const draggableRef = useRef(null);
 
+
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Enter') {
@@ -74,7 +75,7 @@ const DraggableModal = ({
         setIsOpen(false);
       }
     };
-  }, [isOpen, setIsOpen]);
+  }, []);
 
   const handleCancel = (e) => {
     e?.stopPropagation();
@@ -86,8 +87,16 @@ const DraggableModal = ({
     }
   };
 
+  const handleRequestClose = (e) => {
+    if (onCloseNoReset) {
+      onCloseNoReset(e);
+    } else {
+      handleCancel(e);
+    }
+  };
+
   return (
-    <Modal isOpen={isOpen} onRequestClose={onCloseNoReset} style={modalStyle}>
+    <Modal isOpen={isOpen} onRequestClose={handleRequestClose} style={modalStyle}>
       {isMobileOrTablet() ? (
         <div className='modal modal--mobile'>
           <div className='modal-content'>

@@ -23,8 +23,6 @@ import useOs from '../../hooks/useOs';
 
 import './LyricsModal.scss';
 
-Modal.setAppElement('#root');
-
 const MODAL_STYLE = {
   overlay: {
     backgroundColor: 'transparent',

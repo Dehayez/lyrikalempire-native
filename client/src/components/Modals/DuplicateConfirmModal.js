@@ -22,6 +22,7 @@ const DuplicateConfirmModal = ({
     return (
       <DraggableModal
         isOpen={isOpen}
+        setIsOpen={() => {}} // Prevent modal from trying to close itself
         title="Already added"
         onConfirm={handleCancel}
         onCancel={handleConfirm}

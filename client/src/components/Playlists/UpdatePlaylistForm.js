@@ -12,6 +12,7 @@ export const UpdatePlaylistForm = ({ playlist, onCancel, onConfirm, isOpen, setI
     const [isTitleEmpty, setIsTitleEmpty] = useState(false);
     const [description, setDescription] = useState(playlist.description || '');
 
+
     const handleUpdate = useCallback(async () => {
         if (!title.trim()) {
           setIsTitleEmpty(true);
