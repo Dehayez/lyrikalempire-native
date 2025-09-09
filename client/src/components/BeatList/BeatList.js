@@ -466,7 +466,11 @@ const handlePlayPause = useCallback((beat) => {
 
     result.push(
       <React.Fragment key={beat.id}>
-        {hoverIndex === absoluteIndex && hoverPosition === 'top' && <tr className="drop-line" />}
+        {hoverIndex === absoluteIndex && hoverPosition === 'top' && (
+          <tr className="drop-line">
+            <td colSpan="10"></td>
+          </tr>
+        )}
         <BeatRow
           key={beat.uniqueKey || beat.id}
           beat={beat}
@@ -495,7 +499,11 @@ const handlePlayPause = useCallback((beat) => {
           isBeatCachedSync={isBeatCachedSync}
           isOffline={isOffline}
         />
-        {hoverIndex === absoluteIndex && hoverPosition === 'bottom' && <tr className="drop-line" />}
+        {hoverIndex === absoluteIndex && hoverPosition === 'bottom' && (
+          <tr className="drop-line">
+            <td colSpan="10"></td>
+          </tr>
+        )}
       </React.Fragment>
     );
   });

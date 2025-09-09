@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import classNames from 'classnames';
 import { IoAddSharp } from 'react-icons/io5';
@@ -22,6 +22,9 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
   const [playlist, setPlaylist] = useState(() => playlists.find(p => p.id === id));
   const [beats, setBeats] = useState([]);
   const { sortedItems: sortedBeatsFromPlaylist } = useSort(beats);
+  
+  // Track original order for potential restoration
+  const originalOrderRef = useRef([]);
 
   const refreshPlaylist = async () => {
     const updatedPlaylist = await getPlaylistById(id);
@@ -31,14 +34,35 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
     setBeats(updatedBeats);
   };
 
-  const moveBeat = useCallback((dragIndex, hoverIndex) => {
+  const moveBeat = useCallback(async (dragIndex, hoverIndex) => {
+    if (dragIndex === hoverIndex) return;
+    
+    // Store original order if not already stored
+    if (originalOrderRef.current.length === 0) {
+      originalOrderRef.current = [...beats];
+    }
+    
     const dragBeat = beats[dragIndex];
     const updatedBeats = [...beats];
     updatedBeats.splice(dragIndex, 1);
     updatedBeats.splice(hoverIndex, 0, dragBeat);
 
+    // Update local state immediately for responsive UI
     setBeats(updatedBeats);
-    updateBeatOrder(id, updatedBeats.map((beat, index) => ({ id: beat.id, order: index + 1 })));
+    
+    // Update the beat order on the server
+    try {
+      await updateBeatOrder(id, updatedBeats.map((beat, index) => ({ id: beat.id, order: index + 1 })));
+      // Clear original order on successful server update
+      originalOrderRef.current = [];
+    } catch (error) {
+      console.error('Error updating beat order:', error);
+      // Revert to original order if server update fails
+      if (originalOrderRef.current.length > 0) {
+        setBeats(originalOrderRef.current);
+        originalOrderRef.current = [];
+      }
+    }
   }, [beats, id]);
 
   const handleUpdateBeat = (beatId, updatedFields) => {
@@ -77,6 +101,9 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
   useEffect(() => {
     const fetchPlaylistDetails = async () => {
       try {
+        // Clear any stored original order when switching playlists
+        originalOrderRef.current = [];
+        
         const playlistData = await getPlaylistById(id);
         if (Array.isArray(playlistData) && playlistData.length > 0) {
           setPlaylist(playlistData[0]);

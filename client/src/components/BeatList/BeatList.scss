@@ -277,11 +277,19 @@
 // Toast mobile styles moved to Toaster.scss
 
 .drop-line {
-  position: absolute;
-  display: flex;
-  height: 1px;
-  width: calc(100% - 32px);
-  background-color: $color-yellow;
+  position: relative;
+  height: 2px;
+  background-color: $color-primary;
+  border-radius: 1px;
+  margin: 0 16px;
+  box-shadow: 0 0 4px rgba(255, 193, 7, 0.6);
+  
+  td {
+    padding: 0 !important;
+    height: 2px !important;
+    background-color: $color-primary;
+    border-radius: 1px;
+  }
 }
 
 .container__content__middle--mobile {

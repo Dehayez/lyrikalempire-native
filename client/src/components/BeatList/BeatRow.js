@@ -83,6 +83,17 @@ const BeatRow = ({
   const [tierlist, setTierlist] = useState(beat.tierlist || '');
   const [disableFocus, setDisableFocus] = useState(mode !== 'edit');
   
+  // API calls and handlers
+  const fetchBeats = useCallback(async (playlistId, setBeats) => {
+    try {
+      const beatsData = await getBeatsByPlaylistId(playlistId);
+      const sortedBeats = beatsData.sort((a, b) => a.beat_order - b.beat_order);
+      setBeats(sortedBeats);
+    } catch (error) {
+      console.error('Error fetching beats:', error);
+    }
+  }, []);
+
   // Drag and drop configuration
   const isPlaylistPage = location.pathname !== '/';
   const toDragAndDrop = isPlaylistPage && (mode === 'lock' || mode === 'listen');
@@ -104,6 +115,16 @@ const BeatRow = ({
       isDragging: monitor.isDragging(),
     }),
     canDrag: () => toDragAndDrop || canDragToPlaylist || canDragFromPlaylistToPlaylist,
+    end: useCallback((item, monitor) => {
+      // Clear hover indicators when drag ends
+      setHoverIndex(null);
+      setHoverPosition(null);
+      
+      // If drag was cancelled or dropped outside valid area, refresh beats to ensure consistency
+      if (!monitor.didDrop() && toDragAndDrop && playlistId && setBeats) {
+        fetchBeats(playlistId, setBeats);
+      }
+    }, [setHoverIndex, setHoverPosition, toDragAndDrop, playlistId, setBeats, fetchBeats]),
   });
 
   const [, drop] = useDrop({
@@ -119,35 +140,63 @@ const BeatRow = ({
       const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
       const hoverClientY = clientOffset.y - hoverBoundingRect.top;
     
-      // Set hover position for visual feedback
+      // Set hover position for visual feedback only
       if (hoverClientY < hoverMiddleY) {
         setHoverPosition('top');
       } else {
         setHoverPosition('bottom');
       }
       setHoverIndex(hoverIndex);
+    }, [toDragAndDrop, index, setHoverIndex, setHoverPosition]),
     
-      if (dragIndex === hoverIndex) return;
-    
-      // Only move when crossing midpoint
-      if (dragIndex < hoverIndex && hoverClientY > hoverMiddleY) {
-        moveBeat(dragIndex, hoverIndex);
-        item.index = hoverIndex;
-        return;
-      }
-    
-      if (dragIndex > hoverIndex && hoverClientY < hoverMiddleY) {
-        moveBeat(dragIndex, hoverIndex);
-        item.index = hoverIndex;
-        return;
-      }
-    }, [toDragAndDrop, index, moveBeat, setHoverIndex, setHoverPosition]),
-    
-    drop: useCallback(() => {
+    drop: useCallback((item, monitor) => {
       if (!toDragAndDrop) return;
-      fetchBeats(playlistId, setBeats);
+      
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      
+      // Only perform the actual move on drop within the same playlist
+      if (dragIndex !== hoverIndex) {
+        const clientOffset = monitor.getClientOffset();
+        const hoverBoundingRect = ref.current?.getBoundingClientRect();
+        
+        if (!hoverBoundingRect) return;
+        
+        const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+        const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+        
+        let targetIndex = hoverIndex;
+        
+        // Determine final position based on drop location
+        if (dragIndex < hoverIndex && hoverClientY > hoverMiddleY) {
+          // Moving down, place after hover item
+          targetIndex = hoverIndex;
+        } else if (dragIndex > hoverIndex && hoverClientY < hoverMiddleY) {
+          // Moving up, place before hover item  
+          targetIndex = hoverIndex;
+        } else if (hoverClientY > hoverMiddleY) {
+          // Place after hover item
+          targetIndex = hoverIndex + 1;
+        } else {
+          // Place before hover item
+          targetIndex = hoverIndex;
+        }
+        
+        // Clamp target index to valid range
+        targetIndex = Math.max(0, Math.min(targetIndex, beats.length - 1));
+        
+        if (targetIndex !== dragIndex) {
+          moveBeat(dragIndex, targetIndex);
+        }
+      }
+      
       setHoverIndex(null);
-    }, [toDragAndDrop, playlistId, setBeats, setHoverIndex]),
+      setHoverPosition(null);
+    }, [toDragAndDrop, index, moveBeat, setHoverIndex, setHoverPosition, beats.length]),
+    
+    canDrop: useCallback(() => {
+      return toDragAndDrop;
+    }, [toDragAndDrop]),
   });
 
   // Connect drag and drop refs
@@ -181,17 +230,6 @@ const BeatRow = ({
     'beat-row--edit': mode === 'edit',
     'beat-row--offline-uncached': isOffline && !isBeatCached,
   }), [isSelected, isMiddle, hasSelectedBefore, hasSelectedAfter, isDragging, currentBeat, beat.id, isSamePlaylist, mode, isOffline, isBeatCached]);
-
-  // API calls and handlers
-  const fetchBeats = useCallback(async (playlistId, setBeats) => {
-    try {
-      const beatsData = await getBeatsByPlaylistId(playlistId);
-      const sortedBeats = beatsData.sort((a, b) => a.beat_order - b.beat_order);
-      setBeats(sortedBeats);
-    } catch (error) {
-      console.error('Error fetching beats:', error);
-    }
-  }, []);
 
   const handleInputChange = useCallback((property, value) => {
     onUpdateBeat?.(beat.id, { [property]: value });
