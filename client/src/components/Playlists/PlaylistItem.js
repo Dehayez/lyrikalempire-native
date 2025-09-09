@@ -27,13 +27,17 @@ const PlaylistItem = ({
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'BEAT',
     drop: async (item) => {
-      // Only allow drops from home page to prevent duplicates in playlist pages
-      if (!item.isFromHomePage) {
+      // Allow drops from home page OR from other playlists
+      const canAcceptDrop = item.isFromHomePage || 
+                           (item.isFromPlaylistPage && item.sourcePlaylistId !== playlist.id);
+      
+      if (!canAcceptDrop) {
         return;
       }
       
       try {
         await addBeatsToPlaylist(playlist.id, [item.id]);
+        const sourceText = item.isFromPlaylistPage ? 'playlist' : 'library';
         toastService.addToPlaylist(item.title || 'Track', playlist.title);
       } catch (error) {
         console.error('Error adding beat to playlist:', error);
@@ -42,10 +46,16 @@ const PlaylistItem = ({
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
-      canDrop: monitor.canDrop() && monitor.getItem()?.isFromHomePage,
+      canDrop: monitor.canDrop() && (() => {
+        const item = monitor.getItem();
+        return item?.isFromHomePage || 
+               (item?.isFromPlaylistPage && item?.sourcePlaylistId !== playlist.id);
+      })(),
     }),
     hover: (item, monitor) => {
-      setIsDragOver(monitor.isOver() && item?.isFromHomePage);
+      const canAcceptDrop = item?.isFromHomePage || 
+                           (item?.isFromPlaylistPage && item?.sourcePlaylistId !== playlist.id);
+      setIsDragOver(monitor.isOver() && canAcceptDrop);
     },
   });
 

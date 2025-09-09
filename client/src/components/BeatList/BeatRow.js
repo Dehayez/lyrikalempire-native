@@ -87,6 +87,7 @@ const BeatRow = ({
   const isPlaylistPage = location.pathname !== '/';
   const toDragAndDrop = isPlaylistPage && (mode === 'lock' || mode === 'listen');
   const canDragToPlaylist = location.pathname === '/' && mode === 'listen';
+  const canDragFromPlaylistToPlaylist = isPlaylistPage && mode === 'listen';
   
   const [{ isDragging }, drag] = useDrag({
     type: 'BEAT',
@@ -95,12 +96,14 @@ const BeatRow = ({
       id: beat.id, 
       index,
       title: beat.title,
-      isFromHomePage: location.pathname === '/'
+      isFromHomePage: location.pathname === '/',
+      isFromPlaylistPage: isPlaylistPage,
+      sourcePlaylistId: playlistId
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    canDrag: () => toDragAndDrop || canDragToPlaylist,
+    canDrag: () => toDragAndDrop || canDragToPlaylist || canDragFromPlaylistToPlaylist,
   });
 
   const [, drop] = useDrop({
@@ -150,7 +153,7 @@ const BeatRow = ({
   // Connect drag and drop refs
   if (toDragAndDrop) {
     drag(drop(ref));
-  } else if (canDragToPlaylist) {
+  } else if (canDragToPlaylist || canDragFromPlaylistToPlaylist) {
     drag(ref);
   }
 
