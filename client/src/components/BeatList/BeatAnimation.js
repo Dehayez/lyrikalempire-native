@@ -15,7 +15,7 @@ const BeatAnimation = ({ beat, currentBeat, isPlaying, index, showPlayButton = t
 
   return (
     currentBeat && currentBeat.id === beat.id && isPlaying && isSamePlaylist ? 
-    <div className="animation-container" style={{ animation: `barAnimation ${170 / beat.bpm}s infinite`, opacity: hoveredBeat === beat.id ? 0 : 1 }}>
+    <div className="animation-container" style={{ animation: `barAnimation ${170 / beat.bpm}s infinite`, opacity: hoveredBeat === `${beat.id}-${index}` ? 0 : 1 }}>
         <div className="bar" style={{ animationDelay: `-${delays[0]}s`, animationDuration: `${durations[0]}s` }}></div>
         <div className="bar" style={{ animationDelay: `-${delays[1]}s`, animationDuration: `${durations[1]}s` }}></div>
         <div className="bar" style={{ animationDelay: `-${delays[2]}s`, animationDuration: `${durations[2]}s` }}></div>
@@ -25,7 +25,7 @@ const BeatAnimation = ({ beat, currentBeat, isPlaying, index, showPlayButton = t
         zIndex: 1, 
         minWidth: '30px', 
         color: currentBeat && currentBeat.id === beat.id && isSamePlaylist ? '#FFCC44' : '', 
-        opacity: (hoveredBeat === beat.id && showPlayButton) ? 0 : 1 
+        opacity: (hoveredBeat === `${beat.id}-${index}` && showPlayButton) ? 0 : 1 
       }}>{index + 1}</div>
   );
 };

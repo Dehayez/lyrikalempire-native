@@ -389,9 +389,10 @@ const BeatRow = ({
       e.currentTarget.querySelectorAll('.interactive-button').forEach(button => { 
         button.style.opacity = 1; 
       }); 
-      setHoveredBeat(beat.id); 
+      // Use beat.id and index to create unique identifier for each row instance
+      setHoveredBeat(`${beat.id}-${index}`); 
     }
-  }, [beat.id, setHoveredBeat]);
+  }, [beat.id, index, setHoveredBeat]);
 
   const handleMouseLeave = useCallback((e) => {
     if (!isMobileOrTablet()) { 
@@ -504,7 +505,8 @@ const BeatRow = ({
                 beat={beat} 
                 handlePlayPause={handlePlayPause}
                 currentBeat={currentBeat} 
-                isPlaying={isPlaying} 
+                isPlaying={isPlaying}
+                index={calculateActualIndex(index)}
               />
             )}
           </div>

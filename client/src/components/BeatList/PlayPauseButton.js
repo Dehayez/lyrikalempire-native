@@ -4,7 +4,7 @@ import { useBeat } from '../../contexts';
 import { IconButton } from '../Buttons';
 import './PlayPauseButton.scss';
 
-const PlayPauseButton = ({ beat, handlePlayPause, currentBeat, isPlaying }) => {
+const PlayPauseButton = ({ beat, handlePlayPause, currentBeat, isPlaying, index }) => {
   const isCurrentBeatPlaying = currentBeat?.id === beat.id && isPlaying;
   const { hoveredBeat } = useBeat();
 
@@ -12,7 +12,7 @@ const PlayPauseButton = ({ beat, handlePlayPause, currentBeat, isPlaying }) => {
     <IconButton
       className="icon-button--play-pause"
       onClick={() => handlePlayPause(beat)}
-      style={{ opacity: hoveredBeat === beat.id ? 1 : 0 }}
+      style={{ opacity: hoveredBeat === `${beat.id}-${index}` ? 1 : 0 }}
       ariaLabel={isCurrentBeatPlaying ? 'Pause' : 'Play'}
     >
       {isCurrentBeatPlaying ? <IoPauseSharp/> : <IoPlaySharp/>}
