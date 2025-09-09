@@ -424,8 +424,8 @@ const handlePlayPause = useCallback((beat) => {
       // Bottom gradient opacity (fade in when near bottom)
       const distanceFromBottom = maxScrollTop - scrollPosition;
       const bottomOpacity = Math.min(distanceFromBottom / maxScroll, 1);
-      setScrollOpacityBottom(bottomOpacity);
-      setIsScrolledBottom(bottomOpacity > 0);
+      setScrollOpacityBottom?.(bottomOpacity);
+      setIsScrolledBottom?.(bottomOpacity > 0);
     };
 
     const container = containerRef.current;
