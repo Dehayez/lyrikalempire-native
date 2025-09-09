@@ -499,12 +499,14 @@ function App() {
               ) : null}
             </div>
           </div>
-          <AddBeatForm 
-            isOpen={isOpen} 
-            setIsOpen={setIsOpen} 
-            droppedFiles={droppedFiles} 
-            clearDroppedFiles={clearDroppedFiles} 
-          />
+          {isOpen && (
+            <AddBeatForm 
+              isOpen={isOpen} 
+              setIsOpen={setIsOpen} 
+              droppedFiles={droppedFiles} 
+              clearDroppedFiles={clearDroppedFiles} 
+            />
+          )}
           {/* Performance Testing Panel - only for user id 39 */}
           {isPerfAllowed && (
             <PerformancePanel

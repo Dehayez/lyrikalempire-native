@@ -656,20 +656,22 @@ const handlePlayPause = useCallback((beat) => {
       ) : (
         showMessage && <p className='placeholder-text'>No tracks are added yet.</p>
       )}
-      <ConfirmModal 
-        isOpen={isOpen} 
-        setIsOpen={setIsOpen}
-        title={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'} ${beatsToDelete.length > 1 ? `tracks` : 'track'}`}
-        message={<span>Are you sure you want to {deleteMode === 'playlist' ? 'remove' : 'delete'} {beatsToDelete.length > 1 ? `${beatsToDelete.length} tracks` : 'this track'}{deleteMode === 'playlist' ? <> from <strong>{playlistName}</strong></> : ''}?</span>}
-        confirmButtonText={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'}`}
-        cancelButtonText="Cancel" 
-        onConfirm={handleConfirm} 
-        onCancel={() => {
-          if (typeof setIsOpen === 'function') {
-            setIsOpen(false);
-          }
-        }}
-      />
+      {isOpen && (
+        <ConfirmModal 
+          isOpen={isOpen} 
+          setIsOpen={setIsOpen}
+          title={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'} ${beatsToDelete.length > 1 ? `tracks` : 'track'}`}
+          message={<span>Are you sure you want to {deleteMode === 'playlist' ? 'remove' : 'delete'} {beatsToDelete.length > 1 ? `${beatsToDelete.length} tracks` : 'this track'}{deleteMode === 'playlist' ? <> from <strong>{playlistName}</strong></> : ''}?</span>}
+          confirmButtonText={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'}`}
+          cancelButtonText="Cancel" 
+          onConfirm={handleConfirm} 
+          onCancel={() => {
+            if (typeof setIsOpen === 'function') {
+              setIsOpen(false);
+            }
+          }}
+        />
+      )}
     </SimpleBar>
   );
 };
