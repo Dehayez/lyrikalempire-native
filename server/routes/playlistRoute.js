@@ -3,6 +3,7 @@ const router = express.Router();
 const playlistController = require('../controllers/playlistController');
 const checkPlan = require('../middleware/checkPlan');
 
+
 router.post('/', checkPlan('paid'), playlistController.createPlaylist);
 router.get('/', playlistController.getPlaylists);
 router.get('/:id', playlistController.getPlaylistById);

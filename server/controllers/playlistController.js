@@ -112,16 +112,40 @@ const getBeatsInPlaylist = (req, res) => {
   );
 };
 
-const addBeatsToPlaylist = (req, res) => {
+const addBeatsToPlaylist = async (req, res) => {
   const { playlist_id } = req.params;
   const { beatIds } = req.body;
 
-  const queries = beatIds.map(beat_id => ({
-    query: 'INSERT INTO playlists_beats (playlist_id, beat_id) VALUES (?, ?)',
-    params: [playlist_id, beat_id]
-  }));
 
-  dbHelpers.handleTransaction(queries, res, 'Beats added to playlist successfully');
+  try {
+    // Check for existing beats in the playlist before adding
+    const checkQuery = `
+      SELECT beat_id 
+      FROM playlists_beats 
+      WHERE playlist_id = ? AND beat_id IN (${beatIds.map(() => '?').join(',')})
+    `;
+    
+    
+    const [existingBeats] = await dbHelpers.db.query(checkQuery, [playlist_id, ...beatIds]);
+    
+    
+    const existingBeatIds = existingBeats.map(row => row.beat_id);
+    const duplicateBeatIds = beatIds.filter(id => existingBeatIds.includes(id));
+    
+    if (duplicateBeatIds.length > 0) {
+    }
+
+    // Continue with the original logic - add all tracks (including duplicates)
+    const queries = beatIds.map(beat_id => ({
+      query: 'INSERT INTO playlists_beats (playlist_id, beat_id) VALUES (?, ?)',
+      params: [playlist_id, beat_id]
+    }));
+
+    dbHelpers.handleTransaction(queries, res, 'Beats added to playlist successfully');
+  } catch (error) {
+    console.error('Database error checking for duplicates:', error);
+    return res.status(500).json({ error: 'Database error checking for duplicates' });
+  }
 };
 
 module.exports = {

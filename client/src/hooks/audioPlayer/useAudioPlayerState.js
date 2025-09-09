@@ -48,6 +48,12 @@ export const useAudioPlayerState = ({
   );
   
   const [isFullPageVisible, setIsFullPageVisible] = useState(false);
+  const [duplicateModal, setDuplicateModal] = useState({
+    isOpen: false,
+    beatTitle: '',
+    playlistTitle: '',
+    pendingPlaylistId: null
+  });
 
   // Sync with localStorage
   useLocalStorageSync({ waveform, isFullPage });
@@ -295,6 +301,27 @@ export const useAudioPlayerState = ({
     setActiveContextMenu(false);
   }, []);
 
+  const handleDuplicateConfirm = useCallback(async () => {
+    if (duplicateModal.pendingPlaylistId && currentBeat) {
+      try {
+        const { addBeatsToPlaylist } = await import('../../services/playlistService');
+        await addBeatsToPlaylist(duplicateModal.pendingPlaylistId, [currentBeat.id], true);
+        
+        const { toastService } = await import('../../components/Toaster');
+        toastService.addToPlaylist(currentBeat.title, duplicateModal.playlistTitle);
+      } catch (error) {
+        console.error('Error adding duplicate beat to playlist:', error);
+        const { toastService } = await import('../../components/Toaster');
+        toastService.warning('Failed to add track to playlist');
+      }
+    }
+    setDuplicateModal({ isOpen: false, beatTitle: '', playlistTitle: '', pendingPlaylistId: null });
+  }, [duplicateModal.pendingPlaylistId, duplicateModal.playlistTitle, currentBeat]);
+
+  const handleDuplicateCancel = useCallback(() => {
+    setDuplicateModal({ isOpen: false, beatTitle: '', playlistTitle: '', pendingPlaylistId: null });
+  }, []);
+
   // Load artist name when current beat changes
   useEffect(() => {
     loadArtistName();
@@ -349,6 +376,8 @@ export const useAudioPlayerState = ({
     setIsFullPage,
     isFullPageVisible,
     setIsFullPageVisible,
+    duplicateModal,
+    setDuplicateModal,
 
     // Derived state
     shouldShowFullPagePlayer,
@@ -359,6 +388,8 @@ export const useAudioPlayerState = ({
     toggleWaveform,
     handleEllipsisClick,
     handleCloseContextMenu,
+    handleDuplicateConfirm,
+    handleDuplicateCancel,
     handleAudioReady,
     refreshAudioSrc
   };

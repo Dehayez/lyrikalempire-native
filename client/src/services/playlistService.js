@@ -20,11 +20,35 @@ const deletePlaylist = async (id) => {
   return apiRequest('delete', `/${id}`, API_URL);
 };
 
-const addBeatsToPlaylist = async (playlistId, beatIds) => {
+const addBeatsToPlaylist = async (playlistId, beatIds, allowDuplicates = false) => {
   if (!Array.isArray(beatIds)) {
     beatIds = [beatIds];
   }
-  return apiRequest('post', `/${playlistId}/beats`, API_URL, { beatIds });
+  
+  // If allowDuplicates is false, check for duplicates first
+  if (!allowDuplicates) {
+    try {
+      // Get existing beats in the playlist
+      const existingBeats = await getBeatsByPlaylistId(playlistId);
+      const existingBeatIds = existingBeats.map(beat => beat.id);
+      const duplicateBeatIds = beatIds.filter(id => existingBeatIds.includes(id));
+      
+      if (duplicateBeatIds.length > 0) {
+        // Return duplicate information instead of adding
+        return {
+          isDuplicate: true,
+          duplicates: duplicateBeatIds,
+          newTracks: beatIds.filter(id => !existingBeatIds.includes(id))
+        };
+      }
+    } catch (error) {
+      console.error('Error checking for duplicates:', error);
+      // Continue with normal flow if duplicate check fails
+    }
+  }
+  
+  const result = await apiRequest('post', `/${playlistId}/beats`, API_URL, { beatIds });
+  return result;
 };
 
 const removeBeatFromPlaylist = async (playlistId, beatId) => {

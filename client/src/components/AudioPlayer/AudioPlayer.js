@@ -16,6 +16,7 @@ import { audioErrorRecovery } from '../../services/audioErrorRecovery';
 import { AudioErrorBoundary } from './AudioErrorBoundary';
 
 import { ContextMenu } from '../ContextMenu';
+import { DuplicateConfirmModal } from '../Modals';
 
 import MobileAudioPlayer from './MobileAudioPlayer';
 import DesktopAudioPlayer from './DesktopAudioPlayer';
@@ -243,7 +244,11 @@ const AudioPlayer = ({
     handleEllipsisClick,
     handleCloseContextMenu,
     handleAudioReady,
-    refreshAudioSrc
+    refreshAudioSrc,
+    duplicateModal,
+    setDuplicateModal,
+    handleDuplicateConfirm,
+    handleDuplicateCancel
   } = useAudioPlayerState({
     currentBeat,
     setCurrentBeat,
@@ -477,12 +482,23 @@ const AudioPlayer = ({
       // Import the addBeatsToPlaylist service
       import('../../services/playlistService').then(({ addBeatsToPlaylist }) => {
         addBeatsToPlaylist(playlistId, [currentBeat.id])
-          .then(() => {
-            // Show success message
-            import('../../components/Toaster').then(({ toastService }) => {
+          .then((result) => {
+            // Check if it's a duplicate
+            if (result.isDuplicate) {
               const playlist = playlists.find(p => p.id === playlistId);
-              toastService.addToPlaylist(currentBeat.title, playlist?.title || 'playlist');
-            });
+              setDuplicateModal({
+                isOpen: true,
+                beatTitle: currentBeat.title,
+                playlistTitle: playlist?.title || 'playlist',
+                pendingPlaylistId: playlistId
+              });
+            } else {
+              // Show success message
+              import('../../components/Toaster').then(({ toastService }) => {
+                const playlist = playlists.find(p => p.id === playlistId);
+                toastService.addToPlaylist(currentBeat.title, playlist?.title || 'playlist');
+              });
+            }
           })
           .catch((error) => {
             console.error('Error adding beat to playlist:', error);
@@ -492,7 +508,7 @@ const AudioPlayer = ({
           });
       });
     }
-  }, [currentBeat, playlists]);
+  }, [currentBeat, playlists, setDuplicateModal]);
 
   // Handle removing from playlist
   const handleRemoveFromPlaylist = useCallback(() => {
@@ -818,6 +834,15 @@ const AudioPlayer = ({
           items={contextMenuItems}
         />
       )}
+
+      {/* Duplicate confirmation modal */}
+      <DuplicateConfirmModal
+        isOpen={duplicateModal.isOpen}
+        beatTitle={duplicateModal.beatTitle}
+        playlistTitle={duplicateModal.playlistTitle}
+        onConfirm={handleDuplicateConfirm}
+        onCancel={handleDuplicateCancel}
+      />
       </>
     </AudioErrorBoundary>
   );

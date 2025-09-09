@@ -4,23 +4,30 @@ import './DuplicateConfirmModal.scss';
 
 const DuplicateConfirmModal = ({ 
   isOpen, 
-  setIsOpen, 
   beatTitle, 
   playlistTitle, 
   onConfirm, 
   onCancel 
 }) => {
-  return (
-    <DraggableModal
-      isOpen={isOpen}
-      setIsOpen={setIsOpen}
-      title="Duplicate Track Detected"
-      onConfirm={onConfirm}
-      onCancel={onCancel}
-      confirmButtonText="Add Anyway"
-      cancelButtonText="Cancel"
-      confirmButtonType="warning"
-    >
+  const handleConfirm = () => {
+    onConfirm();
+  };
+
+  const handleCancel = () => {
+    onCancel();
+  };
+
+    return (
+      <DraggableModal
+        isOpen={isOpen}
+        title="Duplicate Track Detected"
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+        onCloseNoReset={handleCancel} // Use onCancel for overlay click
+        confirmButtonText="Add Anyway"
+        cancelButtonText="Cancel"
+        confirmButtonType="warning"
+      >
       <div className="duplicate-confirm-modal__content">
         <p>
           <strong>{beatTitle}</strong> is already in <strong>{playlistTitle}</strong>.

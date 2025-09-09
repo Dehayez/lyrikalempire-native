@@ -4,6 +4,7 @@ import { IoVolumeMediumSharp, IoRemoveCircleOutline, IoPencil } from "react-icon
 import classNames from 'classnames';
 
 import { ContextMenu } from '../ContextMenu';
+import { DuplicateConfirmModal } from '../Modals';
 import { addBeatsToPlaylist } from '../../services';
 import { toastService } from '../../utils';
 
@@ -23,6 +24,12 @@ const PlaylistItem = ({
   onOpenUpdateForm
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [duplicateModal, setDuplicateModal] = useState({
+    isOpen: false,
+    beatTitle: '',
+    playlistTitle: '',
+    pendingItem: null
+  });
 
   const [{ isOver, canDrop }, drop] = useDrop({
     accept: 'BEAT',
@@ -36,9 +43,20 @@ const PlaylistItem = ({
       }
       
       try {
-        await addBeatsToPlaylist(playlist.id, [item.id]);
-        const sourceText = item.isFromPlaylistPage ? 'playlist' : 'library';
-        toastService.addToPlaylist(item.title || 'Track', playlist.title);
+        const result = await addBeatsToPlaylist(playlist.id, [item.id]);
+        
+        // Check if it's a duplicate
+        if (result && result.isDuplicate) {
+          setDuplicateModal({
+            isOpen: true,
+            beatTitle: item.title || 'Track',
+            playlistTitle: playlist.title,
+            pendingItem: item
+          });
+        } else {
+          const sourceText = item.isFromPlaylistPage ? 'playlist' : 'library';
+          toastService.addToPlaylist(item.title || 'Track', playlist.title);
+        }
       } catch (error) {
         console.error('Error adding beat to playlist:', error);
         toastService.warning('Failed to add track to playlist');
@@ -58,6 +76,23 @@ const PlaylistItem = ({
       setIsDragOver(monitor.isOver() && canAcceptDrop);
     },
   });
+
+  const handleDuplicateConfirm = async () => {
+    if (duplicateModal.pendingItem) {
+      try {
+        await addBeatsToPlaylist(playlist.id, [duplicateModal.pendingItem.id], true);
+        toastService.addToPlaylist(duplicateModal.pendingItem.title || 'Track', playlist.title);
+      } catch (error) {
+        console.error('Error adding duplicate beat to playlist:', error);
+        toastService.warning('Failed to add track to playlist');
+      }
+    }
+    setDuplicateModal({ isOpen: false, beatTitle: '', playlistTitle: '', pendingItem: null });
+  };
+
+  const handleDuplicateCancel = () => {
+    setDuplicateModal({ isOpen: false, beatTitle: '', playlistTitle: '', pendingItem: null });
+  };
 
   const itemClasses = classNames('playlists__list-item', {
     'playlists__list-item--playing': playedPlaylistId === playlist.id,
@@ -100,6 +135,14 @@ const PlaylistItem = ({
           ]}
         />
       )}
+
+      <DuplicateConfirmModal
+        isOpen={duplicateModal.isOpen}
+        beatTitle={duplicateModal.beatTitle}
+        playlistTitle={duplicateModal.playlistTitle}
+        onConfirm={handleDuplicateConfirm}
+        onCancel={handleDuplicateCancel}
+      />
     </li>
   );
 };

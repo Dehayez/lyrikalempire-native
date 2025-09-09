@@ -41,4 +41,4 @@ const handleTransaction = async (queries, res, successMessage) => {
   }
 };
 
-module.exports = { handleQuery, handleTransaction };
+module.exports = { handleQuery, handleTransaction, db };
