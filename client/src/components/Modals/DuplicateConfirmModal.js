@@ -9,11 +9,13 @@ const DuplicateConfirmModal = ({
   onConfirm, 
   onCancel 
 }) => {
-  const handleConfirm = () => {
+  const handleConfirm = (e) => {
+    e?.stopPropagation();
     onConfirm();
   };
 
-  const handleCancel = () => {
+  const handleCancel = (e) => {
+    e?.stopPropagation();
     onCancel();
   };
 
@@ -28,8 +30,12 @@ const DuplicateConfirmModal = ({
         cancelButtonText="Add anyway"
         confirmButtonType="primary"
         cancelButtonType="transparent"
+        hideCloseButton={true}
       >
-        <div className="duplicate-confirm-modal__content">
+        <div 
+          className="duplicate-confirm-modal__content"
+          onClick={(e) => e.stopPropagation()}
+        >
           <p>This is already in your <strong>{playlistTitle}</strong> playlist. </p>
         </div>
       </DraggableModal>

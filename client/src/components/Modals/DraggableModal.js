@@ -48,7 +48,8 @@ const DraggableModal = ({
   confirmButtonText = "Save", 
   cancelButtonText = "Cancel", 
   cancelButtonType = "transparent", 
-  confirmButtonType = "primary" 
+  confirmButtonType = "primary",
+  hideCloseButton = false
 }) => {
   const draggableRef = useRef(null);
 
@@ -75,12 +76,13 @@ const DraggableModal = ({
     };
   }, [isOpen, setIsOpen]);
 
-  const handleCancel = () => {
+  const handleCancel = (e) => {
+    e?.stopPropagation();
     if (typeof setIsOpen === 'function') {
       setIsOpen(false);
     }
     if (onCancel) {
-      onCancel();
+      onCancel(e);
     }
   };
 
@@ -92,8 +94,8 @@ const DraggableModal = ({
             <h2 className='modal__title'>{title}</h2>
             {children}
             <div className='modal__buttons'>
-              <Button variant={cancelButtonType} onClick={handleCancel}>{cancelButtonText}</Button>
-              <Button variant={confirmButtonType} onClick={onConfirm}>{confirmButtonText}</Button>
+              <Button variant={cancelButtonType} onClick={(e) => handleCancel(e)}>{cancelButtonText}</Button>
+              <Button variant={confirmButtonType} onClick={(e) => onConfirm(e)}>{confirmButtonText}</Button>
             </div>
           </div>
         </div>
@@ -101,14 +103,16 @@ const DraggableModal = ({
         <Draggable handle=".modal__title" nodeRef={draggableRef}>
           <div ref={draggableRef} className='modal'>
             <div className='modal-content'>
-              <IconButton className="modal__close-button" onClick={handleCancel}>
-                <IoCloseSharp />
-              </IconButton>
+              {!hideCloseButton && (
+                <IconButton className="modal__close-button" onClick={(e) => handleCancel(e)}>
+                  <IoCloseSharp />
+                </IconButton>
+              )}
               <h2 className='modal__title'>{title}</h2>
               {children}
               <div className='modal__buttons'>
-                <Button variant={cancelButtonType} onClick={handleCancel}>{cancelButtonText}</Button>
-                <Button variant={confirmButtonType} onClick={onConfirm}>{confirmButtonText}</Button>
+                <Button variant={cancelButtonType} onClick={(e) => handleCancel(e)}>{cancelButtonText}</Button>
+                <Button variant={confirmButtonType} onClick={(e) => onConfirm(e)}>{confirmButtonText}</Button>
               </div>
             </div>
           </div>
