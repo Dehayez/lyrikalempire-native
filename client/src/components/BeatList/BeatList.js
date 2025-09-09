@@ -479,14 +479,14 @@ const handlePlayPause = useCallback((beat) => {
     const indexValue = playlistId ? absoluteIndex : reversedIndex;
 
     result.push(
-      <React.Fragment key={beat.id}>
+      <React.Fragment key={`fragment-${beat.id}-${absoluteIndex}`}>
         {hoverIndex === absoluteIndex && hoverPosition === 'top' && (
           <tr className="drop-line">
             <td colSpan="10"></td>
           </tr>
         )}
         <BeatRow
-          key={beat.uniqueKey || beat.id}
+          key={beat.uniqueKey || `${beat.id}-${absoluteIndex}`}
           beat={beat}
           index={indexValue}
           moveBeat={moveBeat}

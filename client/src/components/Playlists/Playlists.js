@@ -136,7 +136,7 @@ const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
       <ul className='playlists__list'>
         {playlists.map((playlist, index) => (
           <PlaylistItem
-            key={index}
+            key={playlist.id}
             playlist={playlist}
             index={index}
             playedPlaylistId={playedPlaylistId}
