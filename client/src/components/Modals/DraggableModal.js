@@ -69,14 +69,16 @@ const DraggableModal = ({
   // Cleanup modal when component unmounts
   useEffect(() => {
     return () => {
-      if (isOpen) {
+      if (isOpen && typeof setIsOpen === 'function') {
         setIsOpen(false);
       }
     };
   }, [isOpen, setIsOpen]);
 
   const handleCancel = () => {
-    setIsOpen(false);
+    if (typeof setIsOpen === 'function') {
+      setIsOpen(false);
+    }
     if (onCancel) {
       onCancel();
     }

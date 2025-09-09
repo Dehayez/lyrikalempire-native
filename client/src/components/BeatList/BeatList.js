@@ -285,36 +285,50 @@ const handlePlayPause = useCallback((beat) => {
 
   const handleConfirm = async () => {
     if (beatsToDelete.length > 0) {
-      if (onDeleteFromPlaylist) {
-        await onDeleteFromPlaylist(beatsToDelete);
-      } else {
-        await Promise.all(beatsToDelete.map(beatId => handleDelete(beatId)));
+      try {
+        if (onDeleteFromPlaylist) {
+          await onDeleteFromPlaylist(beatsToDelete);
+        } else {
+          await Promise.all(beatsToDelete.map(beatId => handleDelete(beatId)));
+        }
+    
+        const titlesToDelete = beatsToDelete.map(beatId => {
+          const beat = beats.find(b => b.id === beatId);
+          return beat ? beat.title : 'Unknown Track';
+        });
+    
+        const message = beatsToDelete.length === 1
+          ? <div><strong>{titlesToDelete[0]}</strong> has been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>
+          : <div><strong>{beatsToDelete.length} tracks</strong> have been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>;
+    
+        setRefreshBeats(prev => !prev);
+    
+        // Safety check to ensure setIsOpen is still a function
+        if (typeof setIsOpen === 'function') {
+          setIsOpen(false);
+        }
+        setBeatsToDelete([]);
+    
+        toast.dark(message, {
+          autoClose: 3000,
+          pauseOnFocusLoss: false,
+          className: "Toastify__toast--warning",
+        });
+      } catch (error) {
+        console.error('Error during deletion:', error);
+        // Still try to close the modal even if deletion failed
+        if (typeof setIsOpen === 'function') {
+          setIsOpen(false);
+        }
+        setBeatsToDelete([]);
       }
-  
-      const titlesToDelete = beatsToDelete.map(beatId => {
-        const beat = beats.find(b => b.id === beatId);
-        return beat ? beat.title : 'Unknown Track';
-      });
-  
-      const message = beatsToDelete.length === 1
-        ? <div><strong>{titlesToDelete[0]}</strong> has been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>
-        : <div><strong>{beatsToDelete.length} tracks</strong> have been {deleteMode === 'playlist' ? <>removed from <strong>{playlistName}</strong></> : 'deleted'}.</div>;
-  
-      setRefreshBeats(prev => !prev);
-  
-      setIsOpen(false);
-      setBeatsToDelete([]);
-  
-      toast.dark(message, {
-        autoClose: 3000,
-        pauseOnFocusLoss: false,
-        className: "Toastify__toast--warning",
-      });
     }
   };
 
   const openConfirmModal = () => {
-    setIsOpen(true);
+    if (typeof setIsOpen === 'function') {
+      setIsOpen(true);
+    }
     const beatIds = selectedBeats.map(beat => beat.id);
     setBeatsToDelete(beatIds);
   };
@@ -650,7 +664,11 @@ const handlePlayPause = useCallback((beat) => {
         confirmButtonText={`${deleteMode === 'playlist' ? 'Remove' : 'Delete'}`}
         cancelButtonText="Cancel" 
         onConfirm={handleConfirm} 
-        onCancel={() => setIsOpen(false)}
+        onCancel={() => {
+          if (typeof setIsOpen === 'function') {
+            setIsOpen(false);
+          }
+        }}
       />
     </SimpleBar>
   );
