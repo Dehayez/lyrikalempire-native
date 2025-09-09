@@ -62,19 +62,33 @@ const BeatRow = ({
   );
 
   const isSelected = useMemo(() => 
-    selectedBeats.some(b => b.id === beat.id), 
-    [selectedBeats, beat.id]
+    selectedBeats.some(b => {
+      if (beat.uniqueKey && b.uniqueKey) {
+        return b.uniqueKey === beat.uniqueKey;
+      }
+      // Fallback: use id + index combination for uniqueness
+      const beatIndex = beats.indexOf(beat);
+      const bIndex = beats.indexOf(b);
+      return b.id === beat.id && bIndex === beatIndex;
+    }), 
+    [selectedBeats, beat.id, beat.uniqueKey, beats]
   );
 
-  const hasSelectedBefore = useMemo(() => 
-    selectedBeats.some(b => beatIndices[b.id] === beatIndices[beat.id] - 1), 
-    [selectedBeats, beatIndices, beat.id]
-  );
+  const hasSelectedBefore = useMemo(() => {
+    const currentBeatIndex = beats.indexOf(beat);
+    return selectedBeats.some(b => {
+      const bIndex = beats.indexOf(b);
+      return bIndex === currentBeatIndex - 1;
+    });
+  }, [selectedBeats, beats, beat]);
 
-  const hasSelectedAfter = useMemo(() => 
-    selectedBeats.some(b => beatIndices[b.id] === beatIndices[beat.id] + 1), 
-    [selectedBeats, beatIndices, beat.id]
-  );
+  const hasSelectedAfter = useMemo(() => {
+    const currentBeatIndex = beats.indexOf(beat);
+    return selectedBeats.some(b => {
+      const bIndex = beats.indexOf(b);
+      return bIndex === currentBeatIndex + 1;
+    });
+  }, [selectedBeats, beats, beat]);
 
   const isMiddle = hasSelectedBefore && hasSelectedAfter;
 

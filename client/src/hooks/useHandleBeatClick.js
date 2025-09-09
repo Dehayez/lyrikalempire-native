@@ -5,7 +5,17 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
   const [lastSelectedBeatIndex, setLastSelectedBeatIndex] = useState(null);
 
   const handleBeatClick = (beat, e) => {
-    const clickedBeatIndex = beats.findIndex(b => b.id === beat.id);
+    // Use a more specific identifier to handle duplicate beats
+    // First try to find by uniqueKey if available, otherwise use id + index combination
+    const clickedBeatIndex = beats.findIndex(b => {
+      if (beat.uniqueKey && b.uniqueKey) {
+        return b.uniqueKey === beat.uniqueKey;
+      }
+      // Fallback: use id + index combination for uniqueness
+      const beatIndex = beats.indexOf(beat);
+      const bIndex = beats.indexOf(b);
+      return b.id === beat.id && bIndex === beatIndex;
+    });
     processSelection(clickedBeatIndex, e);
   };
 
