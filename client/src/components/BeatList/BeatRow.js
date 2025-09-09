@@ -266,13 +266,16 @@ const BeatRow = ({
     e.stopPropagation();
     handleMenuClick(e, beatItem);
     
+    // Create unique identifier for context menu
+    const uniqueMenuId = beatItem.uniqueKey || `${beatItem.id}-${beats.indexOf(beatItem)}`;
+    
     if (isMobileOrTablet()) {
-      setActiveContextMenu(beatItem.id);
+      setActiveContextMenu(uniqueMenuId);
     } else {
-      if (activeContextMenu === beatItem.id) {
+      if (activeContextMenu === uniqueMenuId) {
         setActiveContextMenu(null);
       } else {
-        setActiveContextMenu(beatItem.id);
+        setActiveContextMenu(uniqueMenuId);
         const buttonRect = e.currentTarget.getBoundingClientRect();
         const contextMenuWidth = 240;
         const offsetY = 24;
@@ -291,7 +294,7 @@ const BeatRow = ({
         setContextMenuPosition({ x: calculatedX, y: calculatedY });
       }
     }
-  }, [activeContextMenu, handleMenuClick, setActiveContextMenu]);
+  }, [activeContextMenu, handleMenuClick, setActiveContextMenu, beats]);
 
   const handleAddBeatToPlaylist = useCallback(async (playlistId, beatIds) => {
     try {
@@ -447,9 +450,11 @@ const BeatRow = ({
   const handleContextMenu = useCallback((e) => {
     e.preventDefault();
     handleMenuClick(e, beat);
-    setActiveContextMenu(beat.id);
+    // Create unique identifier for context menu
+    const uniqueMenuId = beat.uniqueKey || `${beat.id}-${beats.indexOf(beat)}`;
+    setActiveContextMenu(uniqueMenuId);
     setContextMenuPosition({ x: e.clientX, y: e.clientY });
-  }, [beat, handleMenuClick, setActiveContextMenu]);
+  }, [beat, handleMenuClick, setActiveContextMenu, beats]);
 
   // Menu items for context menu
   const contextMenuItems = useMemo(() => [
@@ -666,7 +671,7 @@ const BeatRow = ({
         <IoEllipsisHorizontal fontSize={24} />
       </IconButton>
       </td>
-      {activeContextMenu === beat.id && (
+      {activeContextMenu === (beat.uniqueKey || `${beat.id}-${beats.indexOf(beat)}`) && (
         <ContextMenu
           beat={beat}
           position={{ top: contextMenuPosition.y, left: contextMenuPosition.x }}
