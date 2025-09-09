@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import classNames from 'classnames';
-import { IoAddSharp } from 'react-icons/io5';
 
 import { usePlaylist } from '../../contexts';
 import { getPlaylistById, getBeatsByPlaylistId, removeBeatFromPlaylist, updateBeatOrder } from '../../services';
@@ -153,14 +152,6 @@ const PlaylistDetail = ({ onPlay, selectedBeat, isPlaying, currentBeat, sortedBe
                           {playlist.description}
                         </p>
                       </div>
-                      <IconButton
-                        className="playlist__action-button"
-                        onClick={() => console.log('Button clicked!')}
-                        text="Add to playlist"
-                        tooltipPosition="left"
-                      >
-                        <IoAddSharp />
-                      </IconButton>
                     </div>
                   }
                 />
