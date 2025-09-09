@@ -70,45 +70,45 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/build/index.html'));
 });
 
-// WebSocket connection handling
-io.on('connection', (socket) => {
-  // Handle audio player events
-  socket.on('audio-play', (data) => {
-    socket.broadcast.emit('audio-play', data);
-  });
-  
-  socket.on('audio-pause', (data) => {
-    socket.broadcast.emit('audio-pause', data);
-  });
-  
-  socket.on('audio-seek', (data) => {
-    socket.broadcast.emit('audio-seek', data);
-  });
-  
-  socket.on('beat-change', (data) => {
-    socket.broadcast.emit('beat-change', data);
-  });
-  
-  // Add handlers for state request/response
-  socket.on('request-state', (data) => {
-    // Broadcast to all clients except sender
-    socket.broadcast.emit('request-state', data);
-  });
-  
-  socket.on('state-response', (data) => {
-    // Broadcast to all clients except sender
-    socket.broadcast.emit('state-response', data);
-  });
-  
-  socket.on('master-closed', (data) => {
-    // Broadcast to all clients including sender
-    io.emit('master-closed', data);
-  });
-  
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
-});
+// WebSocket connection handling - DISABLED
+// io.on('connection', (socket) => {
+//   // Handle audio player events
+//   socket.on('audio-play', (data) => {
+//     socket.broadcast.emit('audio-play', data);
+//   });
+//   
+//   socket.on('audio-pause', (data) => {
+//     socket.broadcast.emit('audio-pause', data);
+//   });
+//   
+//   socket.on('audio-seek', (data) => {
+//     socket.broadcast.emit('audio-seek', data);
+//   });
+//   
+//   socket.on('beat-change', (data) => {
+//     socket.broadcast.emit('beat-change', data);
+//   });
+//   
+//   // Add handlers for state request/response
+//   socket.on('request-state', (data) => {
+//     // Broadcast to all clients except sender
+//     socket.broadcast.emit('request-state', data);
+//   });
+//   
+//   socket.on('state-response', (data) => {
+//     // Broadcast to all clients except sender
+//     socket.broadcast.emit('state-response', data);
+//   });
+//   
+//   socket.on('master-closed', (data) => {
+//     // Broadcast to all clients including sender
+//     io.emit('master-closed', data);
+//   });
+//   
+//   socket.on('disconnect', () => {
+//     console.log(`Socket disconnected: ${socket.id}`);
+//   });
+// });
 
 // The endpoint below is no longer needed since we're using WebSockets for the master-closed event
 // Remove the /audio-pause-sync endpoint

@@ -15,7 +15,16 @@ export const useCrossTabSync = ({
   setCurrentBeat,
   currentTime
 }) => {
-  const { socket, emitAudioPlay, emitAudioPause, emitAudioSeek, emitBeatChange, emitStateRequest, emitStateResponse, emitMasterClosed } = useWebSocket();
+  // WebSocket functionality disabled - use empty functions
+  const socket = null;
+  const emitAudioPlay = () => {};
+  const emitAudioPause = () => {};
+  const emitAudioSeek = () => {};
+  const emitBeatChange = () => {};
+  const emitStateRequest = () => {};
+  const emitStateResponse = () => {};
+  const emitMasterClosed = () => {};
+  
   const isProcessingRemoteEvent = useRef(false);
   const sessionId = useRef(generateSessionId());
   const [masterSession, setMasterSession] = useState(null);
@@ -124,22 +133,11 @@ export const useCrossTabSync = ({
     };
   }, [masterSession, sessionId, isPlaying, currentBeat, audioCore, socket, emitMasterClosed, emitAudioPause]);
 
-  // Request current state when socket connects
+  // Request current state when socket connects - DISABLED
   useEffect(() => {
-    if (socket && socket.connected) {
-      // Add a small delay to ensure all components are initialized
-      const timer = setTimeout(() => {
-        emitStateRequest();
-        
-        // Try again after a longer delay to ensure everything is loaded
-        setTimeout(() => {
-          emitStateRequest();
-        }, 2000);
-      }, 500); // 500ms delay
-      
-      return () => clearTimeout(timer);
-    }
-  }, [socket, emitStateRequest]);
+    // WebSocket functionality disabled
+    return;
+  }, []);
 
   // Emit play event to other tabs
   const broadcastPlay = useCallback(() => {
@@ -197,11 +195,10 @@ export const useCrossTabSync = ({
     });
   }, [emitBeatChange]);
 
-  // Listen for events from other tabs
+  // Listen for events from other tabs - DISABLED
   useEffect(() => {
-    if (!socket) {
-      return;
-    }
+    // WebSocket functionality disabled
+    return;
 
     // Listen for socket connection and request state
     const handleConnect = () => {
@@ -410,11 +407,10 @@ export const useCrossTabSync = ({
     };
   }, [socket, currentBeat, isPlaying, audioCore, setIsPlaying, setCurrentBeat, masterSession, sessionId, emitStateResponse, emitStateRequest]);
 
-  // Add periodic time broadcast from master tab
+  // Add periodic time broadcast from master tab - DISABLED
   useEffect(() => {
-    // Only the master tab should broadcast time updates
-    const isCurrentTabMaster = masterSession === sessionId.current;
-    if (!isCurrentTabMaster || !currentBeat) return;
+    // WebSocket functionality disabled
+    return;
     
     // Function to broadcast current time to all tabs
     const broadcastTime = () => {

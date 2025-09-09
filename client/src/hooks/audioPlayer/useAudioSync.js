@@ -34,7 +34,8 @@ export const useAudioSync = ({
   isPlaying,
   setCurrentBeat
 }) => {
-  const { emitStateRequest: wsEmitStateRequest } = useWebSocket();
+  // WebSocket functionality disabled - use empty function
+  const wsEmitStateRequest = () => {};
   
   // Refs for Safari-specific handling
   const timeUpdateThrottleRef = useRef(false);
