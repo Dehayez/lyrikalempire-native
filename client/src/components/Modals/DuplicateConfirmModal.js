@@ -20,24 +20,20 @@ const DuplicateConfirmModal = ({
     return (
       <DraggableModal
         isOpen={isOpen}
-        title="Duplicate Track Detected"
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-        onCloseNoReset={handleCancel} // Use onCancel for overlay click
-        confirmButtonText="Add Anyway"
-        cancelButtonText="Cancel"
-        confirmButtonType="warning"
+        title="Already added"
+        onConfirm={handleCancel}
+        onCancel={handleConfirm}
+        onCloseNoReset={handleCancel}
+        confirmButtonText="Don't add"
+        cancelButtonText="Add anyway"
+        confirmButtonType="primary"
+        cancelButtonType="transparent"
       >
-      <div className="duplicate-confirm-modal__content">
-        <p>
-          <strong>{beatTitle}</strong> is already in <strong>{playlistTitle}</strong>.
-        </p>
-        <p>
-          Do you want to add this duplicate track to the playlist?
-        </p>
-      </div>
-    </DraggableModal>
-  );
+        <div className="duplicate-confirm-modal__content">
+          <p>This is already in your <strong>{playlistTitle}</strong> playlist. </p>
+        </div>
+      </DraggableModal>
+    );
 };
 
 export default DuplicateConfirmModal;
