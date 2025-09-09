@@ -436,8 +436,8 @@ const BeatRow = ({
     ? (e) => {
         // Handle selection
         handleBeatClick(beat, e);
-        // Also handle play if no modifier keys are pressed
-        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && onBeatClick) {
+        // Also handle play if no modifier keys are pressed AND it's a mobile/tablet device
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && onBeatClick && isMobileOrTablet()) {
           onBeatClick(beat);
         }
       }
