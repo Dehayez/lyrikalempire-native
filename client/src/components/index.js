@@ -5,7 +5,6 @@ export * from './Breadcrumb';
 export * from './Buttons';
 
 export * from './Charts';
-export * from './ConfirmModal';
 export * from './ContextMenu';
 export * from './PanelToggle';
 export * from './Footer';

@@ -1,0 +1,64 @@
+@import '../../../globals/variables';
+
+.modal {
+    &--mobile {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        .modal-content {
+            min-width: 0;
+            max-width: none;
+        }
+    }
+
+    &__close-button {
+        padding: 0;
+    }
+}
+
+.modal-content {
+    position: relative;
+    max-width: 400px;
+    min-width: 400px;
+    background-color: $color-black;
+    border-radius: 6px;
+    padding: 20px;
+    pointer-events: auto;
+    box-sizing: border-box;
+    box-shadow: $box-shadow-hover;
+}
+
+.modal__title {
+    margin-top: 0;
+    cursor: default;
+}
+
+.modal__close-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.modal__buttons {
+    margin-top: 20px;
+    display: flex;
+    justify-content: end;
+    gap: 20px;
+}
+
+.ReactModal__Content {
+    pointer-events: none;
+    overflow: visible !important;
+}
+
+.react-draggable {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}

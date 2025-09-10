@@ -9,7 +9,7 @@ import { eventBus, isMobileOrTablet } from '../../utils';
 import { getPlaylistById, deletePlaylist, addBeatsToPlaylist } from '../../services';
 
 import { Button, IconButton } from '../Buttons';
-import ConfirmModal from '../ConfirmModal/ConfirmModal';
+import { ConfirmModal } from '../Modals';
 import { ContextMenu } from '../ContextMenu';
 import { UpdatePlaylistForm } from './UpdatePlaylistForm';
 import PlaylistItem from './PlaylistItem';

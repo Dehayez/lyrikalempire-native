@@ -12,7 +12,7 @@ import { isMobileOrTablet, getInitialState } from '../../utils';
 import { useHandleBeatClick, useBeatActions, useSort, useLocalStorageSync } from '../../hooks';
 
 import BeatRow from './BeatRow';
-import ConfirmModal from '../ConfirmModal/ConfirmModal';
+import { ConfirmModal } from '../Modals';
 import { FilterDropdown } from '../Inputs/FilterDropdown';
 import { IconButton } from '../Buttons';
 import TableHeader from './TableHeader';
