@@ -28,7 +28,17 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
       setSelectedBeats(prevBeats => {
         const newSelectedBeats = [...prevBeats];
         selectedBeatsRange.forEach(beat => {
-          if (!newSelectedBeats.map(b => b.id).includes(beat.id)) {
+          const isAlreadySelected = newSelectedBeats.some(b => {
+            if (beat.uniqueKey && b.uniqueKey) {
+              return b.uniqueKey === beat.uniqueKey;
+            }
+            // Fallback: use id + index combination for uniqueness
+            const beatIndex = beats.indexOf(beat);
+            const bIndex = beats.indexOf(b);
+            return b.id === beat.id && bIndex === beatIndex;
+          });
+
+          if (!isAlreadySelected) {
             newSelectedBeats.push(beat);
           }
         });
@@ -38,10 +48,29 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
       setSelectedBeats([beats[clickedBeatIndex]]);
     } else {
       setSelectedBeats(prevBeats => {
-        if (prevBeats.map(b => b.id).includes(beats[clickedBeatIndex].id)) {
-          return prevBeats.filter(b => b.id !== beats[clickedBeatIndex].id);
+        const clickedBeat = beats[clickedBeatIndex];
+        const isAlreadySelected = prevBeats.some(b => {
+          if (clickedBeat.uniqueKey && b.uniqueKey) {
+            return b.uniqueKey === clickedBeat.uniqueKey;
+          }
+          // Fallback: use id + index combination for uniqueness
+          const clickedBeatIndex = beats.indexOf(clickedBeat);
+          const bIndex = beats.indexOf(b);
+          return b.id === clickedBeat.id && bIndex === clickedBeatIndex;
+        });
+
+        if (isAlreadySelected) {
+          return prevBeats.filter(b => {
+            if (clickedBeat.uniqueKey && b.uniqueKey) {
+              return b.uniqueKey !== clickedBeat.uniqueKey;
+            }
+            // Fallback: use id + index combination for uniqueness
+            const clickedBeatIndex = beats.indexOf(clickedBeat);
+            const bIndex = beats.indexOf(b);
+            return !(b.id === clickedBeat.id && bIndex === clickedBeatIndex);
+          });
         } else {
-          return [...prevBeats, beats[clickedBeatIndex]];
+          return [...prevBeats, clickedBeat];
         }
       });
     }
@@ -86,7 +115,15 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         let newIndex;
         if (selectedBeats.length === 0) {
-          const currentBeatIndex = currentBeat ? beats.findIndex(b => b.id === currentBeat.id) : -1;
+          const currentBeatIndex = currentBeat ? beats.findIndex(b => {
+            if (currentBeat.uniqueKey && b.uniqueKey) {
+              return b.uniqueKey === currentBeat.uniqueKey;
+            }
+            // Fallback: use id + index combination for uniqueness
+            const beatIndex = beats.indexOf(currentBeat);
+            const bIndex = beats.indexOf(b);
+            return b.id === currentBeat.id && bIndex === beatIndex;
+          }) : -1;
           if (currentBeatIndex !== -1) {
             if (e.key === 'ArrowUp') {
               newIndex = currentBeatIndex - 1 >= 0 ? currentBeatIndex - 1 : beats.length - 1;
@@ -101,7 +138,16 @@ export const useHandleBeatClick = (beats, tableRef, currentBeat) => {
             }
           }
         } else {
-          const currentIndex = beats.findIndex(b => b.id === selectedBeats[0].id);
+          const currentIndex = beats.findIndex(b => {
+            const selectedBeat = selectedBeats[0];
+            if (selectedBeat.uniqueKey && b.uniqueKey) {
+              return b.uniqueKey === selectedBeat.uniqueKey;
+            }
+            // Fallback: use id + index combination for uniqueness
+            const selectedBeatIndex = beats.indexOf(selectedBeat);
+            const bIndex = beats.indexOf(b);
+            return b.id === selectedBeat.id && bIndex === selectedBeatIndex;
+          });
           if (e.key === 'ArrowUp') {
             newIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : beats.length - 1;
           } else if (e.key === 'ArrowDown') {
