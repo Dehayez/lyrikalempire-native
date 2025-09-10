@@ -68,14 +68,7 @@ const DraggableModal = ({
     };
   }, [isOpen, onConfirm]);
 
-  // Cleanup modal when component unmounts
-  useEffect(() => {
-    return () => {
-      if (isOpen && typeof setIsOpen === 'function') {
-        setIsOpen(false);
-      }
-    };
-  }, []);
+  // Note: Removed cleanup effect that was causing modals to close immediately
 
   const handleCancel = (e) => {
     e?.stopPropagation();

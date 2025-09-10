@@ -165,7 +165,7 @@ const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
       {isOpenDelete && 
         <ConfirmModal
           isOpen={isOpenDelete}
-          isSetOpen={setIsOpenDelete}
+          setIsOpen={setIsOpenDelete}
           title="Delete playlist"
           message={<span>Are you sure you want to delete <strong>{playlistToDelete?.title}</strong>?</span>}
           confirmButtonText="Delete"
