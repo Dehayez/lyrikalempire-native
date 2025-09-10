@@ -13,6 +13,7 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [isMuted, setIsMuted] = useState(() => JSON.parse(localStorage.getItem('isMuted')) || false);
   const [prevVolume, setPrevVolume] = useState(() => parseFloat(localStorage.getItem('prevVolume')) || volume);
+  const [localVolume, setLocalVolume] = useState(volume);
   const initialSetupDone = useRef(false);
   
   // Check if device is mobile
@@ -22,7 +23,11 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
   useEffect(() => {
     volumeRef.current = volume;
     handleVolumeChangeRef.current = handleVolumeChange;
-  }, [volume, handleVolumeChange]);
+    // Update local volume when not dragging to sync with external changes
+    if (!isDragging) {
+      setLocalVolume(volume);
+    }
+  }, [volume, handleVolumeChange, isDragging]);
 
   const calculateVolume = useCallback((event) => {
     // Prevent volume changes on mobile devices
@@ -31,7 +36,10 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
     const rect = sliderRef.current.getBoundingClientRect();
     const newVolume = clamp((event.clientX - rect.left) / rect.width, 0, 1);
     
-    // Only update if volume actually changed by more than 1%
+    // Always update local volume for smooth UI updates
+    setLocalVolume(newVolume);
+    
+    // Only update parent if volume actually changed by more than 1%
     if (Math.abs(newVolume - volumeRef.current) > 0.01) {
       handleVolumeChangeRef.current({ target: { value: newVolume } });
       setIsMuted(newVolume === 0);
@@ -62,15 +70,22 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
     if (isDragging) calculateVolume(event);
   }, [isDragging, calculateVolume]);
 
+  const handleMouseUp = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
+      // Sync local volume with actual volume when drag ends
+      setLocalVolume(volumeRef.current);
+    }
+  }, [isDragging]);
+
   useEffect(() => {
-    const handleMouseUp = () => setIsDragging(false);
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mousemove', handleMouseMove);
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [handleMouseUp, handleMouseMove]);
 
   useEffect(() => {
     // Restore volume and mute state on component mount - only once
@@ -94,9 +109,11 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
     }
   }, []); // Empty dependency array = only run once on mount
 
-  const volumeIcon = volume > 0.66 ? <IoVolumeHighSharp size={24} />
-    : volume > 0.33 ? <IoVolumeMediumSharp size={24} />
-    : volume > 0 ? <IoVolumeLowSharp size={24} />
+  // Use localVolume for icon display to show smooth updates during drag
+  const displayVolume = isDragging ? localVolume : volume;
+  const volumeIcon = displayVolume > 0.66 ? <IoVolumeHighSharp size={24} />
+    : displayVolume > 0.33 ? <IoVolumeMediumSharp size={24} />
+    : displayVolume > 0 ? <IoVolumeLowSharp size={24} />
     : <IoVolumeMuteSharp size={24} />;
 
   return (
@@ -119,11 +136,11 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
       >
         <div
           className='volume-slider__progress'
-          style={{ width: `${volume * 100}%` }}
+          style={{ width: `${displayVolume * 100}%` }}
         />
         <div
           className='volume-slider__thumb'
-          style={{ left: `${volume * 100}%` }}
+          style={{ left: `${displayVolume * 100}%` }}
         />
         <div
           className='volume-slider__click-capture'

@@ -69,9 +69,6 @@ const AudioPlayer = ({
       if (progressUpdateRef.current) {
         cancelAnimationFrame(progressUpdateRef.current);
       }
-      if (volumeUpdateRef.current) {
-        clearTimeout(volumeUpdateRef.current);
-      }
       if (errorRecoveryRef.current) {
         clearTimeout(errorRecoveryRef.current);
       }
@@ -90,7 +87,6 @@ const AudioPlayer = ({
 
   // Performance optimization refs
   const progressUpdateRef = useRef(null);
-  const volumeUpdateRef = useRef(null);
   const errorRecoveryRef = useRef(null);
 
   // Get playlists
@@ -115,15 +111,10 @@ const AudioPlayer = ({
     playlist: currentPlaylist
   });
 
-  // Enhanced volume handling with debouncing
-  const handleVolumeChangeDebounced = useCallback((newVolume) => {
-    // Debounce volume updates
-    if (volumeUpdateRef.current) {
-      clearTimeout(volumeUpdateRef.current);
-    }
-    volumeUpdateRef.current = setTimeout(() => {
-      audioPlayer.handleVolumeChange?.(newVolume);
-    }, 100);
+  // Direct volume handling without debouncing for smooth slider updates
+  const handleVolumeChangeDirect = useCallback((newVolume) => {
+    // Call volume change directly for immediate updates
+    audioPlayer.handleVolumeChange?.(newVolume);
   }, [audioPlayer.handleVolumeChange]);
 
   // Extract the properties we need for backward compatibility
@@ -770,7 +761,7 @@ const AudioPlayer = ({
           currentTime={currentTimeState}
           duration={duration}
           volume={volume}
-          handleVolumeChange={handleVolumeChangeDebounced}
+          handleVolumeChange={handleVolumeChangeDirect}
           toggleLyricsModal={toggleLyricsModal}
           handleEllipsisClick={handleEllipsisClick}
           waveformRef={waveformRefDesktop}
@@ -804,7 +795,7 @@ const AudioPlayer = ({
         currentTime={currentTimeState}
         duration={duration}
         volume={volume}
-        handleVolumeChange={handleVolumeChangeDebounced}
+        handleVolumeChange={handleVolumeChangeDirect}
         toggleFullPagePlayer={toggleFullPagePlayer}
         isFullPageVisible={isFullPageVisible}
         handleDragStart={handleDragStart}
