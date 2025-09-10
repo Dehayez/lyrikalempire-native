@@ -44,6 +44,7 @@ function App() {
   const [selectedBeat, setSelectedBeat] = useState(() => getInitialState('selectedBeat', null));
   const { sortedItems: sortedBeats, sortConfig } = useSort(beats);
   const [queue, setQueue] = useState([]);
+  const [shuffledQueue, setShuffledQueue] = useState([]);
   const [customQueue, setCustomQueue] = useState(() => getInitialState('customQueue', []));
   const [isPlaying, setIsPlaying] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -161,9 +162,11 @@ function App() {
   const handlePrevWrapper = () => {
     if (!currentBeats.length) return;
     
-    const currentIndex = currentBeats.findIndex(beat => beat.id === currentBeat.id);
-    const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : currentBeats.length - 1;
-    const prevBeat = currentBeats[prevIndex];
+    // Use shuffled queue if shuffle is enabled, otherwise use regular queue
+    const currentQueue = shuffle && shuffledQueue.length > 0 ? shuffledQueue : currentBeats;
+    const currentIndex = currentQueue.findIndex(beat => beat.id === currentBeat.id);
+    const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : currentQueue.length - 1;
+    const prevBeat = currentQueue[prevIndex];
     
     handlePlayWrapper(prevBeat, true, currentBeats, true);
     
@@ -178,9 +181,11 @@ function App() {
       handlePlayWrapper(nextCustomBeat, true, currentBeats, true);
       setCustomQueue(customQueue.slice(1));
     } else {
-      const currentIndex = queue.findIndex(beat => beat.id === currentBeat.id);
-      const nextIndex = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
-      const nextBeat = queue[nextIndex];
+      // Use shuffled queue if shuffle is enabled, otherwise use regular queue
+      const currentQueue = shuffle && shuffledQueue.length > 0 ? shuffledQueue : currentBeats;
+      const currentIndex = currentQueue.findIndex(beat => beat.id === currentBeat.id);
+      const nextIndex = currentIndex + 1 < currentQueue.length ? currentIndex + 1 : 0;
+      const nextBeat = currentQueue[nextIndex];
       handlePlayWrapper(nextBeat, true, currentBeats, true);
     }
     if (repeat === 'Repeat One') {
@@ -256,14 +261,30 @@ function App() {
     ]);
   };
 
-  const logQueue = (beats, shuffle, currentBeat) => {
+  const logQueue = (beats, shuffle, currentBeat, forceShuffle = false) => {
     let queue = [...beats];
+    
     if (shuffle) {
-      for (let i = queue.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [queue[i], queue[j]] = [queue[j], queue[i]];
+      // If we don't have a shuffled queue yet, or if forceShuffle is true, create one
+      if (shuffledQueue.length === 0 || forceShuffle) {
+        const newShuffledQueue = [...beats];
+        for (let i = newShuffledQueue.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [newShuffledQueue[i], newShuffledQueue[j]] = [newShuffledQueue[j], newShuffledQueue[i]];
+        }
+        setShuffledQueue(newShuffledQueue);
+        queue = newShuffledQueue;
+      } else {
+        // Use existing shuffled queue
+        queue = [...shuffledQueue];
+      }
+    } else {
+      // Clear shuffled queue when shuffle is disabled
+      if (shuffledQueue.length > 0) {
+        setShuffledQueue([]);
       }
     }
+    
     if (currentBeat) {
       const currentBeatIndex = queue.findIndex(beat => beat.id === currentBeat.id);
   
@@ -331,17 +352,31 @@ function App() {
       window.electron.setActivity();
     }
     
-    // Update queue when currentBeat changes
+    // Update queue when currentBeat changes (but don't reshuffle if shuffle is enabled)
     if (currentBeat && currentBeats.length > 0) {
-      logQueue(currentBeats, shuffle, currentBeat);
+      logQueue(currentBeats, shuffle, currentBeat, false);
     }
-  }, [currentBeat, currentBeats, shuffle]);
+  }, [currentBeat, currentBeats]);
 
   useEffect(() => {
-  if (queue.length === 0 && currentBeat && currentBeats && currentBeats.length > 0) {
-    logQueue(currentBeats, shuffle, currentBeat);
-  }
-}, [queue.length, currentBeat, currentBeats, shuffle]);
+    if (queue.length === 0 && currentBeat && currentBeats && currentBeats.length > 0) {
+      logQueue(currentBeats, shuffle, currentBeat);
+    }
+  }, [queue.length, currentBeat, currentBeats, shuffle]);
+
+  // Handle shuffle toggle - create new shuffled queue when shuffle is enabled
+  useEffect(() => {
+    if (shuffle && currentBeats.length > 0) {
+      // Create new shuffled queue when shuffle is enabled
+      logQueue(currentBeats, shuffle, currentBeat, true);
+    } else if (!shuffle && shuffledQueue.length > 0) {
+      // Clear shuffled queue and use regular queue when shuffle is disabled
+      setShuffledQueue([]);
+      if (currentBeat && currentBeats.length > 0) {
+        logQueue(currentBeats, shuffle, currentBeat, false);
+      }
+    }
+  }, [shuffle]);
 
   return (
       <div className={classNames('app', {
