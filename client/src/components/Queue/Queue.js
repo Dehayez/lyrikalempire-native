@@ -258,7 +258,7 @@ const Queue = ({ queue, setQueue, currentBeat, onBeatClick, isShuffleEnabled, cu
           {(isShuffleEnabled ? getNextItemForShuffle() : queue.map((item, index) => ({
             ...item,
             uniqueKey: `non-shuffle-${item.id}-${index}`
-          }))).map((beat, index) => (
+          }))).filter(beat => !currentBeat || beat.id !== currentBeat.id).map((beat, index) => (
             <li
               className={`queue__list-item ${currentBeat && beat.id === currentBeat.id ? 'queue__list-item--playing' : ''}`}
               key={beat.uniqueKey}

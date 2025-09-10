@@ -158,18 +158,30 @@ function App() {
     }
   };
 
-  const handlePrevWrapper = () => handlePrev(currentBeats, currentBeat, handlePlayWrapper, repeat, setRepeat);
+  const handlePrevWrapper = () => {
+    if (!currentBeats.length) return;
+    
+    const currentIndex = currentBeats.findIndex(beat => beat.id === currentBeat.id);
+    const prevIndex = currentIndex - 1 >= 0 ? currentIndex - 1 : currentBeats.length - 1;
+    const prevBeat = currentBeats[prevIndex];
+    
+    handlePlayWrapper(prevBeat, true, currentBeats, true);
+    
+    if (repeat === 'Repeat One') {
+      setRepeat('Repeat');
+    }
+  };
 
  const handleNextWrapper = () => {
     if (customQueue.length > 0) {
       const nextCustomBeat = customQueue[0];
-      handlePlayWrapper(nextCustomBeat, true, currentBeats);
+      handlePlayWrapper(nextCustomBeat, true, currentBeats, true);
       setCustomQueue(customQueue.slice(1));
     } else {
       const currentIndex = queue.findIndex(beat => beat.id === currentBeat.id);
       const nextIndex = currentIndex + 1 < queue.length ? currentIndex + 1 : 0;
       const nextBeat = queue[nextIndex];
-      handlePlayWrapper(nextBeat, true, currentBeats);
+      handlePlayWrapper(nextBeat, true, currentBeats, true);
     }
     if (repeat === 'Repeat One') {
       setRepeat('Repeat');
@@ -255,9 +267,13 @@ function App() {
     if (currentBeat) {
       const currentBeatIndex = queue.findIndex(beat => beat.id === currentBeat.id);
   
-      if (currentBeatIndex > 0) {
-        const currentAndNext = queue.splice(currentBeatIndex);
-        queue = [...currentAndNext, ...queue];
+      if (currentBeatIndex >= 0) {
+        // Get tracks after the current one (upcoming tracks)
+        const upcomingTracks = queue.slice(currentBeatIndex + 1);
+        // Get tracks before the current one (to be played later)
+        const previousTracks = queue.slice(0, currentBeatIndex);
+        // Combine: upcoming tracks first, then previous tracks
+        queue = [...upcomingTracks, ...previousTracks];
       }
     }
     setQueue(queue);
@@ -314,7 +330,12 @@ function App() {
     } else if (window.electron) {
       window.electron.setActivity();
     }
-  }, [currentBeat]);
+    
+    // Update queue when currentBeat changes
+    if (currentBeat && currentBeats.length > 0) {
+      logQueue(currentBeats, shuffle, currentBeat);
+    }
+  }, [currentBeat, currentBeats, shuffle]);
 
   useEffect(() => {
   if (queue.length === 0 && currentBeat && currentBeats && currentBeats.length > 0) {
