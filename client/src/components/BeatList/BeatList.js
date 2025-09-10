@@ -591,7 +591,7 @@ const handlePlayPause = useCallback((beat) => {
           ) : (
             <h2 className='beat-list__title'>
               All Tracks
-              {selectedBeats.length > 0 && (
+              {selectedBeats.length > 1 && (
                 <span className='beat-list__selection-count'>
                   ({selectedBeats.length} selected)
                 </span>
