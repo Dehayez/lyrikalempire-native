@@ -114,12 +114,28 @@ export const SelectableInput = ({
   }, [beatId, associationType, form, singularAssociationType]);
 
   const scrollToFocusedItem = useCallback((index) => {
+    const listContainer = containerRef.current.querySelector('.selectable-input__list');
     const listItems = containerRef.current.querySelectorAll('.selectable-input__list-item');
-    if (listItems[index]) {
-      listItems[index].scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
+    
+    if (listContainer && listItems[index]) {
+      const focusedItem = listItems[index];
+      const containerRect = listContainer.getBoundingClientRect();
+      const itemRect = focusedItem.getBoundingClientRect();
+      
+      // Check if item is above the visible area
+      if (itemRect.top < containerRect.top) {
+        focusedItem.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+      // Check if item is below the visible area
+      else if (itemRect.bottom > containerRect.bottom) {
+        focusedItem.scrollIntoView({
+          behavior: 'smooth',
+          block: 'end',
+        });
+      }
     }
   }, []);
 
