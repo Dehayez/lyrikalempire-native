@@ -61,12 +61,16 @@ export const SelectableInput = ({
   }, []);
 
   const handleBlur = useCallback((e) => {
-    e.preventDefault();
-    setFocusedIndex(-1);
-    if (inputContainerRef.current && !isFocused) {
-      inputContainerRef.current.scrollLeft = 0;
-    }
-  }, [isFocused]);
+    // Use setTimeout to allow click events on dropdown items to complete first
+    setTimeout(() => {
+      setIsFocused(false);
+      setFocusedIndex(-1);
+      setInputValue(''); // Clear the input when losing focus
+      if (inputContainerRef.current) {
+        inputContainerRef.current.scrollLeft = 0;
+      }
+    }, 150);
+  }, []);
 
   const handleInputChange = useCallback((e) => setInputValue(e.target.value), []);
 
@@ -160,6 +164,13 @@ export const SelectableInput = ({
       e.preventDefault();
       e.stopPropagation();
       handleItemSelect(associationItems[focusedIndex]);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsFocused(false);
+      setFocusedIndex(-1);
+      setInputValue(''); // Clear the input when pressing Escape
+      inputRef.current?.blur();
     }
   }, [associationItems, focusedIndex, scrollToFocusedItem, handleItemSelect]);
 
@@ -190,6 +201,11 @@ export const SelectableInput = ({
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsFocused(false);
+        setFocusedIndex(-1);
+        setInputValue(''); // Clear the input when clicking outside
+        if (inputContainerRef.current) {
+          inputContainerRef.current.scrollLeft = 0;
+        }
       }
     };
 
