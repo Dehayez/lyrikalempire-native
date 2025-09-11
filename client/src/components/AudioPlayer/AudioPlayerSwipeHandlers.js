@@ -3,6 +3,18 @@
  */
 
 export const handleSwipeTouchStart = (e, swipeStartX, isSwipeDragging, swipeableContainerRef) => {
+  // Don't start swiping if user is trying to interact with form elements
+  const target = e.target;
+  const isFormElement = target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON';
+  
+  // Check if target is inside a form element or has interactive classes
+  const isInsideFormElement = target.closest('input, select, textarea, button, .form-group__input, .selectable-input, .select-input, .form-input, .select-wrapper, .file-input, .code-input');
+  
+  if (isFormElement || isInsideFormElement) {
+    // Don't start swiping if user is interacting with form elements
+    return;
+  }
+  
   swipeStartX.current = e.touches[0].clientX;
   isSwipeDragging.current = true;
   
@@ -60,7 +72,10 @@ export const handleSwipeMouseDown = (e, swipeStartX, isSwipeDragging, swipeableC
   const target = e.target;
   const isFormElement = target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON';
   
-  if (isFormElement) {
+  // Check if target is inside a form element or has interactive classes
+  const isInsideFormElement = target.closest('input, select, textarea, button, .form-group__input, .selectable-input, .select-input, .form-input, .select-wrapper, .file-input, .code-input');
+  
+  if (isFormElement || isInsideFormElement) {
     // Don't start swiping if user is interacting with form elements
     return;
   }
