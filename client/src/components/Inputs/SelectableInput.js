@@ -125,18 +125,24 @@ export const SelectableInput = ({
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      e.stopPropagation();
       setFocusedIndex((prevIndex) => {
         const newIndex = (prevIndex + 1) % associationItems.length;
         scrollToFocusedItem(newIndex);
         return newIndex;
       });
     } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
       setFocusedIndex((prevIndex) => {
         const newIndex = prevIndex - 1 < 0 ? associationItems.length - 1 : prevIndex - 1;
         scrollToFocusedItem(newIndex);
         return newIndex;
       });
     } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
       handleItemSelect(associationItems[focusedIndex]);
     }
   }, [associationItems, focusedIndex, scrollToFocusedItem, handleItemSelect]);
