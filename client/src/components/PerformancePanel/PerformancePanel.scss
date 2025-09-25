@@ -2,107 +2,448 @@
 
 .performance-panel {
   position: fixed;
-  right: 16px;
-  bottom: 80px;
-  width: 360px;
-  max-width: calc(100% - 32px);
+  top: 20px;
+  right: 20px;
+  width: 380px;
+  max-height: 80vh;
   background: $color-black;
-  border: 1px solid $color-gray-mid;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  z-index: 1000;
   color: $color-white;
+  border-radius: 8px;
+  border: 1px solid $color-gray-mid;
+  box-shadow: $box-shadow;
+  z-index: 9999;
+  font-family: 'Raleway', sans-serif;
+  font-size: 14px;
+  overflow: hidden;
 
   &__header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    align-items: center;
+    padding: 16px 20px;
+    background: $color-gray-dark;
     border-bottom: 1px solid $color-gray-mid;
   }
 
   &__title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    margin: 0;
+    font-size: 16px;
     font-weight: 600;
+    color: $color-white;
   }
 
   &__close {
-    background: transparent;
+    background: none;
     border: none;
     color: $color-gray-default;
     font-size: 20px;
     cursor: pointer;
-    &:hover { color: $color-white; }
+    padding: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: $color-gray-dark-hover;
+      color: $color-white;
+    }
+  }
+
+  &__tabs {
+    display: flex;
+    border-bottom: 1px solid $color-gray-mid;
+  }
+
+  &__tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: $color-gray-default;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+
+    &--active {
+      color: $color-primary;
+      background: $color-primary-bg;
+      border-bottom-color: $color-primary;
+    }
+
+    &:hover {
+      color: $color-white;
+      background: $color-gray-dark-hover;
+    }
   }
 
   &__content {
-    padding: 12px 16px 16px;
+    padding: 20px;
+    max-height: calc(80vh - 120px);
+    overflow-y: auto;
   }
 
-  &__section { margin-top: 12px; }
-  &__section-title {
+  &__metrics {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  &__metric {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    margin: 0 0 8px;
-    font-size: 14px;
-    color: $color-gray-light;
+    padding: 12px;
+    background: $color-gray-dark;
+    border-radius: 6px;
+    border: 1px solid $color-gray-mid;
   }
 
-  &__throttle-controls {
+  &__metric-label {
+    font-size: 12px;
+    color: $color-gray-default;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+
+  &__metric-value {
+    font-size: 18px;
+    font-weight: 600;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    color: $color-white;
+  }
+
+  &__metric-bar {
+    height: 6px;
+    background: $color-gray-mid;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  &__metric-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+
+  &__warning {
     display: flex;
     align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: $color-warning-bg;
+    border: 1px solid $color-warning-border;
+    border-radius: 6px;
+    margin-bottom: 20px;
+  }
+
+  &__warning-icon {
+    font-size: 18px;
+  }
+
+  &__warning-text {
+    font-size: 13px;
+    color: $color-warning;
+    font-weight: 500;
+  }
+
+  &__alerts {
+    margin-bottom: 16px;
+  }
+
+  &__alerts-header {
+    display: flex;
     justify-content: space-between;
-    gap: 8px;
+    align-items: center;
     margin-bottom: 8px;
   }
 
-  &__preset-selector { display: flex; align-items: center; gap: 6px; }
+  &__alerts-header h4 {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  &__clear-alerts {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  &__alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  &__alert {
+    padding: 6px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    border-left: 3px solid;
+
+    &--high-cpu {
+      background: rgba(255, 68, 68, 0.1);
+      border-left-color: #ff4444;
+    }
+
+    &--high-memory {
+      background: rgba(255, 170, 0, 0.1);
+      border-left-color: #ffaa00;
+    }
+
+    &--slow-render {
+      background: rgba(255, 170, 0, 0.1);
+      border-left-color: #ffaa00;
+    }
+
+    &--too-many-intervals {
+      background: rgba(255, 68, 68, 0.1);
+      border-left-color: #ff4444;
+    }
+
+    &--slow-api {
+      background: rgba(255, 170, 0, 0.1);
+      border-left-color: #ffaa00;
+    }
+  }
+
+  &__alert-message {
+    color: white;
+    margin-bottom: 2px;
+  }
+
+  &__alert-time {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 9px;
+  }
+
+  &__detailed {
+    margin-bottom: 16px;
+  }
+
+  &__toggle-details {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  &__details {
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+  }
+
+  &__detail-label {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  &__detail-value {
+    color: white;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__action {
+    @include bg-border-hover();
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  // Network throttling styles
+  &__network {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__section-title {
+    margin: 0;
+    font-size: 16px;
+    color: $color-white;
+    font-weight: 600;
+  }
 
   &__toggle {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
+    padding: 12px;
     background: $color-gray-dark;
-    color: $color-white;
-    border: 1px solid $color-gray-mid;
-    padding: 6px 10px;
     border-radius: 6px;
-    cursor: pointer;
-    &--active { background: $color-gray-mid; }
+    border: 1px solid $color-gray-mid;
   }
 
-  &__config-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  &__config-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-
-  &__metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
-  }
-
-  &__metric { display: flex; justify-content: space-between; gap: 8px; }
-  &__metric-label { color: $color-gray-default; }
-  &__metric-value { font-weight: 600; }
-
-  &__actions { display: flex; gap: 8px; }
-  &__action {
-    display: inline-flex;
+  &__toggle-label {
+    display: flex;
     align-items: center;
-    gap: 6px;
-    background: $color-gray-dark;
+    gap: 12px;
     color: $color-white;
-    border: 1px solid $color-gray-mid;
-    padding: 6px 10px;
-    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: $color-primary;
+    }
+  }
+
+  &__preset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__label {
+    color: $color-gray-default;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  &__select {
+    background: $color-gray-dark;
+    border: 1px solid $color-gray-mid;
+    color: $color-white;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      border-color: $color-primary;
+    }
+
+    option {
+      background: $color-black;
+      color: $color-white;
+    }
+  }
+
+  &__config {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__config-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__input {
+    background: $color-gray-dark;
+    border: 1px solid $color-gray-mid;
+    color: $color-white;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+    }
+  }
+
+  &__status {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: $color-gray-dark;
+    border-radius: 6px;
+    border: 1px solid $color-gray-mid;
+  }
+
+  &__status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__status-label {
+    color: $color-gray-default;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  &__status-value {
+    color: $color-white;
+    font-size: 12px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+
+    &--active {
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
+
+  // Mobile responsive
+  @media (max-width: 480px) {
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
+    top: 10px;
+    max-height: 90vh;
   }
 }
-

@@ -17,11 +17,16 @@ import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queu
 import PerformancePanel from './components/PerformancePanel/PerformancePanel';
 import { IoSpeedometer } from 'react-icons/io5';
 import networkThrottleService from './services/networkThrottleService';
+import mobilePerformanceMonitor from './utils/performanceMonitor';
 import NotFound from './components/NotFound';
 
 import './App.scss';
 
 // Load audio cache debug utilities (development only)
+// Load performance debug utilities (development only)
+if (process.env.NODE_ENV === 'development') {
+  import('./utils/performanceDebug');
+}
 
 
 function App() {
@@ -138,6 +143,22 @@ function App() {
       networkThrottleService.disable();
     }
   }, [isPerfAllowed, isThrottlingEnabled, networkThrottleConfig]);
+
+  // Auto-enable mobile performance monitoring for allowed user
+  useEffect(() => {
+    if (isPerfAllowed) {
+      // Enable without timer interception to avoid conflicts
+      mobilePerformanceMonitor.enable({ interceptTimers: false });
+    } else {
+      mobilePerformanceMonitor.disable();
+    }
+    
+    return () => {
+      if (isPerfAllowed) {
+        mobilePerformanceMonitor.disable();
+      }
+    };
+  }, [isPerfAllowed]);
   
   const handlePlayWrapper = (beat, play, beats, shouldUpdateQueue = false) => {
     if (shouldUpdateQueue) {
@@ -525,7 +546,7 @@ function App() {
                             onClick={() => setIsPerformancePanelOpen((v) => !v)}
                             text={'Performance'}
                             tooltipPosition='left'
-                            ariaLabel={'Open performance testing panel'}
+                            ariaLabel={'Open performance monitoring panel'}
                           >
                             <IoSpeedometer />
                           </IconButton>

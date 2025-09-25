@@ -1,0 +1,137 @@
+import { useEffect, useRef, useState } from 'react';
+import mobilePerformanceMonitor from '../utils/performanceMonitor';
+
+/**
+ * React hook for mobile performance monitoring
+ * Provides real-time performance metrics and alerts
+ */
+export const useMobilePerformanceMonitor = (componentName = 'Component') => {
+  const [metrics, setMetrics] = useState({
+    cpuUsage: 0,
+    memoryUsage: 0,
+    renderTime: 0,
+    apiCalls: 0,
+    isOverheating: false
+  });
+  
+  const [alerts, setAlerts] = useState([]);
+  const renderStartTime = useRef(0);
+  const lastReportTime = useRef(Date.now());
+
+  // Track render performance
+  useEffect(() => {
+    renderStartTime.current = performance.now();
+    
+    return () => {
+      const renderTime = performance.now() - renderStartTime.current;
+      
+      if (renderTime > 16) { // 60fps threshold
+        const alert = {
+          type: 'slow-render',
+          component: componentName,
+          value: renderTime,
+          timestamp: Date.now(),
+          message: `Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`
+        };
+        
+        setAlerts(prev => [...prev.slice(-9), alert]); // Keep last 10 alerts
+        console.warn(alert.message);
+      }
+    };
+  });
+
+  // Update metrics periodically
+  useEffect(() => {
+    const updateMetrics = () => {
+      const report = mobilePerformanceMonitor.getReport();
+      
+      const newMetrics = {
+        cpuUsage: report.avgCpuUsage,
+        memoryUsage: report.avgMemoryUsage,
+        renderTime: report.avgRenderTime,
+        apiCalls: report.totalApiCalls,
+        isOverheating: report.avgCpuUsage > 80 || report.avgMemoryUsage > 500
+      };
+      
+      setMetrics(newMetrics);
+      
+      // Check for performance alerts
+      const now = Date.now();
+      if (now - lastReportTime.current > 5000) { // Check every 5 seconds
+        checkPerformanceAlerts(report);
+        lastReportTime.current = now;
+      }
+    };
+
+    const interval = setInterval(updateMetrics, 1000);
+    return () => clearInterval(interval);
+  }, [componentName]);
+
+  // Check for performance issues
+  const checkPerformanceAlerts = (report) => {
+    const newAlerts = [];
+
+    if (report.avgCpuUsage > 80) {
+      newAlerts.push({
+        type: 'high-cpu',
+        component: componentName,
+        value: report.avgCpuUsage,
+        timestamp: Date.now(),
+        message: `High CPU usage: ${report.avgCpuUsage.toFixed(1)}%`
+      });
+    }
+
+    if (report.avgMemoryUsage > 500) {
+      newAlerts.push({
+        type: 'high-memory',
+        component: componentName,
+        value: report.avgMemoryUsage,
+        timestamp: Date.now(),
+        message: `High memory usage: ${report.avgMemoryUsage}MB`
+      });
+    }
+
+    if (report.activeIntervals > 20) {
+      newAlerts.push({
+        type: 'too-many-intervals',
+        component: componentName,
+        value: report.activeIntervals,
+        timestamp: Date.now(),
+        message: `Too many active intervals: ${report.activeIntervals}`
+      });
+    }
+
+    if (report.avgApiLatency > 2000) {
+      newAlerts.push({
+        type: 'slow-api',
+        component: componentName,
+        value: report.avgApiLatency,
+        timestamp: Date.now(),
+        message: `Slow API calls: ${report.avgApiLatency.toFixed(0)}ms average`
+      });
+    }
+
+    if (newAlerts.length > 0) {
+      setAlerts(prev => [...prev.slice(-9), ...newAlerts]);
+      newAlerts.forEach(alert => console.warn(`[Performance Alert] ${alert.message}`));
+    }
+  };
+
+  // Performance actions
+  const clearAlerts = () => setAlerts([]);
+  const getReport = () => mobilePerformanceMonitor.getReport();
+  const logReport = () => mobilePerformanceMonitor.logReport();
+  const exportData = () => mobilePerformanceMonitor.exportData();
+
+  return {
+    metrics,
+    alerts,
+    clearAlerts,
+    getReport,
+    logReport,
+    exportData,
+    isMonitoring: mobilePerformanceMonitor.isEnabled
+  };
+};
+
+export default useMobilePerformanceMonitor;

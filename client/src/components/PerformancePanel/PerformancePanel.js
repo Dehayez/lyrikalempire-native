@@ -1,337 +1,371 @@
 import React, { useState, useEffect } from 'react';
-import { IoSpeedometer, IoWifi, IoWifiOutline, IoClose, IoRefresh, IoStatsChart } from 'react-icons/io5';
+import { useMobilePerformanceMonitor } from '../../hooks/useMobilePerformanceMonitor';
 import networkThrottleService from '../../services/networkThrottleService';
-import usePerformanceMonitor from '../../hooks/usePerformanceMonitor';
 import './PerformancePanel.scss';
 
 const PerformancePanel = ({
   isOpen,
   onClose,
-  // Controlled props (optional)
-  networkConfig: controlledNetworkConfig,
+  networkConfig, 
   onUpdateNetworkConfig,
-  selectedPreset: controlledPreset,
+  selectedPreset, 
   onChangePreset,
-  isThrottlingEnabled: controlledIsThrottlingEnabled,
+  isThrottlingEnabled, 
   onToggleThrottling
 }) => {
-  const [uncontrolledNetworkConfig, setUncontrolledNetworkConfig] = useState(() => {
-    const saved = localStorage.getItem('networkThrottleConfig');
-    return saved ? JSON.parse(saved) : {
-      latency: 100,
-      downloadSpeed: 1024 * 1024,
-      uploadSpeed: 512 * 1024,
-      packetLoss: 0
-    };
-  });
-  const [uncontrolledPreset, setUncontrolledPreset] = useState(() => localStorage.getItem('networkThrottlePreset') || 'Custom');
-  const [uncontrolledIsEnabled, setUncontrolledIsEnabled] = useState(() => !!JSON.parse(localStorage.getItem('isThrottlingEnabled') || 'false'));
-
-  const networkConfig = controlledNetworkConfig ?? uncontrolledNetworkConfig;
-  const selectedPreset = controlledPreset ?? uncontrolledPreset;
-  const isThrottlingEnabled = controlledIsThrottlingEnabled ?? uncontrolledIsEnabled;
-  
-  const { metrics } = usePerformanceMonitor('PerformancePanel');
-
-  const presets = networkThrottleService.getPresets();
+  const { metrics, alerts, clearAlerts, getReport, logReport, exportData } = useMobilePerformanceMonitor('PerformancePanel');
+  const [detailedReport, setDetailedReport] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState('performance'); // 'performance' or 'network'
 
   useEffect(() => {
-    const status = networkThrottleService.getStatus();
-    if (controlledIsThrottlingEnabled === undefined) {
-      setUncontrolledIsEnabled(status.isEnabled);
+    if (isOpen) {
+      const report = getReport();
+      setDetailedReport(report);
     }
-  }, [controlledIsThrottlingEnabled]);
+  }, [isOpen, getReport]);
 
-  const handlePresetChange = (presetName) => {
-    if (onChangePreset) onChangePreset(presetName);
-    else setUncontrolledPreset(presetName);
-
-    if (presetName === 'Custom') {
-      localStorage.setItem('networkThrottlePreset', 'Custom');
-      return;
-    }
-
-    const preset = presets[presetName];
-    if (onUpdateNetworkConfig) onUpdateNetworkConfig(preset);
-    else setUncontrolledNetworkConfig(preset);
-    localStorage.setItem('networkThrottlePreset', presetName);
-    localStorage.setItem('networkThrottleConfig', JSON.stringify(preset));
-    
+  // Apply throttling when config changes
+  useEffect(() => {
     if (isThrottlingEnabled) {
-      networkThrottleService.enable(preset);
+      networkThrottleService.enable(networkConfig);
+    }
+  }, [networkConfig, isThrottlingEnabled]);
+
+  const handleExportData = () => {
+    const data = exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `performance-report-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getStatusColor = (value, thresholds) => {
+    if (value >= thresholds.high) return '#ff4444';
+    if (value >= thresholds.medium) return '#ffaa00';
+    return '#44ff44';
+  };
+
+  const cpuColor = getStatusColor(metrics.cpuUsage, { medium: 50, high: 80 });
+  const memoryColor = getStatusColor(metrics.memoryUsage, { medium: 300, high: 500 });
+  const renderColor = getStatusColor(metrics.renderTime, { medium: 8, high: 16 });
+
+  // Network throttling handlers
+  const handlePresetChange = (preset) => {
+    onChangePreset(preset);
+    if (preset !== 'Custom') {
+      const presets = networkThrottleService.getPresets();
+      onUpdateNetworkConfig(presets[preset]);
     }
   };
 
-  const handleConfigChange = (field, value) => {
-    const newConfig = { ...networkConfig, [field]: value };
-    if (onUpdateNetworkConfig) onUpdateNetworkConfig(newConfig);
-    else setUncontrolledNetworkConfig(newConfig);
-    localStorage.setItem('networkThrottleConfig', JSON.stringify(newConfig));
-    // switch to Custom when any field changes
-    if (selectedPreset !== 'Custom') {
-      if (onChangePreset) onChangePreset('Custom');
-      else setUncontrolledPreset('Custom');
-      localStorage.setItem('networkThrottlePreset', 'Custom');
-    }
+  const handleToggleThrottling = () => {
+    const newState = !isThrottlingEnabled;
+    onToggleThrottling(newState);
     
-    if (isThrottlingEnabled) {
-      networkThrottleService.enable(newConfig);
-    }
-  };
-
-  const toggleThrottling = () => {
-    const next = !isThrottlingEnabled;
-    if (next) {
+    // Apply throttling immediately
+    if (newState) {
       networkThrottleService.enable(networkConfig);
     } else {
       networkThrottleService.disable();
     }
-    localStorage.setItem('isThrottlingEnabled', JSON.stringify(next));
-    if (onToggleThrottling) onToggleThrottling(next);
-    else setUncontrolledIsEnabled(next);
   };
-
-  const formatSpeed = (bytesPerSecond) => {
-    if (bytesPerSecond >= 1024 * 1024) {
-      return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)}MB/s`;
-    } else if (bytesPerSecond >= 1024) {
-      return `${(bytesPerSecond / 1024).toFixed(1)}KB/s`;
-    } else {
-      return `${bytesPerSecond.toFixed(0)}B/s`;
-    }
-  };
-
-  const formatLatency = (ms) => {
-    if (ms >= 1000) {
-      return `${(ms / 1000).toFixed(1)}s`;
-    }
-    return `${ms}ms`;
-  };
-
-  const getPerformanceStatus = () => {
-    const { lastRenderTime, memoryUsage, networkLatency } = metrics;
-    
-    let status = 'Good';
-    let color = '#4CAF50';
-    
-    if (lastRenderTime > 50 || networkLatency > 2000 || 
-        (memoryUsage && memoryUsage.used > memoryUsage.limit * 0.9)) {
-      status = 'Poor';
-      color = '#F44336';
-    } else if (lastRenderTime > 16 || networkLatency > 1000 || 
-               (memoryUsage && memoryUsage.used > memoryUsage.limit * 0.7)) {
-      status = 'Fair';
-      color = '#FF9800';
-    }
-    
-    return { status, color };
-  };
-
-  const { status: performanceStatus, color: statusColor } = getPerformanceStatus();
 
   if (!isOpen) return null;
 
   return (
     <div className="performance-panel">
       <div className="performance-panel__header">
-        <div className="performance-panel__title">
-          <IoSpeedometer />
-          <span>Performance Testing</span>
+        <h3 className="performance-panel__title">Performance Monitor</h3>
+        <button className="performance-panel__close" onClick={onClose}>×</button>
         </div>
+
+      {/* Tab Toggle */}
+      <div className="performance-panel__tabs">
         <button 
-          className="performance-panel__close"
-          onClick={onClose}
-          aria-label="Close performance panel"
+          className={`performance-panel__tab ${activeTab === 'performance' ? 'performance-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('performance')}
         >
-          <IoClose />
+          Performance
+        </button>
+        <button 
+          className={`performance-panel__tab ${activeTab === 'network' ? 'performance-panel__tab--active' : ''}`}
+          onClick={() => setActiveTab('network')}
+        >
+          Network
         </button>
       </div>
 
       <div className="performance-panel__content">
-        {/* Network Throttling Section */}
-        <section className="performance-panel__section">
-          <h3 className="performance-panel__section-title">
-            <IoWifi />
-            Network Throttling
-          </h3>
-          
-          <div className="performance-panel__throttle-controls">
-            <div className="performance-panel__preset-selector">
-              <label>Preset:</label>
-              <select 
-                value={selectedPreset}
-                onChange={(e) => handlePresetChange(e.target.value)}
-              >
-                <option value="Custom">Custom</option>
-                {Object.keys(presets).map(preset => (
-                  <option key={preset} value={preset}>{preset}</option>
-                ))}
-              </select>
-            </div>
-
-            <button 
-              className={`performance-panel__toggle ${isThrottlingEnabled ? 'performance-panel__toggle--active' : ''}`}
-              onClick={toggleThrottling}
+        {activeTab === 'performance' && (
+          <>
+            {/* Performance Metrics */}
+            <div className="performance-panel__metrics">
+          <div className="performance-panel__metric">
+            <div className="performance-panel__metric-label">CPU Usage</div>
+            <div 
+              className="performance-panel__metric-value" 
+              style={{ color: cpuColor }}
             >
-              {isThrottlingEnabled ? <IoWifi /> : <IoWifiOutline />}
-              {isThrottlingEnabled ? 'Disable' : 'Enable'} Throttling
-            </button>
-          </div>
-
-          <div className="performance-panel__config-grid">
-            <div className="performance-panel__config-item">
-              <label>Latency (ms)</label>
-              <input
-                type="range"
-                min={0}
-                max={2000}
-                step={50}
-                value={Number(networkConfig.latency) || 0}
-                onChange={(e) => handleConfigChange('latency', parseInt(e.target.value, 10))}
+              {metrics.cpuUsage.toFixed(1)}%
+            </div>
+            <div className="performance-panel__metric-bar">
+              <div 
+                className="performance-panel__metric-fill"
+                style={{ 
+                  width: `${Math.min(100, metrics.cpuUsage)}%`,
+                  backgroundColor: cpuColor
+                }}
               />
-              <span>{formatLatency(networkConfig.latency)}</span>
+            </div>
             </div>
 
-            <div className="performance-panel__config-item">
-              <label>Download Speed</label>
-              <input
-                type="range"
-                min={1024}
-                max={10 * 1024 * 1024}
-                step={1024 * 1024}
-                value={Number(networkConfig.downloadSpeed) || 1024}
-                onChange={(e) => handleConfigChange('downloadSpeed', parseInt(e.target.value, 10))}
-              />
-              <span>{formatSpeed(networkConfig.downloadSpeed)}</span>
+          <div className="performance-panel__metric">
+            <div className="performance-panel__metric-label">Memory Usage</div>
+            <div 
+              className="performance-panel__metric-value" 
+              style={{ color: memoryColor }}
+            >
+              {metrics.memoryUsage.toFixed(0)}MB
             </div>
-
-            <div className="performance-panel__config-item">
-              <label>Upload Speed</label>
-              <input
-                type="range"
-                min={1024}
-                max={5 * 1024 * 1024}
-                step={512 * 1024}
-                value={Number(networkConfig.uploadSpeed) || 1024}
-                onChange={(e) => handleConfigChange('uploadSpeed', parseInt(e.target.value, 10))}
+            <div className="performance-panel__metric-bar">
+              <div 
+                className="performance-panel__metric-fill"
+                style={{ 
+                  width: `${Math.min(100, (metrics.memoryUsage / 1000) * 100)}%`,
+                  backgroundColor: memoryColor
+                }}
               />
-              <span>{formatSpeed(networkConfig.uploadSpeed)}</span>
-            </div>
-
-            <div className="performance-panel__config-item">
-              <label>Packet Loss (%)</label>
-              <input
-                type="range"
-                min={0}
-                max={20}
-                step={1}
-                value={Number(networkConfig.packetLoss * 100) || 0}
-                onChange={(e) => handleConfigChange('packetLoss', parseInt(e.target.value, 10) / 100)}
-              />
-              <span>{(networkConfig.packetLoss * 100).toFixed(1)}%</span>
             </div>
           </div>
-        </section>
 
-        {/* Performance Metrics Section */}
-        <section className="performance-panel__section">
-          <h3 className="performance-panel__section-title">
-            <IoStatsChart />
-            Performance Metrics
-          </h3>
-          
-          <div className="performance-panel__metrics">
             <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Status:</span>
-              <span 
+            <div className="performance-panel__metric-label">Render Time</div>
+            <div 
                 className="performance-panel__metric-value"
-                style={{ color: statusColor }}
+              style={{ color: renderColor }}
               >
-                {performanceStatus}
-              </span>
+              {metrics.renderTime.toFixed(1)}ms
+            </div>
+            <div className="performance-panel__metric-bar">
+              <div 
+                className="performance-panel__metric-fill"
+                style={{ 
+                  width: `${Math.min(100, (metrics.renderTime / 33) * 100)}%`,
+                  backgroundColor: renderColor
+                }}
+              />
+            </div>
             </div>
 
             <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Render Time:</span>
-              <span className="performance-panel__metric-value">
-                {metrics.lastRenderTime.toFixed(2)}ms
-              </span>
-            </div>
-
-            <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Avg Render:</span>
-              <span className="performance-panel__metric-value">
-                {metrics.averageRenderTime.toFixed(2)}ms
-              </span>
-            </div>
-
-            <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Render Count:</span>
-              <span className="performance-panel__metric-value">
-                {metrics.renderCount}
-              </span>
-            </div>
-
-            {metrics.memoryUsage && (
-              <>
-                <div className="performance-panel__metric">
-                  <span className="performance-panel__metric-label">Memory Used:</span>
-                  <span className="performance-panel__metric-value">
-                    {metrics.memoryUsage.used}MB
-                  </span>
-                </div>
-                <div className="performance-panel__metric">
-                  <span className="performance-panel__metric-label">Memory Limit:</span>
-                  <span className="performance-panel__metric-value">
-                    {metrics.memoryUsage.limit}MB
-                  </span>
-                </div>
-              </>
-            )}
-
-            <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Network Requests:</span>
-              <span className="performance-panel__metric-value">
-                {metrics.networkRequests}
-              </span>
-            </div>
-
-            <div className="performance-panel__metric">
-              <span className="performance-panel__metric-label">Last Network Latency:</span>
-              <span className="performance-panel__metric-value">
-                {metrics.networkLatency.toFixed(2)}ms
-              </span>
+            <div className="performance-panel__metric-label">API Calls</div>
+            <div className="performance-panel__metric-value">
+              {metrics.apiCalls}
             </div>
           </div>
-        </section>
+            </div>
 
-        {/* Quick Actions */}
-        <section className="performance-panel__section">
-          <h3 className="performance-panel__section-title">Quick Actions</h3>
+        {/* Overheating Warning */}
+        {metrics.isOverheating && (
+          <div className="performance-panel__warning">
+            <div className="performance-panel__warning-icon">⚠️</div>
+            <div className="performance-panel__warning-text">
+              Device overheating detected! Check alerts below for details.
+                </div>
+                </div>
+        )}
+
+        {/* Alerts */}
+        {alerts.length > 0 && (
+          <div className="performance-panel__alerts">
+            <div className="performance-panel__alerts-header">
+              <h4>Performance Alerts ({alerts.length})</h4>
+              <button 
+                className="performance-panel__clear-alerts"
+                onClick={clearAlerts}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="performance-panel__alerts-list">
+              {alerts.map((alert, index) => (
+                <div 
+                  key={index} 
+                  className={`performance-panel__alert performance-panel__alert--${alert.type}`}
+                >
+                  <div className="performance-panel__alert-message">
+                    {alert.message}
+                  </div>
+                  <div className="performance-panel__alert-time">
+                    {new Date(alert.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Detailed Report */}
+        <div className="performance-panel__detailed">
+          <button 
+            className="performance-panel__toggle-details"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? 'Hide' : 'Show'} Detailed Report
+          </button>
           
+          {isExpanded && detailedReport && (
+            <div className="performance-panel__details">
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">Uptime:</span>
+                <span className="performance-panel__detail-value">{detailedReport.uptime}s</span>
+              </div>
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">Avg API Latency:</span>
+                <span className="performance-panel__detail-value">{detailedReport.avgApiLatency}ms</span>
+              </div>
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">Active Intervals:</span>
+                <span className="performance-panel__detail-value">{detailedReport.activeIntervals}</span>
+              </div>
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">Active Timeouts:</span>
+                <span className="performance-panel__detail-value">{detailedReport.activeTimeouts}</span>
+              </div>
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">DOM Mutations:</span>
+                <span className="performance-panel__detail-value">{detailedReport.totalDomMutations}</span>
+              </div>
+              <div className="performance-panel__detail-item">
+                <span className="performance-panel__detail-label">Audio Operations:</span>
+                <span className="performance-panel__detail-value">{detailedReport.totalAudioOperations}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+            {/* Actions */}
           <div className="performance-panel__actions">
             <button 
               className="performance-panel__action"
-              onClick={() => window.location.reload()}
+                onClick={logReport}
             >
-              <IoRefresh />
-              Reload Page
+                Log Report to Console
             </button>
-            
             <button 
               className="performance-panel__action"
-              onClick={() => {
-                if (window.gc) {
-                  window.gc();
-                  console.log('[Performance] Garbage collection triggered');
-                }
-              }}
-            >
-              <IoStatsChart />
-              Force GC
+                onClick={handleExportData}
+              >
+                Export Data
             </button>
           </div>
-        </section>
+          </>
+        )}
+
+        {activeTab === 'network' && (
+          <>
+            {/* Network Throttling Controls */}
+            <div className="performance-panel__network">
+              <div className="performance-panel__section">
+                <h4 className="performance-panel__section-title">Network Throttling</h4>
+                
+                <div className="performance-panel__toggle">
+                  <label className="performance-panel__toggle-label">
+                    <input
+                      type="checkbox"
+                      checked={isThrottlingEnabled}
+                      onChange={handleToggleThrottling}
+                    />
+                    Enable Network Throttling
+                  </label>
+                </div>
+
+                {isThrottlingEnabled && (
+                  <>
+                    <div className="performance-panel__preset">
+                      <label className="performance-panel__label">Preset:</label>
+                      <select 
+                        value={selectedPreset} 
+                        onChange={(e) => handlePresetChange(e.target.value)}
+                        className="performance-panel__select"
+                      >
+                        <option value="Custom">Custom</option>
+                        <option value="Fast 3G">Fast 3G</option>
+                        <option value="Slow 3G">Slow 3G</option>
+                        <option value="2G">2G</option>
+                        <option value="Dial-up">Dial-up</option>
+                      </select>
+                    </div>
+
+                    <div className="performance-panel__config">
+                      <div className="performance-panel__config-item">
+                        <label className="performance-panel__label">Latency (ms):</label>
+                        <input
+                          type="number"
+                          value={networkConfig.latency}
+                          onChange={(e) => onUpdateNetworkConfig({...networkConfig, latency: parseInt(e.target.value)})}
+                          className="performance-panel__input"
+                        />
+                      </div>
+                      
+                      <div className="performance-panel__config-item">
+                        <label className="performance-panel__label">Download Speed (KB/s):</label>
+                        <input
+                          type="number"
+                          value={Math.round(networkConfig.downloadSpeed / 1024)}
+                          onChange={(e) => onUpdateNetworkConfig({...networkConfig, downloadSpeed: parseInt(e.target.value) * 1024})}
+                          className="performance-panel__input"
+                        />
+                      </div>
+                      
+                      <div className="performance-panel__config-item">
+                        <label className="performance-panel__label">Upload Speed (KB/s):</label>
+                        <input
+                          type="number"
+                          value={Math.round(networkConfig.uploadSpeed / 1024)}
+                          onChange={(e) => onUpdateNetworkConfig({...networkConfig, uploadSpeed: parseInt(e.target.value) * 1024})}
+                          className="performance-panel__input"
+                        />
+                      </div>
+                      
+                      <div className="performance-panel__config-item">
+                        <label className="performance-panel__label">Packet Loss (%):</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={networkConfig.packetLoss * 100}
+                          onChange={(e) => onUpdateNetworkConfig({...networkConfig, packetLoss: parseFloat(e.target.value) / 100})}
+                          className="performance-panel__input"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="performance-panel__status">
+                      <div className="performance-panel__status-item">
+                        <span className="performance-panel__status-label">Status:</span>
+                        <span className="performance-panel__status-value performance-panel__status-value--active">
+                          Active
+                        </span>
+                      </div>
+                      <div className="performance-panel__status-item">
+                        <span className="performance-panel__status-label">Current Settings:</span>
+                        <span className="performance-panel__status-value">
+                          {networkConfig.latency}ms, {Math.round(networkConfig.downloadSpeed / 1024)}KB/s down, {Math.round(networkConfig.uploadSpeed / 1024)}KB/s up
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
