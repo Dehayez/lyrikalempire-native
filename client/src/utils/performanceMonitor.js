@@ -19,6 +19,7 @@ class MobilePerformanceMonitor {
     };
     
     this.originalFetch = window.fetch;
+    this.originalXMLHttpRequest = window.XMLHttpRequest;
     this.originalSetInterval = window.setInterval;
     this.originalSetTimeout = window.setTimeout;
     this.originalClearInterval = window.clearInterval;
@@ -64,6 +65,7 @@ class MobilePerformanceMonitor {
     console.log('[Mobile Performance Monitor] Disabled');
     
     this.restoreNetworkRequests();
+    this.restoreXMLHttpRequests();
     this.restoreTimers();
     this.restoreAudioMethods();
     this.stopMonitoring();
@@ -330,6 +332,64 @@ class MobilePerformanceMonitor {
         throw error;
       }
     };
+
+    // Intercept XMLHttpRequest
+    this.interceptXMLHttpRequests();
+  }
+
+  interceptXMLHttpRequests() {
+    const originalXHR = this.originalXMLHttpRequest;
+    const performanceMonitor = this;
+
+    window.XMLHttpRequest = function() {
+      const xhr = new originalXHR();
+      const startTime = performance.now();
+      let url = '';
+      let method = 'GET';
+
+      // Override open to capture URL and method
+      const originalOpen = xhr.open;
+      xhr.open = function(m, u, ...args) {
+        method = m;
+        url = u;
+        return originalOpen.apply(this, [m, u, ...args]);
+      };
+
+      // Override send to track the request
+      const originalSend = xhr.send;
+      xhr.send = function(data) {
+        xhr.addEventListener('loadend', function() {
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+
+          performanceMonitor.metrics.apiCalls.push({
+            timestamp: Date.now(),
+            url: url,
+            method: method,
+            duration,
+            status: xhr.status,
+            size: xhr.getResponseHeader('content-length') || 'unknown',
+            type: 'xhr'
+          });
+
+          // Log slow requests
+          if (duration > 1000) {
+            console.warn(`[Performance] Slow XHR request: ${url} took ${duration.toFixed(2)}ms`);
+          }
+        });
+
+        return originalSend.apply(this, [data]);
+      };
+
+      return xhr;
+    };
+
+    // Copy static properties from original XMLHttpRequest
+    Object.setPrototypeOf(window.XMLHttpRequest, originalXHR);
+    Object.defineProperty(window.XMLHttpRequest, 'prototype', {
+      value: originalXHR.prototype,
+      writable: false
+    });
   }
 
   // Timer Monitoring
@@ -407,6 +467,10 @@ class MobilePerformanceMonitor {
   // Restore Methods
   restoreNetworkRequests() {
     window.fetch = this.originalFetch;
+  }
+
+  restoreXMLHttpRequests() {
+    window.XMLHttpRequest = this.originalXMLHttpRequest;
   }
 
   restoreTimers() {
