@@ -336,7 +336,6 @@ class AudioCacheService {
       }
     }
     
-    console.log('🧹 [CACHE DEBUG] All audio cache cleared');
   }
 
   // Get cache statistics

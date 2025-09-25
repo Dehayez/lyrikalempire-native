@@ -36,7 +36,6 @@ class NetworkThrottleService {
     window.fetch = this.originalFetch;
     XMLHttpRequest.prototype.open = this.originalXHROpen;
     XMLHttpRequest.prototype.send = this.originalXHRSend;
-    console.log('[Network Throttle] Disabled');
   }
 
   // Intercept fetch requests

@@ -36,7 +36,6 @@ class MobilePerformanceMonitor {
   enable(options = {}) {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    console.log('[Mobile Performance Monitor] Enabled');
     
     this.interceptNetworkRequests();
     
@@ -62,7 +61,6 @@ class MobilePerformanceMonitor {
   disable() {
     if (!this.isEnabled) return;
     this.isEnabled = false;
-    console.log('[Mobile Performance Monitor] Disabled');
     
     this.restoreNetworkRequests();
     this.restoreXMLHttpRequests();
@@ -328,7 +326,6 @@ class MobilePerformanceMonitor {
           error: error.message
         });
         
-        console.error(`[Performance] API call failed: ${url} after ${duration.toFixed(2)}ms`);
         throw error;
       }
     };
@@ -486,10 +483,8 @@ class MobilePerformanceMonitor {
 
   // Test API monitoring
   testApiMonitoring() {
-    // Make a simple API call to test the monitoring
-    fetch('/api/test', { method: 'HEAD' }).catch(() => {
-      // Ignore errors - this is just to test the monitoring
-    });
+    // Make a simple API call to test the monitoring (silent)
+    fetch('/api/test', { method: 'HEAD' }).catch(() => {});
   }
 
   stopMonitoring() {

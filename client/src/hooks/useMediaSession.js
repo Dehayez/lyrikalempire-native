@@ -16,21 +16,16 @@ export const useMediaSession = ({
       // Use artistName from user_id lookup, fallback to currentBeat.artist
       const artist = artistName && artistName !== '\u00A0' ? artistName : (currentBeat.artist || 'Unknown Artist');
       
-      // Use artworkUrl (like in audioPlayerUtils) or fallback to placeholder
-      const artworkUrl = currentBeat.artworkUrl || currentBeat.artwork || currentBeat.image || 'https://www.lyrikalempire.com/placeholder.png';
+      // Use artworkUrl (like in audioPlayerUtils) or fallback to local placeholder
+      const artworkUrl = currentBeat.artworkUrl || currentBeat.artwork || currentBeat.image || '/placeholder.png';
       
       const metadata = {
         title: currentBeat.title || 'Unknown Title',
         artist: artist,
         album: currentBeat.album || 'Lyrikal Empire',
-        artwork: [
-          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
-          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
-          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
-          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
-          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
-          { src: artworkUrl, sizes: '512x512', type: 'image/png' }
-        ]
+        artwork: artworkUrl ? [
+          { src: artworkUrl, sizes: '192x192', type: 'image/png' }
+        ] : []
       };
 
       try {

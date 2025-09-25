@@ -92,13 +92,6 @@ window.performanceDebug = {
   }
 };
 
-console.log('Performance debug utilities loaded. Use window.performanceDebug.* to access them.');
-console.log('Available commands:');
-console.log('- window.performanceDebug.enable() - Start monitoring');
-console.log('- window.performanceDebug.disable() - Stop monitoring');
-console.log('- window.performanceDebug.report() - Get current report');
-console.log('- window.performanceDebug.log() - Log report to console');
-console.log('- window.performanceDebug.export() - Export data as JSON');
-console.log('- window.performanceDebug.checkOverheating() - Check for issues');
+// Performance debug utilities loaded silently
 
 export default window.performanceDebug;

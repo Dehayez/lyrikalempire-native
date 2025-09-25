@@ -30,7 +30,7 @@ export const createSlides = (currentBeat, editInputs, lyricsContent) => [
           />
         ) : (
           <img
-            src="https://www.lyrikalempire.com/placeholder.png"
+            src="/placeholder.png"
             alt="Placeholder Cover"
             className="audio-player__cover-image"
           />

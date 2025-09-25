@@ -11,7 +11,8 @@ const ESSENTIAL_ASSETS = [
   '/static/css/main.css',
   '/manifest.json',
   '/android-chrome-192x192.png',
-  '/android-chrome-512x512.png'
+  '/android-chrome-512x512.png',
+  '/placeholder.png'
 ];
 
 // Install event - cache essential assets
@@ -82,13 +83,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Handle other requests
+  // Handle other requests (including placeholder.png)
   event.respondWith(
     caches.match(request)
       .then(response => {
         if (response) {
           return response;
         }
+        
+        // For images (especially placeholder.png), cache aggressively to prevent repeated fetches
+        if (request.url.includes('placeholder.png') || 
+            request.url.includes('.png') || 
+            request.url.includes('.jpg') || 
+            request.url.includes('.jpeg') || 
+            request.url.includes('.gif') || 
+            request.url.includes('.webp')) {
+          return fetch(request).then(fetchResponse => {
+            if (fetchResponse.ok) {
+              const responseClone = fetchResponse.clone();
+              caches.open(CACHE_NAME).then(cache => {
+                cache.put(request, responseClone);
+              });
+            }
+            return fetchResponse;
+          });
+        }
+        
+        // For other requests, use normal fetch
         return fetch(request);
       })
   );

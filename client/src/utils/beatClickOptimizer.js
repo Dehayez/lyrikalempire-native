@@ -15,7 +15,6 @@ class BeatClickOptimizer {
   enable() {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    console.log('[Beat Click Optimizer] Enabled');
   }
 
   disable() {
