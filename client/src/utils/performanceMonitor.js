@@ -24,6 +24,9 @@ class MobilePerformanceMonitor {
     this.originalClearInterval = window.clearInterval;
     this.originalClearTimeout = window.clearTimeout;
     
+    // Store original audio methods
+    this.originalAudioPlay = HTMLAudioElement.prototype.play;
+    
     this.startTime = Date.now();
     this.lastCpuCheck = Date.now();
     this.performanceObserver = null;
@@ -44,7 +47,7 @@ class MobilePerformanceMonitor {
     this.startCpuMonitoring();
     this.startMemoryMonitoring();
     this.startRenderMonitoring();
-    this.startAudioMonitoring();
+    // this.startAudioMonitoring(); // Disabled - too intrusive, breaks audio playback
     this.startDomMonitoring();
     
     // Add global error handler
@@ -59,6 +62,7 @@ class MobilePerformanceMonitor {
     
     this.restoreNetworkRequests();
     this.restoreTimers();
+    this.restoreAudioMethods();
     this.stopMonitoring();
     
     window.removeEventListener('error', this.handleError.bind(this));
@@ -172,6 +176,8 @@ class MobilePerformanceMonitor {
 
   // Audio Performance Monitoring
   startAudioMonitoring() {
+    if (!this.isEnabled) return;
+    
     // Monitor audio context usage
     const originalCreateAnalyser = AudioContext.prototype.createAnalyser;
     AudioContext.prototype.createAnalyser = function() {
@@ -182,9 +188,13 @@ class MobilePerformanceMonitor {
 
     // Monitor audio element operations
     const originalAudioPlay = HTMLAudioElement.prototype.play;
+    const performanceMonitor = this; // Capture the correct 'this' context
+    
     HTMLAudioElement.prototype.play = function() {
       const startTime = performance.now();
-      this.metrics.audioOperations.push({
+      
+      // Use the correct metrics reference
+      performanceMonitor.metrics.audioOperations.push({
         timestamp: Date.now(),
         operation: 'play',
         startTime
@@ -211,8 +221,8 @@ class MobilePerformanceMonitor {
       
       this.metrics.domMutations.push(domMutations);
       
-      // Log excessive DOM mutations
-      if (mutations.length > 50) {
+      // Log excessive DOM mutations (increased threshold to reduce noise)
+      if (mutations.length > 200) {
         console.warn(`[Performance] Excessive DOM mutations: ${mutations.length}`);
       }
     });
@@ -352,6 +362,10 @@ class MobilePerformanceMonitor {
     window.setTimeout = this.originalSetTimeout;
     window.clearInterval = this.originalClearInterval;
     window.clearTimeout = this.originalClearTimeout;
+  }
+
+  restoreAudioMethods() {
+    HTMLAudioElement.prototype.play = this.originalAudioPlay;
   }
 
   stopMonitoring() {

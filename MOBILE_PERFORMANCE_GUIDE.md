@@ -1,4 +1,4 @@
-# Mobile Performance Monitoring Guide
+# Performance Monitoring Guide
 
 ## Overview
 
@@ -16,15 +16,19 @@ The monitoring system is automatically disabled for other users to avoid perform
 
 ## How to Use the Mobile Performance Panel
 
-1. **Open the Panel**: Click the "Mobile" button in the right panel
-2. **View Real-time Metrics**:
+1. **Open the Panel**: Click the "Performance" button in the right panel
+2. **Switch between tabs**:
+   - **Performance**: CPU, memory, render time, and API monitoring
+   - **Network**: Network throttling controls for testing
+
+3. **View Real-time Metrics** (Performance tab):
    - CPU Usage (should be < 80%)
    - Memory Usage (should be < 500MB)
    - Render Time (should be < 16ms for 60fps)
    - API Calls count
 
-3. **Check Alerts**: The panel shows performance alerts in real-time
-4. **Export Data**: Click "Export Data" to save detailed performance logs
+4. **Check Alerts**: The panel shows performance alerts in real-time
+5. **Export Data**: Click "Export Data" to save detailed performance logs
 
 ## Browser Console Commands
 
@@ -58,6 +62,7 @@ Based on the codebase analysis, here are the likely culprits:
 - **Problem**: Multiple audio players running simultaneously
 - **Location**: `AudioPlayer.js`, `SafariAudioPlayer.js`
 - **Fix**: Ensure only one audio player is active at a time
+- **Note**: Audio monitoring is disabled in the performance monitor to prevent interference with playback
 
 ### 2. **Excessive API Calls**
 - **Problem**: Too many simultaneous fetch requests

@@ -23,7 +23,7 @@ const PerformancePanel = ({
       const report = getReport();
       setDetailedReport(report);
     }
-  }, [isOpen, getReport]);
+  }, [isOpen]); // Removed getReport from dependencies to prevent infinite loop
 
   // Apply throttling when config changes
   useEffect(() => {

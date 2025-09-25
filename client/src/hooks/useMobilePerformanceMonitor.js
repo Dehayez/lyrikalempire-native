@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import mobilePerformanceMonitor from '../utils/performanceMonitor';
 
 /**
@@ -18,57 +18,8 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
   const renderStartTime = useRef(0);
   const lastReportTime = useRef(Date.now());
 
-  // Track render performance
-  useEffect(() => {
-    renderStartTime.current = performance.now();
-    
-    return () => {
-      const renderTime = performance.now() - renderStartTime.current;
-      
-      if (renderTime > 16) { // 60fps threshold
-        const alert = {
-          type: 'slow-render',
-          component: componentName,
-          value: renderTime,
-          timestamp: Date.now(),
-          message: `Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`
-        };
-        
-        setAlerts(prev => [...prev.slice(-9), alert]); // Keep last 10 alerts
-        console.warn(alert.message);
-      }
-    };
-  });
-
-  // Update metrics periodically
-  useEffect(() => {
-    const updateMetrics = () => {
-      const report = mobilePerformanceMonitor.getReport();
-      
-      const newMetrics = {
-        cpuUsage: report.avgCpuUsage,
-        memoryUsage: report.avgMemoryUsage,
-        renderTime: report.avgRenderTime,
-        apiCalls: report.totalApiCalls,
-        isOverheating: report.avgCpuUsage > 80 || report.avgMemoryUsage > 500
-      };
-      
-      setMetrics(newMetrics);
-      
-      // Check for performance alerts
-      const now = Date.now();
-      if (now - lastReportTime.current > 5000) { // Check every 5 seconds
-        checkPerformanceAlerts(report);
-        lastReportTime.current = now;
-      }
-    };
-
-    const interval = setInterval(updateMetrics, 1000);
-    return () => clearInterval(interval);
-  }, [componentName]);
-
   // Check for performance issues
-  const checkPerformanceAlerts = (report) => {
+  const checkPerformanceAlerts = useCallback((report) => {
     const newAlerts = [];
 
     if (report.avgCpuUsage > 80) {
@@ -115,7 +66,34 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
       setAlerts(prev => [...prev.slice(-9), ...newAlerts]);
       newAlerts.forEach(alert => console.warn(`[Performance Alert] ${alert.message}`));
     }
-  };
+  }, [componentName]);
+
+  // Update metrics periodically
+  useEffect(() => {
+    const updateMetrics = () => {
+      const report = mobilePerformanceMonitor.getReport();
+      
+      const newMetrics = {
+        cpuUsage: report.avgCpuUsage,
+        memoryUsage: report.avgMemoryUsage,
+        renderTime: report.avgRenderTime,
+        apiCalls: report.totalApiCalls,
+        isOverheating: report.avgCpuUsage > 80 || report.avgMemoryUsage > 500
+      };
+      
+      setMetrics(newMetrics);
+      
+      // Check for performance alerts
+      const now = Date.now();
+      if (now - lastReportTime.current > 5000) { // Check every 5 seconds
+        checkPerformanceAlerts(report);
+        lastReportTime.current = now;
+      }
+    };
+
+    const interval = setInterval(updateMetrics, 1000);
+    return () => clearInterval(interval);
+  }, [componentName, checkPerformanceAlerts]);
 
   // Performance actions
   const clearAlerts = () => setAlerts([]);
