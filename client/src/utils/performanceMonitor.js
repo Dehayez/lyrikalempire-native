@@ -50,6 +50,9 @@ class MobilePerformanceMonitor {
     // this.startAudioMonitoring(); // Disabled - too intrusive, breaks audio playback
     // this.startDomMonitoring(); // Temporarily disabled - causing too much noise
     
+    // Test API monitoring with a simple call
+    this.testApiMonitoring();
+    
     // Add global error handler
     window.addEventListener('error', this.handleError.bind(this));
     window.addEventListener('unhandledrejection', this.handlePromiseRejection.bind(this));
@@ -168,10 +171,59 @@ class MobilePerformanceMonitor {
             console.warn(`[Performance] Slow render: ${entry.name} took ${entry.duration.toFixed(2)}ms`);
           }
         }
+        
+        // Also track frame timing for actual render performance
+        if (entry.entryType === 'measure' && entry.name.includes('render')) {
+          this.metrics.renderTimes.push({
+            timestamp: Date.now(),
+            name: entry.name,
+            duration: entry.duration,
+            startTime: entry.startTime
+          });
+        }
       }
     });
     
-    this.performanceObserver.observe({ entryTypes: ['measure'] });
+    // Monitor multiple entry types for better coverage
+    this.performanceObserver.observe({ entryTypes: ['measure', 'navigation', 'paint'] });
+    
+    // Create a periodic render performance check
+    this.startRenderPerformanceCheck();
+  }
+  
+  startRenderPerformanceCheck() {
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    
+    const checkRenderPerformance = () => {
+      if (!this.isEnabled) return;
+      
+      const currentTime = performance.now();
+      const deltaTime = currentTime - lastFrameTime;
+      
+      // Track frame timing (60fps = 16.67ms per frame)
+      frameCount++;
+      if (frameCount % 10 === 0) { // Check every 10 frames
+        const avgFrameTime = deltaTime / 10;
+        
+        this.metrics.renderTimes.push({
+          timestamp: Date.now(),
+          name: 'frame-timing',
+          duration: avgFrameTime,
+          startTime: currentTime
+        });
+        
+        // Log slow frame timing
+        if (avgFrameTime > 16.67) {
+          console.warn(`[Performance] Slow frame timing: ${avgFrameTime.toFixed(2)}ms (target: 16.67ms for 60fps)`);
+        }
+      }
+      
+      lastFrameTime = currentTime;
+      requestAnimationFrame(checkRenderPerformance);
+    };
+    
+    requestAnimationFrame(checkRenderPerformance);
   }
 
   // Audio Performance Monitoring
@@ -366,6 +418,14 @@ class MobilePerformanceMonitor {
 
   restoreAudioMethods() {
     HTMLAudioElement.prototype.play = this.originalAudioPlay;
+  }
+
+  // Test API monitoring
+  testApiMonitoring() {
+    // Make a simple API call to test the monitoring
+    fetch('/api/test', { method: 'HEAD' }).catch(() => {
+      // Ignore errors - this is just to test the monitoring
+    });
   }
 
   stopMonitoring() {

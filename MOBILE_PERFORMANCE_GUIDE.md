@@ -211,6 +211,24 @@ window.beatClickOptimizer.enable()
 window.beatClickOptimizer.disable()
 ```
 
+## Troubleshooting
+
+### Render Time and API Calls Showing 0
+
+If you see render time and API calls staying at 0, this has been fixed with the latest updates:
+
+1. **Render Time**: Now tracks actual frame timing using `requestAnimationFrame`
+2. **API Calls**: Will show 0 until actual fetch requests are made
+3. **Test API Calls**: Use the "Test API Calls" button in the performance panel to trigger monitoring
+
+### Performance Panel Features
+
+- **Real-time Metrics**: CPU, memory, render time, API calls
+- **Performance Alerts**: Automatic warnings for high usage
+- **Test API Calls**: Button to trigger API monitoring for testing
+- **Export Data**: Download performance reports for analysis
+- **Network Throttling**: Test different network conditions
+
 ## Next Steps
 
 1. **Enable monitoring** and use your app normally

@@ -17,6 +17,7 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
   const [alerts, setAlerts] = useState([]);
   const renderStartTime = useRef(0);
   const lastReportTime = useRef(Date.now());
+  const renderCount = useRef(0);
 
   // Check for performance issues
   const checkPerformanceAlerts = useCallback((report) => {
@@ -68,11 +69,27 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
     }
   }, [componentName]);
 
+  // Track render performance
+  useEffect(() => {
+    renderStartTime.current = performance.now();
+    renderCount.current++;
+    
+    // Mark render performance
+    const renderTime = performance.now() - renderStartTime.current;
+    if (renderTime > 0) {
+      performance.mark(`${componentName}-render-${renderCount.current}`);
+      performance.measure(
+        `${componentName}-render-duration-${renderCount.current}`,
+        `${componentName}-render-${renderCount.current}`
+      );
+    }
+  });
+
   // Update metrics periodically
   useEffect(() => {
     const updateMetrics = () => {
       const report = mobilePerformanceMonitor.getReport();
-      
+
       const newMetrics = {
         cpuUsage: report.avgCpuUsage,
         memoryUsage: report.avgMemoryUsage,
@@ -80,9 +97,9 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
         apiCalls: report.totalApiCalls,
         isOverheating: report.avgCpuUsage > 80 || report.avgMemoryUsage > 500
       };
-      
+
       setMetrics(newMetrics);
-      
+
       // Check for performance alerts
       const now = Date.now();
       if (now - lastReportTime.current > 5000) { // Check every 5 seconds

@@ -248,19 +248,30 @@ const PerformancePanel = ({
           )}
         </div>
 
-            {/* Actions */}
+                {/* Actions */}
           <div className="performance-panel__actions">
             <button 
               className="performance-panel__action"
-                onClick={logReport}
-            >
-                Log Report to Console
+                    onClick={logReport}
+                  >
+                    Log Report to Console
+                  </button>
+                  <button
+                    className="performance-panel__action"
+                    onClick={handleExportData}
+                  >
+                    Export Data
             </button>
             <button 
               className="performance-panel__action"
-                onClick={handleExportData}
-              >
-                Export Data
+              onClick={() => {
+                      // Test API calls to trigger monitoring
+                      fetch('/api/test1').catch(() => {});
+                      fetch('/api/test2').catch(() => {});
+                      fetch('/api/test3').catch(() => {});
+                    }}
+                  >
+                    Test API Calls
             </button>
           </div>
           </>
