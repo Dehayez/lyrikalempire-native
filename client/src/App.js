@@ -26,6 +26,8 @@ import './App.scss';
 // Load performance debug utilities (development only)
 if (process.env.NODE_ENV === 'development') {
   import('./utils/performanceDebug');
+  import('./utils/performanceOptimizer');
+  import('./utils/beatClickOptimizer');
 }
 
 
@@ -149,13 +151,35 @@ function App() {
     if (isPerfAllowed) {
       // Enable without timer interception to avoid conflicts
       mobilePerformanceMonitor.enable({ interceptTimers: false });
+      
+      // Also enable performance optimizer for better debugging (disabled by default)
+      // if (window.performanceOptimizer) {
+      //   window.performanceOptimizer.enable();
+      // }
+      
+      // Enable beat click optimizer
+      if (window.beatClickOptimizer) {
+        window.beatClickOptimizer.enable();
+      }
     } else {
       mobilePerformanceMonitor.disable();
+      // if (window.performanceOptimizer) {
+      //   window.performanceOptimizer.disable();
+      // }
+      if (window.beatClickOptimizer) {
+        window.beatClickOptimizer.disable();
+      }
     }
     
     return () => {
       if (isPerfAllowed) {
         mobilePerformanceMonitor.disable();
+        // if (window.performanceOptimizer) {
+        //   window.performanceOptimizer.disable();
+        // }
+        if (window.beatClickOptimizer) {
+          window.beatClickOptimizer.disable();
+        }
       }
     };
   }, [isPerfAllowed]);

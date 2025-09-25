@@ -841,4 +841,4 @@ const AudioPlayer = ({
   );
 };
 
-export default AudioPlayer;
+export default AudioPlayer;console.log('[Performance] Audio player beat change - starting optimization');

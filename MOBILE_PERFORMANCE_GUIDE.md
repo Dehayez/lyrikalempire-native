@@ -189,6 +189,28 @@ The performance panel shows:
 4. **API calls taking > 1 second**
 5. **Render times > 16ms consistently**
 
+## Available Debug Commands
+
+When the performance monitor is enabled, you can use these commands in the browser console:
+
+```javascript
+// Performance monitor commands
+window.performanceDebug.report()
+window.performanceDebug.log()
+window.performanceDebug.export()
+window.performanceDebug.checkOverheating()
+window.performanceDebug.enable(true) // Enable with timer interception
+
+// Performance optimizer commands (disabled by default - can cause logging loops)
+// window.performanceOptimizer.enable() // Enable manually if needed
+// window.performanceOptimizer.logReport()
+// window.performanceOptimizer.getReport()
+
+// Beat click optimizer commands (new!)
+window.beatClickOptimizer.enable()
+window.beatClickOptimizer.disable()
+```
+
 ## Next Steps
 
 1. **Enable monitoring** and use your app normally

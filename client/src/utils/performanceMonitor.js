@@ -48,7 +48,7 @@ class MobilePerformanceMonitor {
     this.startMemoryMonitoring();
     this.startRenderMonitoring();
     // this.startAudioMonitoring(); // Disabled - too intrusive, breaks audio playback
-    this.startDomMonitoring();
+    // this.startDomMonitoring(); // Temporarily disabled - causing too much noise
     
     // Add global error handler
     window.addEventListener('error', this.handleError.bind(this));
