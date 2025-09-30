@@ -18,7 +18,7 @@ import { SelectableInput } from '../Inputs';
 
 import './BeatRow.scss';
 
-const BeatRow = ({
+const BeatRow = React.memo(({
   beat, 
   index, 
   moveBeat, 
@@ -681,6 +681,51 @@ const BeatRow = ({
       )}
     </tr>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Return true if props are equal (skip re-render), false if different (re-render)
+  
+  // Always re-render if mode changes or if this beat is selected/deselected
+  if (prevProps.mode !== nextProps.mode) return false;
+  if (prevProps.isOffline !== nextProps.isOffline) return false;
+  
+  const wasSelected = prevProps.selectedBeats.some(b => 
+    (b.uniqueKey && prevProps.beat.uniqueKey && b.uniqueKey === prevProps.beat.uniqueKey) ||
+    (b.id === prevProps.beat.id)
+  );
+  const isSelected = nextProps.selectedBeats.some(b => 
+    (b.uniqueKey && nextProps.beat.uniqueKey && b.uniqueKey === nextProps.beat.uniqueKey) ||
+    (b.id === nextProps.beat.id)
+  );
+  if (wasSelected !== isSelected) return false;
+  
+  // Re-render if this beat is playing or was playing
+  const wasPlaying = prevProps.currentBeat?.id === prevProps.beat.id && prevProps.isPlaying;
+  const isPlayingNow = nextProps.currentBeat?.id === nextProps.beat.id && nextProps.isPlaying;
+  if (wasPlaying !== isPlayingNow) return false;
+  
+  // Re-render if beat data changed
+  if (prevProps.beat.title !== nextProps.beat.title) return false;
+  if (prevProps.beat.bpm !== nextProps.beat.bpm) return false;
+  if (prevProps.beat.tierlist !== nextProps.beat.tierlist) return false;
+  if (prevProps.beat.duration !== nextProps.beat.duration) return false;
+  
+  // Re-render if searchText changes (affects highlighting)
+  if (prevProps.searchText !== nextProps.searchText) return false;
+  
+  // Re-render if context menu is active for this beat
+  const wasContextMenuActive = prevProps.activeContextMenu === (prevProps.beat.uniqueKey || `${prevProps.beat.id}-${prevProps.beats.indexOf(prevProps.beat)}`);
+  const isContextMenuActive = nextProps.activeContextMenu === (nextProps.beat.uniqueKey || `${nextProps.beat.id}-${nextProps.beats.indexOf(nextProps.beat)}`);
+  if (wasContextMenuActive !== isContextMenuActive) return false;
+  
+  // Re-render if beat associations changed (genres, moods, keywords, features)
+  if (JSON.stringify(prevProps.beat.genres) !== JSON.stringify(nextProps.beat.genres)) return false;
+  if (JSON.stringify(prevProps.beat.moods) !== JSON.stringify(nextProps.beat.moods)) return false;
+  if (JSON.stringify(prevProps.beat.keywords) !== JSON.stringify(nextProps.beat.keywords)) return false;
+  if (JSON.stringify(prevProps.beat.features) !== JSON.stringify(nextProps.beat.features)) return false;
+  
+  // If all checks pass, props are equal - skip re-render
+  return true;
+});
 
 export default BeatRow;

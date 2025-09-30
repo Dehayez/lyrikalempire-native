@@ -41,8 +41,8 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const beats = externalBeats || allBeats;
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Virtual scrolling state
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
+  // Progressive rendering state - rows stay in DOM once rendered
+  const [renderedUpTo, setRenderedUpTo] = useState(50);
   const [rowHeight, setRowHeight] = useState(60);
   
   const { sortedItems: sortedBeats, sortConfig, onSort } = useSort(beats);
@@ -168,8 +168,10 @@ const filterOptionsWithCounts = useMemo(() => {
   const [filterDropdownHeight, setFilterDropdownHeight] = useState(0);
 
   useEffect(() => {
-    setCurrentBeats(filteredAndSortedBeats)
-  }, [filteredAndSortedBeats]);
+    setCurrentBeats(filteredAndSortedBeats);
+    // Reset rendered range when filtered beats change
+    setRenderedUpTo(Math.min(50, filteredAndSortedBeats.length - 1));
+  }, [filteredAndSortedBeats, setCurrentBeats]);
 
   const { selectedBeats, handleBeatClick } = useHandleBeatClick(beats, tableRef, currentBeat);
   const { handleUpdate, handleDelete } = useBeatActions();
@@ -197,14 +199,19 @@ const filterOptionsWithCounts = useMemo(() => {
     const scrollTop = containerRef.current.scrollTop;
     const viewportHeight = containerRef.current.clientHeight;
     
-    const buffer = 5;
-    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
-    const endIndex = Math.min(
-      filteredAndSortedBeats.length - 1,
-      Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer
-    );
+    // Calculate which row is at the bottom of the viewport
+    const buffer = 20; // Render ahead buffer
+    const bottomVisibleIndex = Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer;
     
-    setVisibleRange({ start: startIndex, end: endIndex });
+    // Progressive rendering: only increase renderedUpTo, never decrease
+    // This keeps all previously rendered rows in the DOM
+    setRenderedUpTo(prev => {
+      const newRenderedUpTo = Math.min(
+        filteredAndSortedBeats.length - 1,
+        Math.max(prev, bottomVisibleIndex)
+      );
+      return newRenderedUpTo;
+    });
   }, [filteredAndSortedBeats.length, rowHeight]);
 
   useEffect(() => {
@@ -461,68 +468,65 @@ const handlePlayPause = useCallback((beat) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedBeats, handlePlayPause, inputFocused]);
 
+  // Progressive rendering: Beat rows stay in DOM once rendered.
+  // As you scroll down, more rows are added but never removed.
+  // BeatRow components use React.memo to prevent re-rendering when props haven't changed.
   const virtualizedBeats = useMemo(() => {
-    // Generate the visible beats plus spacers
     const result = [];
     
-    // Add top spacer if needed
-    if (visibleRange.start > 0) {
-      result.push(
-        <tr key="top-spacer" style={{ height: `${visibleRange.start * rowHeight}px` }} />
-      );
-    }
+    // Render all beats from 0 to renderedUpTo (keeps all previously rendered beats in DOM)
+    const beatsToRender = filteredAndSortedBeats.slice(0, renderedUpTo + 1);
     
-  const visibleBeats = filteredAndSortedBeats.slice(visibleRange.start, visibleRange.end + 1);
-  visibleBeats.forEach((beat, relativeIndex) => {
-    const absoluteIndex = visibleRange.start + relativeIndex;
-    const reversedIndex = filteredAndSortedBeats.length - 1 - absoluteIndex;
-    const indexValue = playlistId ? absoluteIndex : reversedIndex;
+    beatsToRender.forEach((beat, absoluteIndex) => {
+      const reversedIndex = filteredAndSortedBeats.length - 1 - absoluteIndex;
+      const indexValue = playlistId ? absoluteIndex : reversedIndex;
 
-    result.push(
-      <React.Fragment key={`fragment-${beat.id}-${absoluteIndex}`}>
-        {hoverIndex === absoluteIndex && hoverPosition === 'top' && (
-          <tr className="drop-line">
-            <td colSpan="10"></td>
-          </tr>
-        )}
-        <BeatRow
-          key={beat.uniqueKey || `${beat.id}-${absoluteIndex}`}
-          beat={beat}
-          index={indexValue}
-          moveBeat={moveBeat}
-          handlePlayPause={handlePlayPause}
-          handleUpdate={handleUpdate}
-          isPlaying={isPlaying}
-          onBeatClick={onBeatClick}
-          selectedBeats={selectedBeats}
-          handleBeatClick={handleBeatClick}
-          openConfirmModal={openConfirmModal}
-          beats={beats}
-          activeContextMenu={activeContextMenu}
-          setActiveContextMenu={setActiveContextMenu}
-          currentBeat={currentBeat}
-          addToCustomQueue={addToCustomQueue}
-          searchText={searchText}
-          mode={mode}
-          deleteMode={deleteMode}
-          onUpdateBeat={onUpdateBeat}
-          playlistId={playlistId}
-          setBeats={setBeats}
-          setHoverIndex={setHoverIndex}
-          setHoverPosition={setHoverPosition}
-          isBeatCachedSync={isBeatCachedSync}
-          isOffline={isOffline}
-        />
-        {hoverIndex === absoluteIndex && hoverPosition === 'bottom' && (
-          <tr className="drop-line">
-            <td colSpan="10"></td>
-          </tr>
-        )}
-      </React.Fragment>
-    );
-  });
+      result.push(
+        <React.Fragment key={`fragment-${beat.id}-${absoluteIndex}`}>
+          {hoverIndex === absoluteIndex && hoverPosition === 'top' && (
+            <tr className="drop-line">
+              <td colSpan="10"></td>
+            </tr>
+          )}
+          <BeatRow
+            key={beat.uniqueKey || `${beat.id}-${absoluteIndex}`}
+            beat={beat}
+            index={indexValue}
+            moveBeat={moveBeat}
+            handlePlayPause={handlePlayPause}
+            handleUpdate={handleUpdate}
+            isPlaying={isPlaying}
+            onBeatClick={onBeatClick}
+            selectedBeats={selectedBeats}
+            handleBeatClick={handleBeatClick}
+            openConfirmModal={openConfirmModal}
+            beats={beats}
+            activeContextMenu={activeContextMenu}
+            setActiveContextMenu={setActiveContextMenu}
+            currentBeat={currentBeat}
+            addToCustomQueue={addToCustomQueue}
+            searchText={searchText}
+            mode={mode}
+            deleteMode={deleteMode}
+            onUpdateBeat={onUpdateBeat}
+            playlistId={playlistId}
+            setBeats={setBeats}
+            setHoverIndex={setHoverIndex}
+            setHoverPosition={setHoverPosition}
+            isBeatCachedSync={isBeatCachedSync}
+            isOffline={isOffline}
+          />
+          {hoverIndex === absoluteIndex && hoverPosition === 'bottom' && (
+            <tr className="drop-line">
+              <td colSpan="10"></td>
+            </tr>
+          )}
+        </React.Fragment>
+      );
+    });
     
-    const remainingRows = filteredAndSortedBeats.length - visibleRange.end - 1;
+    // Add spacer for unrendered rows at the bottom
+    const remainingRows = filteredAndSortedBeats.length - renderedUpTo - 1;
     if (remainingRows > 0) {
       result.push(
         <tr key="bottom-spacer" style={{ height: `${remainingRows * rowHeight}px` }} />
@@ -531,32 +535,19 @@ const handlePlayPause = useCallback((beat) => {
     
     return result;
   }, [
-    visibleRange, 
+    renderedUpTo,
     rowHeight, 
     filteredAndSortedBeats, 
     hoverIndex, 
     hoverPosition, 
     currentBeat,
-    handlePlayPause,
-    handleUpdate,
-    handleDelete, 
-    selectedBeat, 
-    isPlaying, 
-    handleBeatClick, 
     selectedBeats, 
-    openConfirmModal, 
-    beats, 
-    addToCustomQueue, 
+    isPlaying, 
     searchText, 
     mode, 
-    activeContextMenu, 
-    onBeatClick, 
-    deleteMode, 
-    onUpdateBeat, 
-    onUpdate, 
-    moveBeat, 
-    playlistId, 
-    setBeats
+    activeContextMenu,
+    playlistId,
+    isOffline
   ]);
 
   // Track modal state changes
