@@ -149,7 +149,41 @@ const AudioPlayer = ({
 
   // Enhanced error recovery (moved after volume extraction)
   const handleErrorWithRecovery = useCallback(async (error) => {
-    console.log('⚠️ [ERROR RECOVERY] Audio error detected:', error);
+    const audio = playerRef.current?.audio?.current;
+    const audioError = audio?.error;
+    
+    console.error('❌ [ERROR DEBUG] Audio error event fired:', {
+      beatId: currentBeat?.id,
+      beatTitle: currentBeat?.title,
+      audioFile: currentBeat?.audio,
+      errorCode: audioError?.code,
+      errorMessage: audioError?.message,
+      src: audio?.src,
+      readyState: audio?.readyState,
+      networkState: audio?.networkState,
+      currentTime: audio?.currentTime,
+      duration: audio?.duration,
+      paused: audio?.paused,
+      errorCodeMeaning: {
+        1: 'MEDIA_ERR_ABORTED - User aborted',
+        2: 'MEDIA_ERR_NETWORK - Network error',
+        3: 'MEDIA_ERR_DECODE - Decode error',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
+      }[audioError?.code] || 'Unknown error code',
+      readyStateMap: {
+        0: 'HAVE_NOTHING',
+        1: 'HAVE_METADATA',
+        2: 'HAVE_CURRENT_DATA',
+        3: 'HAVE_FUTURE_DATA',
+        4: 'HAVE_ENOUGH_DATA'
+      }[audio?.readyState],
+      networkStateMap: {
+        0: 'NETWORK_EMPTY',
+        1: 'NETWORK_IDLE',
+        2: 'NETWORK_LOADING',
+        3: 'NETWORK_NO_SOURCE'
+      }[audio?.networkState]
+    });
     
     // Cancel any pending error recovery
     if (errorRecoveryRef.current) {
@@ -158,7 +192,6 @@ const AudioPlayer = ({
 
     // TEMPORARILY DISABLED - Skip error recovery for debugging
     console.log('🔄 [ERROR RECOVERY] Error recovery temporarily disabled for debugging');
-    console.error('❌ [ERROR RECOVERY] Audio error (recovery disabled):', error);
     
     /*
     // Attempt recovery
@@ -191,7 +224,7 @@ const AudioPlayer = ({
 
     console.error('❌ [ERROR RECOVERY] Audio error with recovery:', error, recovery);
     */
-  }, [currentBeat, isPlaying, volume, onNext, audioPlayer]);
+  }, [currentBeat, isPlaying, volume, onNext, audioPlayer, playerRef]);
 
   // Get audio player state
   const {

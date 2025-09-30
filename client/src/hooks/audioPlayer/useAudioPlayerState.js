@@ -93,6 +93,52 @@ export const useAudioPlayerState = ({
     return !navigator.onLine;
   }, []);
 
+  // Fix improperly encoded URLs from server
+  const fixUrlEncoding = useCallback((url) => {
+    try {
+      // Parse the URL
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      
+      // The filename is the last part of the path
+      const filename = pathParts[pathParts.length - 1];
+      
+      // Check if filename contains unencoded special characters
+      const needsEncoding = /[,;]/.test(filename);
+      
+      if (needsEncoding) {
+        console.log('🔧 [URL FIX DEBUG] Fixing improperly encoded URL:', {
+          original: filename,
+          hasComma: filename.includes(','),
+          hasSemicolon: filename.includes(';')
+        });
+        
+        // IMPORTANT: Only encode the problematic characters, don't re-encode already encoded ones
+        // Replace unencoded commas and semicolons without touching already encoded characters
+        const fixedFilename = filename
+          .replace(/,/g, '%2C')    // Comma → %2C
+          .replace(/;/g, '%3B');   // Semicolon → %3B
+        
+        pathParts[pathParts.length - 1] = fixedFilename;
+        urlObj.pathname = pathParts.join('/');
+        
+        const fixedUrl = urlObj.toString();
+        console.log('✅ [URL FIX DEBUG] Fixed URL:', {
+          originalFilename: filename,
+          fixedFilename,
+          fixedUrl: fixedUrl.substring(0, 100)
+        });
+        
+        return fixedUrl;
+      }
+      
+      return url;
+    } catch (e) {
+      console.error('❌ [URL FIX DEBUG] Error fixing URL encoding:', e);
+      return url;
+    }
+  }, []);
+
   // Load audio source
   const loadAudio = useCallback(async () => {
     if (!currentBeat) {
@@ -155,7 +201,11 @@ export const useAudioPlayerState = ({
       // This will fail gracefully if offline
       try {
         console.log('🔗 [AUDIO SRC DEBUG] Fetching signed URL from server...');
-        const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        const rawSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        
+        // Fix any URL encoding issues (e.g., unencoded commas)
+        const signedUrl = fixUrlEncoding(rawSignedUrl);
+        
         originalUrlRef.current = signedUrl;
         console.log('✅ [AUDIO SRC DEBUG] Got signed URL:', signedUrl.substring(0, 100));
 
@@ -231,7 +281,7 @@ export const useAudioPlayerState = ({
       
       cacheInProgressRef.current = false;
     }
-  }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari, isOffline]);
+  }, [currentBeat?.id, currentBeat?.user_id, currentBeat?.audio, markBeatAsCached, isSafari, isOffline, fixUrlEncoding]);
 
   // Refresh audio source URL
   const refreshAudioSrc = useCallback(async (force = false) => {

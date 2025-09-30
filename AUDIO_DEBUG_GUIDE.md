@@ -252,9 +252,9 @@ Remember: The logs show the complete flow from clicking a track to actually hear
 
 ## Known Issues (Fixed)
 
-### URL Encoding Mismatch Bug
+### Bug #1: URL Encoding Mismatch in Event Matching
 
-**Symptoms**: Tracks with spaces or special characters in filenames load successfully but never play.
+**Symptoms**: Tracks with spaces in filenames (e.g., "Thrust in Loyalty") load successfully but never play.
 
 **What happens**:
 1. Audio loads: ✅
@@ -268,6 +268,50 @@ Remember: The logs show the complete flow from clicking a track to actually hear
 
 The string comparison failed, so the player thought the event was for the wrong track.
 
-**Fix**: Added `decodeURIComponent()` to decode the URL before comparing.
+**Fix**: Added `decodeURIComponent()` to decode the URL before comparing in `useAudioSync.js`.
 
 **How to verify**: Look for 🔍 `[EVENT CHECK DEBUG]` logs showing `matches: true` or `false`.
+
+---
+
+### Bug #2: Improperly Encoded Special Characters in URLs
+
+**Symptoms**: Tracks with commas or semicolons in filenames (e.g., "Dancy, dancy") fail to load with error code 4.
+
+**What happens**:
+1. Audio loads: ✅
+2. Browser receives URL with unencoded comma: `Dancy,%20dancy.aac` 
+3. Browser rejects invalid URL
+4. Error: ❌ **MEDIA_ERR_SRC_NOT_SUPPORTED - Format error**
+
+**Root cause**: The server returns signed URLs with special characters (`,` `;`) that aren't properly URL-encoded. Commas should be `%2C`, semicolons should be `%3B`.
+
+**Fix**: Added `fixUrlEncoding()` function in `useAudioPlayerState.js` that:
+1. Detects unencoded special characters (`,` `;`) in the URL
+2. Selectively encodes ONLY those characters (`,` → `%2C`, `;` → `%3B`)
+3. Preserves already-encoded characters like spaces (`%20`)
+
+**IMPORTANT**: We use targeted `.replace()` instead of `encodeURIComponent()` to avoid double-encoding already-encoded characters (e.g., `%20` → `%2520`).
+
+**How to verify**: Look for 🔧 `[URL FIX DEBUG]` logs showing the before/after encoding.
+
+**Example**:
+```
+Original:  Dancy,%20dancy.aac
+Fixed:     Dancy%2C%20dancy.aac
+NOT:       Dancy%2C%2520dancy.aac  ← This would be double-encoded and break authentication!
+```
+
+---
+
+### Summary
+
+Both bugs involved URL encoding issues but in different ways:
+- **Bug #1**: URLs were encoded but we needed to decode them for comparison
+- **Bug #2**: URLs weren't encoded properly and we needed to encode them for the browser
+
+These fixes handle filenames with:
+- Spaces: `My Track.aac`
+- Commas: `Dancy, dancy.aac`
+- Semicolons: `Track; Version 2.aac`
+- Other special characters
