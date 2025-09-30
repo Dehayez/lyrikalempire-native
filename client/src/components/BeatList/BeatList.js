@@ -36,13 +36,14 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   
   
   const { setPlaylistId } = usePlaylist();
-  const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats } = useBeat();
+  const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats, loadedFromCache } = useBeat();
   const { user } = useUser();
   const beats = externalBeats || allBeats;
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Progressive rendering state - rows stay in DOM once rendered
-  const [renderedUpTo, setRenderedUpTo] = useState(50);
+  // Start with 20 beats for ultra-fast initial render
+  const [renderedUpTo, setRenderedUpTo] = useState(20);
   const [rowHeight, setRowHeight] = useState(60);
   
   const { sortedItems: sortedBeats, sortConfig, onSort } = useSort(beats);
@@ -169,8 +170,8 @@ const filterOptionsWithCounts = useMemo(() => {
 
   useEffect(() => {
     setCurrentBeats(filteredAndSortedBeats);
-    // Reset rendered range when filtered beats change
-    setRenderedUpTo(Math.min(50, filteredAndSortedBeats.length - 1));
+    // Reset to initial render range when beats change
+    setRenderedUpTo(Math.min(20, filteredAndSortedBeats.length - 1));
   }, [filteredAndSortedBeats, setCurrentBeats]);
 
   const { selectedBeats, handleBeatClick } = useHandleBeatClick(beats, tableRef, currentBeat);
@@ -200,16 +201,21 @@ const filterOptionsWithCounts = useMemo(() => {
     const viewportHeight = containerRef.current.clientHeight;
     
     // Calculate which row is at the bottom of the viewport
-    const buffer = 20; // Render ahead buffer
+    const buffer = 10; // Smaller buffer for better performance
     const bottomVisibleIndex = Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer;
     
     // Progressive rendering: only increase renderedUpTo, never decrease
-    // This keeps all previously rendered rows in the DOM
     setRenderedUpTo(prev => {
       const newRenderedUpTo = Math.min(
         filteredAndSortedBeats.length - 1,
         Math.max(prev, bottomVisibleIndex)
       );
+      
+      // Only update if there's a meaningful change (reduce re-renders)
+      if (newRenderedUpTo - prev < 5 && newRenderedUpTo !== filteredAndSortedBeats.length - 1) {
+        return prev;
+      }
+      
       return newRenderedUpTo;
     });
   }, [filteredAndSortedBeats.length, rowHeight]);
@@ -227,11 +233,25 @@ const filterOptionsWithCounts = useMemo(() => {
     const container = containerRef.current;
     if (container) {
       calculateVisibleRows();
-      container.addEventListener('scroll', calculateVisibleRows);
+      
+      // Throttle scroll events for better performance
+      let isScrolling = false;
+      
+      const throttledScroll = () => {
+        if (!isScrolling) {
+          isScrolling = true;
+          requestAnimationFrame(() => {
+            calculateVisibleRows();
+            isScrolling = false;
+          });
+        }
+      };
+      
+      container.addEventListener('scroll', throttledScroll, { passive: true });
       window.addEventListener('resize', calculateVisibleRows);
       
       return () => {
-        container.removeEventListener('scroll', calculateVisibleRows);
+        container.removeEventListener('scroll', throttledScroll);
         window.removeEventListener('resize', calculateVisibleRows);
       };
     }
@@ -375,7 +395,16 @@ const handlePlayPause = useCallback((beat) => {
   // Handle loading state and determine when to show messages
   useEffect(() => {
     if (user.id) {
-      // Start loading when user is authenticated
+      // If loaded from cache, show immediately without skeleton
+      if (loadedFromCache && beats.length > 0) {
+        setIsLoadingBeats(false);
+        setHasLoadedInitially(true);
+        setShowMessage(false);
+        console.log('⚡ Instant render - first 20 beats from cache, more render as you scroll');
+        return;
+      }
+      
+      // Start loading when user is authenticated (no cache)
       setIsLoadingBeats(true);
       setHasLoadedInitially(false);
       setShowMessage(false);
@@ -398,7 +427,7 @@ const handlePlayPause = useCallback((beat) => {
       setHasLoadedInitially(true);
       setShowMessage(true);
     }
-  }, [user.id]);
+  }, [user.id, loadedFromCache, beats.length]);
 
   // When beats actually load, stop showing loading state
   useEffect(() => {
@@ -468,13 +497,15 @@ const handlePlayPause = useCallback((beat) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedBeats, handlePlayPause, inputFocused]);
 
-  // Progressive rendering: Beat rows stay in DOM once rendered.
-  // As you scroll down, more rows are added but never removed.
-  // BeatRow components use React.memo to prevent re-rendering when props haven't changed.
+  // Optimized progressive rendering:
+  // - Cache loads DATA instantly (no API wait)
+  // - Render first 20 beats immediately (instant UI)
+  // - Render more as user scrolls (prevents memory bloat)
+  // - React.memo prevents unnecessary re-renders
   const virtualizedBeats = useMemo(() => {
     const result = [];
     
-    // Render all beats from 0 to renderedUpTo (keeps all previously rendered beats in DOM)
+    // Only render beats from 0 to renderedUpTo
     const beatsToRender = filteredAndSortedBeats.slice(0, renderedUpTo + 1);
     
     beatsToRender.forEach((beat, absoluteIndex) => {
