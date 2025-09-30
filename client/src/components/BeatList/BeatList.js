@@ -41,9 +41,8 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const beats = externalBeats || allBeats;
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Progressive rendering state - rows stay in DOM once rendered
-  // Start with 20 beats for ultra-fast initial render
-  const [renderedUpTo, setRenderedUpTo] = useState(20);
+  // Virtual scrolling state - only render visible rows + buffer
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 });
   const [rowHeight, setRowHeight] = useState(60);
   
   const { sortedItems: sortedBeats, sortConfig, onSort } = useSort(beats);
@@ -170,8 +169,8 @@ const filterOptionsWithCounts = useMemo(() => {
 
   useEffect(() => {
     setCurrentBeats(filteredAndSortedBeats);
-    // Reset to initial render range when beats change
-    setRenderedUpTo(Math.min(20, filteredAndSortedBeats.length - 1));
+    // Reset visible range when beats change
+    setVisibleRange({ start: 0, end: Math.min(30, filteredAndSortedBeats.length - 1) });
   }, [filteredAndSortedBeats, setCurrentBeats]);
 
   const { selectedBeats, handleBeatClick } = useHandleBeatClick(beats, tableRef, currentBeat);
@@ -200,23 +199,20 @@ const filterOptionsWithCounts = useMemo(() => {
     const scrollTop = containerRef.current.scrollTop;
     const viewportHeight = containerRef.current.clientHeight;
     
-    // Calculate which row is at the bottom of the viewport
-    const buffer = 10; // Smaller buffer for better performance
-    const bottomVisibleIndex = Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer;
+    // Calculate visible window with buffer
+    const buffer = 15; // Render 15 extra rows above and below viewport
+    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
+    const endIndex = Math.min(
+      filteredAndSortedBeats.length - 1,
+      Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer
+    );
     
-    // Progressive rendering: only increase renderedUpTo, never decrease
-    setRenderedUpTo(prev => {
-      const newRenderedUpTo = Math.min(
-        filteredAndSortedBeats.length - 1,
-        Math.max(prev, bottomVisibleIndex)
-      );
-      
-      // Only update if there's a meaningful change (reduce re-renders)
-      if (newRenderedUpTo - prev < 5 && newRenderedUpTo !== filteredAndSortedBeats.length - 1) {
-        return prev;
+    // Only update if the range changed meaningfully
+    setVisibleRange(prev => {
+      if (Math.abs(prev.start - startIndex) < 5 && Math.abs(prev.end - endIndex) < 5) {
+        return prev; // Skip update for small changes
       }
-      
-      return newRenderedUpTo;
+      return { start: startIndex, end: endIndex };
     });
   }, [filteredAndSortedBeats.length, rowHeight]);
 
@@ -400,7 +396,7 @@ const handlePlayPause = useCallback((beat) => {
         setIsLoadingBeats(false);
         setHasLoadedInitially(true);
         setShowMessage(false);
-        console.log('⚡ Instant render - first 20 beats from cache, more render as you scroll');
+        console.log('⚡ Instant render - using virtual scrolling (only ~30-45 beats rendered at a time)');
         return;
       }
       
@@ -497,18 +493,27 @@ const handlePlayPause = useCallback((beat) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedBeats, handlePlayPause, inputFocused]);
 
-  // Optimized progressive rendering:
+  // True virtual scrolling:
   // - Cache loads DATA instantly (no API wait)
-  // - Render first 20 beats immediately (instant UI)
-  // - Render more as user scrolls (prevents memory bloat)
+  // - Only render visible rows + buffer (~30-45 rows max)
+  // - Spacers for non-rendered rows (top and bottom)
   // - React.memo prevents unnecessary re-renders
+  // - Memory stays low regardless of list size
   const virtualizedBeats = useMemo(() => {
     const result = [];
     
-    // Only render beats from 0 to renderedUpTo
-    const beatsToRender = filteredAndSortedBeats.slice(0, renderedUpTo + 1);
+    // Add top spacer for rows before visible range
+    if (visibleRange.start > 0) {
+      result.push(
+        <tr key="top-spacer" style={{ height: `${visibleRange.start * rowHeight}px` }} />
+      );
+    }
     
-    beatsToRender.forEach((beat, absoluteIndex) => {
+    // Only render visible beats
+    const visibleBeats = filteredAndSortedBeats.slice(visibleRange.start, visibleRange.end + 1);
+    
+    visibleBeats.forEach((beat, relativeIndex) => {
+      const absoluteIndex = visibleRange.start + relativeIndex;
       const reversedIndex = filteredAndSortedBeats.length - 1 - absoluteIndex;
       const indexValue = playlistId ? absoluteIndex : reversedIndex;
 
@@ -556,8 +561,8 @@ const handlePlayPause = useCallback((beat) => {
       );
     });
     
-    // Add spacer for unrendered rows at the bottom
-    const remainingRows = filteredAndSortedBeats.length - renderedUpTo - 1;
+    // Add bottom spacer for rows after visible range
+    const remainingRows = filteredAndSortedBeats.length - visibleRange.end - 1;
     if (remainingRows > 0) {
       result.push(
         <tr key="bottom-spacer" style={{ height: `${remainingRows * rowHeight}px` }} />
@@ -566,7 +571,8 @@ const handlePlayPause = useCallback((beat) => {
     
     return result;
   }, [
-    renderedUpTo,
+    visibleRange.start,
+    visibleRange.end,
     rowHeight, 
     filteredAndSortedBeats, 
     hoverIndex, 
