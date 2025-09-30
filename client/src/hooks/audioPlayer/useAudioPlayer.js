@@ -48,16 +48,7 @@ export const useAudioPlayer = ({
 
   // Optimized beat management functions for Safari
   const handlePlay = useCallback((beat, play, beats) => {
-    console.log('🎵 [PLAYER DEBUG] handlePlay called:', {
-      beatId: beat?.id,
-      beatTitle: beat?.title,
-      play,
-      currentBeatId: currentBeatRef.current?.id,
-      isSameBeat: currentBeatRef.current?.id === beat?.id
-    });
-    
     if (!beat) {
-      console.log('⚠️ [PLAYER DEBUG] No beat provided, clearing player');
       setCurrentBeat(null);
       setIsPlaying(false);
       return;
@@ -65,14 +56,11 @@ export const useAudioPlayer = ({
 
     // For Safari, use immediate state updates
     if (isSafari()) {
-      console.log('🧮 [PLAYER DEBUG] Safari: Using immediate state updates');
       if (currentBeatRef.current?.id === beat.id) {
         // Same beat - just toggle play/pause (immediate)
-        console.log('▶️ [PLAYER DEBUG] Safari: Same beat, toggling play/pause to:', play);
         setIsPlaying(play);
       } else {
         // Different beat - change track (immediate)
-        console.log('🔄 [PLAYER DEBUG] Safari: Different beat, changing track');
         setCurrentBeat(beat);
         setIsPlaying(play);
       }
@@ -81,10 +69,8 @@ export const useAudioPlayer = ({
 
     // For other browsers, use standard logic
     if (currentBeatRef.current?.id === beat.id) {
-      console.log('▶️ [PLAYER DEBUG] Same beat, toggling play/pause to:', play);
       setIsPlaying(play);
     } else {
-      console.log('🔄 [PLAYER DEBUG] Different beat, changing track');
       setCurrentBeat(beat);
       setIsPlaying(play);
     }
@@ -92,10 +78,7 @@ export const useAudioPlayer = ({
 
   // Optimized next track handler
   const handleNext = useCallback((beats) => {
-    if (!beats.length) {
-      console.log('⚠️ [PLAYER DEBUG] handleNext: No beats in playlist');
-      return;
-    }
+    if (!beats.length) return;
     
     let nextIndex;
     if (shuffle) {
@@ -108,33 +91,16 @@ export const useAudioPlayer = ({
     }
     
     const nextBeat = beats[nextIndex];
-    console.log('⏭️ [PLAYER DEBUG] handleNext: Moving to next track:', {
-      currentIndex: beats.findIndex(b => b.id === currentBeatRef.current?.id),
-      nextIndex,
-      nextBeatId: nextBeat?.id,
-      nextBeatTitle: nextBeat?.title,
-      shuffle
-    });
     handlePlay(nextBeat, true, beats);
   }, [shuffle, handlePlay]);
 
   // Optimized previous track handler
   const handlePrev = useCallback((beats) => {
-    if (!beats.length) {
-      console.log('⚠️ [PLAYER DEBUG] handlePrev: No beats in playlist');
-      return;
-    }
+    if (!beats.length) return;
     
     const currentIndex = beats.findIndex(b => b.id === currentBeatRef.current?.id);
     const prevIndex = (currentIndex - 1 + beats.length) % beats.length;
     const prevBeat = beats[prevIndex];
-    
-    console.log('⏮️ [PLAYER DEBUG] handlePrev: Moving to previous track:', {
-      currentIndex,
-      prevIndex,
-      prevBeatId: prevBeat?.id,
-      prevBeatTitle: prevBeat?.title
-    });
     
     handlePlay(prevBeat, true, beats);
   }, [handlePlay]);

@@ -149,49 +149,10 @@ const AudioPlayer = ({
 
   // Enhanced error recovery (moved after volume extraction)
   const handleErrorWithRecovery = useCallback(async (error) => {
-    const audio = playerRef.current?.audio?.current;
-    const audioError = audio?.error;
-    
-    console.error('❌ [ERROR DEBUG] Audio error event fired:', {
-      beatId: currentBeat?.id,
-      beatTitle: currentBeat?.title,
-      audioFile: currentBeat?.audio,
-      errorCode: audioError?.code,
-      errorMessage: audioError?.message,
-      src: audio?.src,
-      readyState: audio?.readyState,
-      networkState: audio?.networkState,
-      currentTime: audio?.currentTime,
-      duration: audio?.duration,
-      paused: audio?.paused,
-      errorCodeMeaning: {
-        1: 'MEDIA_ERR_ABORTED - User aborted',
-        2: 'MEDIA_ERR_NETWORK - Network error',
-        3: 'MEDIA_ERR_DECODE - Decode error',
-        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
-      }[audioError?.code] || 'Unknown error code',
-      readyStateMap: {
-        0: 'HAVE_NOTHING',
-        1: 'HAVE_METADATA',
-        2: 'HAVE_CURRENT_DATA',
-        3: 'HAVE_FUTURE_DATA',
-        4: 'HAVE_ENOUGH_DATA'
-      }[audio?.readyState],
-      networkStateMap: {
-        0: 'NETWORK_EMPTY',
-        1: 'NETWORK_IDLE',
-        2: 'NETWORK_LOADING',
-        3: 'NETWORK_NO_SOURCE'
-      }[audio?.networkState]
-    });
-    
     // Cancel any pending error recovery
     if (errorRecoveryRef.current) {
       clearTimeout(errorRecoveryRef.current);
     }
-
-    // TEMPORARILY DISABLED - Skip error recovery for debugging
-    console.log('🔄 [ERROR RECOVERY] Error recovery temporarily disabled for debugging');
     
     /*
     // Attempt recovery
@@ -389,26 +350,8 @@ const AudioPlayer = ({
     setCurrentBeat
   });
 
-  // Log isPlaying state changes
-  useEffect(() => {
-    console.log('🎮 [STATE DEBUG] isPlaying changed:', {
-      isPlaying,
-      beatId: currentBeat?.id,
-      beatTitle: currentBeat?.title,
-      audioSrc: audioSrc?.substring(0, 100),
-      timestamp: new Date().toISOString()
-    });
-  }, [isPlaying, currentBeat?.id, currentBeat?.title, audioSrc]);
-
   // Immediately reset time/progress on beat change (click or programmatic)
   useEffect(() => {
-    console.log('🔄 [BEAT CHANGE DEBUG] Beat changed:', {
-      beatId: currentBeat?.id,
-      beatTitle: currentBeat?.title,
-      audioFile: currentBeat?.audio,
-      isPlaying
-    });
-    
     // Ensure UI shows 00:00 instantly and prevent carryover
     setCurrentTimeState(0);
     setProgress(0);
@@ -622,25 +565,6 @@ const AudioPlayer = ({
 
   // Custom handlers for audio events
   const handleCanPlay = useCallback((e) => {
-    const audio = e.target;
-    console.log('✅ [PLAYBACK DEBUG] canplay event fired:', {
-      beatId: currentBeat?.id,
-      beatTitle: currentBeat?.title,
-      src: audio?.src?.substring(0, 100),
-      readyState: audio?.readyState,
-      networkState: audio?.networkState,
-      duration: audio?.duration,
-      paused: audio?.paused,
-      isPlaying,
-      readyStateMap: {
-        0: 'HAVE_NOTHING',
-        1: 'HAVE_METADATA', 
-        2: 'HAVE_CURRENT_DATA',
-        3: 'HAVE_FUTURE_DATA',
-        4: 'HAVE_ENOUGH_DATA'
-      }[audio?.readyState]
-    });
-    
     // Mark as loaded to prevent duplicate play attempts
     hasLoadedRef.current = true;
     
@@ -659,50 +583,26 @@ const AudioPlayer = ({
     
     // For Safari, we need to manually trigger play if autoPlay is true
     if (isSafari && isPlaying && audioCore.isPaused()) {
-      console.log('🧮 [PLAYBACK DEBUG] Safari: Manually triggering play after canplay');
       setTimeout(() => {
         audioCore.play().catch(error => {
-          console.error('❌ [PLAYBACK DEBUG] Safari: Error playing audio on canplay event:', error);
+          console.error('Safari: Error playing audio on canplay event:', error);
         });
       }, 100);
     }
-  }, [handleAudioReady, isSafari, isPlaying, audioCore, currentBeat]);
+  }, [handleAudioReady, isSafari, isPlaying, audioCore]);
 
   // Custom error handler with better logging
   const handleError = useCallback((e) => {
     const audio = e.target;
     const error = audio?.error;
     
-    console.error('❌ [AUDIO DEBUG] Audio error event fired:', {
-      beatId: currentBeat?.id,
-      error: error?.message || 'Unknown error',
-      code: error?.code,
-      src: audio?.src,
-      readyState: audio?.readyState,
-      networkState: audio?.networkState,
-      errorCodeMeaning: {
-        1: 'MEDIA_ERR_ABORTED - User aborted',
-        2: 'MEDIA_ERR_NETWORK - Network error',
-        3: 'MEDIA_ERR_DECODE - Decode error', 
-        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Source not supported'
-      }[error?.code] || 'Unknown error code'
-    });
+    if (error) {
+      console.error('Audio error:', error.code, error.message);
+    }
     
     // Handle Safari-specific errors
     if (isSafari && error) {
       handleSafariError(error);
-      
-      // For Safari, log detailed error info
-      console.error('Safari audio error:', {
-        errorCode: error.code,
-        errorMessage: error.message,
-        audioSrc: audio.src,
-        currentBeat: currentBeat?.title,
-        networkState: audio.networkState,
-        readyState: audio.readyState,
-        hasLoadedRef: hasLoadedRef.current,
-        retryCount: retryCountRef.current
-      });
       
       // For network errors or CORS issues in Safari, retry with fresh URL
       if ((error.code === 2 || error.code === 4) && !hasLoadedRef.current) {
@@ -711,16 +611,6 @@ const AudioPlayer = ({
     }
     
     if (error) {
-      const errorTypes = {
-        1: 'MEDIA_ERR_ABORTED - The fetching of the audio was aborted',
-        2: 'MEDIA_ERR_NETWORK - A network error occurred while fetching the audio',
-        3: 'MEDIA_ERR_DECODE - A decoding error occurred',
-        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The audio format is not supported'
-      };
-      
-      const errorType = errorTypes[error.code] || `Unknown error code: ${error.code}`;
-      console.error(`Audio error: ${errorType}`, error);
-      
       // For non-Safari browsers, also retry on network errors
       if (!isSafari && error.code === 2 && !hasLoadedRef.current) {
         retryWithFreshUrl();
@@ -728,24 +618,20 @@ const AudioPlayer = ({
       
       // Test if it's a network/CORS issue by trying to fetch the URL directly
       if (error.code === 2 && audio.src) {
-        // Testing direct fetch of audio URL
         fetch(audio.src, { method: 'HEAD' })
           .then(response => {
             if (response.status === 404 && !hasLoadedRef.current) {
-              // If direct fetch returns 404, definitely retry with fresh URL
               retryWithFreshUrl();
             }
           })
           .catch(fetchError => {
-            console.error('Direct fetch failed:', fetchError);
-            // If direct fetch fails, try with fresh URL
             if (!hasLoadedRef.current) {
               retryWithFreshUrl();
             }
           });
       }
     }
-  }, [audioSrc, currentBeat, handleSafariError, isSafari, retryWithFreshUrl]);
+  }, [currentBeat, handleSafariError, isSafari, retryWithFreshUrl]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -772,63 +658,15 @@ const AudioPlayer = ({
           ref={playerRef}
           src={audioSrc || undefined}
           autoPlayAfterSrcChange={false}
-          onPlay={() => {
-            console.log('▶️ [PLAYBACK DEBUG] Play event fired:', {
-              beatId: currentBeat?.id,
-              beatTitle: currentBeat?.title
-            });
-            setIsPlaying(true);
-          }}
-          onPause={() => {
-            console.log('⏸️ [PLAYBACK DEBUG] Pause event fired:', {
-              beatId: currentBeat?.id,
-              beatTitle: currentBeat?.title
-            });
-            setIsPlaying(false);
-          }}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
           onCanPlay={handleCanPlay}
-          onEnded={() => {
-            console.log('🏁 [PLAYBACK DEBUG] Ended event fired, moving to next track');
-            onNext?.();
-          }}
-          onLoadStart={() => {
-            console.log('🔄 [PLAYBACK DEBUG] loadstart event fired:', {
-              beatId: currentBeat?.id,
-              src: audioSrc?.substring(0, 100)
-            });
-          }}
-          onLoadedMetadata={(e) => {
-            console.log('📊 [PLAYBACK DEBUG] loadedmetadata event fired:', {
-              duration: e.target.duration,
-              readyState: e.target.readyState
-            });
-          }}
-          onLoadedData={(e) => {
-            console.log('📊 [PLAYBACK DEBUG] loadeddata event fired:', {
-              readyState: e.target.readyState
-            });
-          }}
-          onWaiting={() => {
-            console.log('⏳ [PLAYBACK DEBUG] waiting event fired (buffering)');
-          }}
-          onStalled={() => {
-            console.warn('⚠️ [PLAYBACK DEBUG] stalled event fired (network stalled)');
-          }}
-          onSuspend={() => {
-            console.log('🔍 [PLAYBACK DEBUG] suspend event fired (browser suspended loading)');
-          }}
+          onEnded={() => onNext?.()}
           onError={handleErrorWithRecovery}
           {...preventDefaultAudioEvents}
           className="audio-player__main-player"
           style={{ display: 'none' }} // Hide the main player
         />
-        
-        {/* Debug info */}
-        {audioSrc && (
-          <div style={{ display: 'none' }}>
-            <p>Debug: Audio source set to: {audioSrc.substring(0, 100)}...</p>
-          </div>
-        )}
 
       {/* Mobile player */}
       {shouldShowMobilePlayer && (

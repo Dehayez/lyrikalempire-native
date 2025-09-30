@@ -73,19 +73,10 @@ export const useAudioState = ({
    */
   const loadAudio = useCallback(async (force = false) => {
     if (!currentBeat) {
-      console.log('🔍 [LOAD DEBUG] No current beat, clearing audio');
       cleanup();
       setAudioSrc('');
       return;
     }
-
-    console.log('🎵 [LOAD DEBUG] Starting to load audio:', {
-      beatId: currentBeat.id,
-      title: currentBeat.title,
-      audioFile: currentBeat.audio,
-      userId: currentBeat.user_id,
-      force
-    });
 
     try {
       setIsLoading(true);
@@ -98,7 +89,6 @@ export const useAudioState = ({
         currentBeat.audio
       );
       setIsCached(isCached);
-      console.log('💾 [LOAD DEBUG] Cache check:', { isCached });
 
       if (isCached && !force) {
         handleProgress('loading-cache', 50);
@@ -107,26 +97,20 @@ export const useAudioState = ({
           currentBeat.audio
         );
         if (cachedUrl) {
-          console.log('✅ [LOAD DEBUG] Using cached audio URL:', cachedUrl.substring(0, 100));
           setAudioSrc(cachedUrl);
           setIsLoading(false);
           handleProgress('ready', 100);
           return;
-        } else {
-          console.warn('⚠️ [LOAD DEBUG] Cache check passed but failed to get cached URL');
         }
       }
 
       // Get fresh signed URL
       handleProgress('fetching-url', 20);
-      console.log('🔗 [LOAD DEBUG] Fetching signed URL...');
       const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
       lastUrlRefreshRef.current = Date.now();
-      console.log('✅ [LOAD DEBUG] Got signed URL:', signedUrl.substring(0, 100));
 
       if (isSafari) {
         // Safari: use signed URL directly
-        console.log('🧮 [LOAD DEBUG] Safari detected, using signed URL directly');
         setAudioSrc(signedUrl);
         audioCacheService.originalUrls.set(
           audioCacheService.getCacheKey(currentBeat.user_id, currentBeat.audio),
@@ -135,7 +119,6 @@ export const useAudioState = ({
         handleProgress('ready', 100);
       } else {
         // Other browsers: cache and use blob URL
-        console.log('🌐 [LOAD DEBUG] Non-Safari browser, downloading and caching...');
         handleProgress('downloading', 30);
         const audioUrl = await audioCacheService.preloadAudio(
           currentBeat.user_id,
@@ -143,22 +126,15 @@ export const useAudioState = ({
           signedUrl,
           (progress) => handleProgress('downloading', 30 + (progress * 0.7))
         );
-        console.log('✅ [LOAD DEBUG] Audio cached, blob URL created:', audioUrl.substring(0, 100));
         setAudioSrc(audioUrl);
       }
 
       setIsLoading(false);
       setRetryCount(0);
       handleProgress('ready', 100);
-      console.log('✅ [LOAD DEBUG] Audio loading complete');
 
     } catch (err) {
-      console.error('❌ [LOAD DEBUG] Error loading audio:', {
-        error: err.message,
-        stack: err.stack,
-        beatId: currentBeat.id,
-        audioFile: currentBeat.audio
-      });
+      console.error('Error loading audio:', err);
       setError(err);
       handleProgress('error', 0);
       onError?.(err);
@@ -166,13 +142,10 @@ export const useAudioState = ({
       // Retry logic with exponential backoff
       if (retryCount < MAX_RETRIES) {
         const delay = Math.min(1000 * Math.pow(2, retryCount), 8000);
-        console.log(`🔄 [LOAD DEBUG] Scheduling retry ${retryCount + 1}/${MAX_RETRIES} in ${delay}ms`);
         retryTimeoutRef.current = setTimeout(() => {
           setRetryCount(prev => prev + 1);
           loadAudio(true);
         }, delay);
-      } else {
-        console.error('❌ [LOAD DEBUG] Max retries reached, giving up');
       }
     }
   }, [currentBeat, cleanup, isSafari, retryCount, handleProgress, onError]);
