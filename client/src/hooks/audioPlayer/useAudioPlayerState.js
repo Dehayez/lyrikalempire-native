@@ -73,6 +73,14 @@ export const useAudioPlayerState = ({
       if (user) {
         const artistName = user.name || user.username || '\u00A0';
         setArtistName(artistName);
+        
+        // Enforce cache size limit (max 50 artists)
+        if (artistCache.current.size >= 50) {
+          // Remove oldest entry (first entry in Map)
+          const firstKey = artistCache.current.keys().next().value;
+          artistCache.current.delete(firstKey);
+        }
+        
         artistCache.current.set(currentBeat.user_id, artistName);
         artistLoadRetryCount.current = 0;
       }
@@ -378,6 +386,21 @@ export const useAudioPlayerState = ({
       }
     };
   }, [currentBeat?.id]);
+
+  // Cleanup on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Clear artist cache
+      if (artistCache.current) {
+        artistCache.current.clear();
+      }
+      
+      // Clear any pending timeouts
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Derived state
   const shouldShowFullPagePlayer = isFullPage; // Render when full page is requested

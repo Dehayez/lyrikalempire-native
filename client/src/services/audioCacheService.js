@@ -33,13 +33,20 @@ class AudioCacheService {
     this.storeName = 'audioFiles';
     this.isSafariBrowser = isSafariBrowser;
     
-    // Store original URLs for Safari
+    // Store original URLs for Safari with size limit
     this.originalUrls = new Map();
+    this.maxOriginalUrls = 100; // Limit to prevent memory leaks
     
     // Track failed URLs to avoid repeated failures
     this.failedUrls = new Map();
+    this.maxFailedUrls = 50; // Limit to prevent memory leaks
     
     this.init();
+    
+    // Periodic cleanup every 5 minutes
+    this.cleanupInterval = setInterval(() => {
+      this.performPeriodicCleanup();
+    }, 5 * 60 * 1000);
   }
 
   async init() {
@@ -155,9 +162,9 @@ class AudioCacheService {
     const now = Date.now();
     
     try {
-      // Store the original URL for Safari
+      // Store the original URL for Safari with size limit
       if (this.isSafariBrowser && originalUrl) {
-        this.originalUrls.set(cacheKey, originalUrl);
+        this.addToOriginalUrls(cacheKey, originalUrl);
         
         // Still store the blob in IndexedDB for potential offline use
       }
@@ -426,13 +433,47 @@ class AudioCacheService {
     return false;
   }
 
-  // Mark URL as failed
+  // Mark URL as failed with size limit
   markUrlAsFailed(url) {
     if (!url) return;
     
     // Extract the file path part without the query parameters
     const urlPath = url.split('?')[0];
+    
+    // Enforce size limit using LRU
+    if (this.failedUrls.size >= this.maxFailedUrls) {
+      // Remove oldest entry
+      const firstKey = this.failedUrls.keys().next().value;
+      this.failedUrls.delete(firstKey);
+    }
+    
     this.failedUrls.set(urlPath, Date.now());
+  }
+
+  // Add original URL with size limit (LRU)
+  addToOriginalUrls(cacheKey, url) {
+    // Enforce size limit using LRU
+    if (this.originalUrls.size >= this.maxOriginalUrls) {
+      // Remove oldest entry
+      const firstKey = this.originalUrls.keys().next().value;
+      this.originalUrls.delete(firstKey);
+    }
+    
+    this.originalUrls.set(cacheKey, url);
+  }
+
+  // Periodic cleanup to prevent memory leaks
+  performPeriodicCleanup() {
+    // Clean up old failed URLs (older than 5 minutes)
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    for (const [url, timestamp] of this.failedUrls) {
+      if (timestamp < fiveMinutesAgo) {
+        this.failedUrls.delete(url);
+      }
+    }
+    
+    // Cleanup expired entries in IndexedDB
+    this.cleanupExpiredEntries().catch(() => {});
   }
 
   // Preload audio for a beat
@@ -453,13 +494,13 @@ class AudioCacheService {
       // Check if URL has recently failed
       if (this.hasUrlFailed(signedUrl)) {
         // Still store the URL for future use
-        this.originalUrls.set(cacheKey, signedUrl);
+        this.addToOriginalUrls(cacheKey, signedUrl);
         return signedUrl;
       }
 
       // For Safari, store the original URL but also try to cache the blob for offline use
       if (this.isSafariBrowser) {
-        this.originalUrls.set(cacheKey, signedUrl);
+        this.addToOriginalUrls(cacheKey, signedUrl);
         
         // Try to cache the blob in background for offline use
         try {
@@ -509,6 +550,12 @@ class AudioCacheService {
 
   // Cleanup resources
   destroy() {
+    // Clear cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    
     // Clean up memory cache
     for (const [key, entry] of this.memoryCache) {
       URL.revokeObjectURL(entry.objectUrl);
