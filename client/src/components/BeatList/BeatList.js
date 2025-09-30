@@ -396,7 +396,6 @@ const handlePlayPause = useCallback((beat) => {
         setIsLoadingBeats(false);
         setHasLoadedInitially(true);
         setShowMessage(false);
-        console.log('⚡ Instant render - using virtual scrolling (only ~30-45 beats rendered at a time)');
         return;
       }
       
