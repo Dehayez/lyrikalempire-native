@@ -81,7 +81,12 @@ const filteredAndSortedBeats = useMemo(() => {
     
     const matchesTierlist =
       selectedTierlist.length === 0 ||
-      selectedTierlist.some(item => beat.tierlist === item.id);
+      selectedTierlist.some(item => {
+        if (item.id === 'no-tierlist') {
+          return !beat.tierlist;
+        }
+        return beat.tierlist === item.id;
+      });
 
     return matchesSearchText && matchesAssociations && matchesTierlist;
   });
@@ -123,6 +128,12 @@ const calculateCounts = useCallback((beatsToCount) => {
         counts.tierlist[tierlist] = { id: tierlist, name: tierlist, count: 0 };
       }
       counts.tierlist[tierlist].count++;
+    } else {
+      // Count beats without tierlist
+      if (!counts.tierlist['no-tierlist']) {
+        counts.tierlist['no-tierlist'] = { id: 'no-tierlist', name: 'No tierlist', count: 0 };
+      }
+      counts.tierlist['no-tierlist'].count++;
     }
   });
 
@@ -160,7 +171,8 @@ const filterOptionsWithCounts = useMemo(() => {
       { id: 'D', name: 'D', count: counts.tierlist['D']?.count || 0 },
       { id: 'E', name: 'E', count: counts.tierlist['E']?.count || 0 },
       { id: 'F', name: 'F', count: counts.tierlist['F']?.count || 0 },
-    ].sort((a, b) => b.count - a.count)
+      { id: 'no-tierlist', name: 'No tierlist', count: counts.tierlist['no-tierlist']?.count || 0 },
+    ]
   };
 }, [filteredAndSortedBeats, genres, moods, keywords, features, calculateCounts]);
 
