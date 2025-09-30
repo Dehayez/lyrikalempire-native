@@ -113,7 +113,10 @@ export const syncAllPlayers = ({
   currentBeat
 }) => {
   const mainAudio = playerRef.current?.audio.current;
-  if (!mainAudio) return;
+  if (!mainAudio) {
+    console.warn('🔍 [SYNC DEBUG] No main audio element found');
+    return;
+  }
 
   // Throttle updates in Safari to prevent maximum update depth exceeded
   const now = Date.now();

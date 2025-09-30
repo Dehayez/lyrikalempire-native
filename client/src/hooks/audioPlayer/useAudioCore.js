@@ -68,27 +68,66 @@ export const useAudioCore = (currentBeat) => {
     const audio = playerRef.current?.audio?.current;
     
     if (!audio) {
+      console.error('❌ [CORE DEBUG] play() called but no audio element found');
       return Promise.resolve();
     }
+
+    console.log('▶️ [CORE DEBUG] play() called:', {
+      paused: audio.paused,
+      readyState: audio.readyState,
+      src: audio.src?.substring(0, 100),
+      currentTime: audio.currentTime,
+      duration: audio.duration,
+      networkState: audio.networkState,
+      readyStateMap: {
+        0: 'HAVE_NOTHING',
+        1: 'HAVE_METADATA',
+        2: 'HAVE_CURRENT_DATA',
+        3: 'HAVE_FUTURE_DATA',
+        4: 'HAVE_ENOUGH_DATA'
+      }[audio.readyState],
+      networkStateMap: {
+        0: 'NETWORK_EMPTY',
+        1: 'NETWORK_IDLE',
+        2: 'NETWORK_LOADING',
+        3: 'NETWORK_NO_SOURCE'
+      }[audio.networkState]
+    });
 
     initAudioContext();
     updateUserInteraction();
     
     if (audio.paused && audio.readyState >= 1) {
+      console.log('▶️ [CORE DEBUG] Audio is paused and ready, attempting to play...');
+      
       // Cancel any pending play promise
       if (pendingPlayPromiseRef.current) {
         pendingPlayPromiseRef.current.catch(() => {});
         pendingPlayPromiseRef.current = null;
       }
       
-      const playPromise = audio.play().catch(error => {
+      const playPromise = audio.play().then(() => {
+        console.log('✅ [CORE DEBUG] Play succeeded');
+      }).catch(error => {
+        console.error('❌ [CORE DEBUG] Play failed:', {
+          errorName: error.name,
+          errorMessage: error.message,
+          readyState: audio.readyState,
+          src: audio.src?.substring(0, 100)
+        });
+        
         if (error.name === 'NotAllowedError') {
+          console.warn('⚠️ [CORE DEBUG] Autoplay blocked by browser');
           // Safari autoplay blocked - dispatch event for UI handling
           if (isMobile()) {
             window.dispatchEvent(new CustomEvent('safari-autoplay-blocked', { 
               detail: { needsUserInteraction: true } 
             }));
           }
+        } else if (error.name === 'NotSupportedError') {
+          console.error('❌ [CORE DEBUG] Audio format not supported or source not available');
+        } else if (error.name === 'AbortError') {
+          console.warn('⚠️ [CORE DEBUG] Play interrupted by another operation');
         }
         
         return Promise.resolve();
@@ -96,6 +135,10 @@ export const useAudioCore = (currentBeat) => {
       
       pendingPlayPromiseRef.current = playPromise;
       return playPromise;
+    } else if (!audio.paused) {
+      console.log('🔍 [CORE DEBUG] Audio is already playing, skipping play call');
+    } else if (audio.readyState < 1) {
+      console.warn('⚠️ [CORE DEBUG] Audio not ready yet, readyState:', audio.readyState);
     }
     
     return Promise.resolve();
@@ -103,6 +146,12 @@ export const useAudioCore = (currentBeat) => {
 
   const pause = useCallback(() => {
     const audio = playerRef.current?.audio?.current;
+    
+    console.log('⏸️ [CORE DEBUG] pause() called:', {
+      hasAudio: !!audio,
+      paused: audio?.paused,
+      currentTime: audio?.currentTime
+    });
     
     // Cancel any pending play promise
     if (pendingPlayPromiseRef.current) {
@@ -113,9 +162,12 @@ export const useAudioCore = (currentBeat) => {
     if (audio && !audio.paused) {
       try {
         audio.pause();
+        console.log('✅ [CORE DEBUG] Pause succeeded');
       } catch (error) {
-        // Ignore pause errors
+        console.error('❌ [CORE DEBUG] Pause failed:', error.message);
       }
+    } else if (audio?.paused) {
+      console.log('🔍 [CORE DEBUG] Audio is already paused');
     }
 
     // Suspend the AudioContext on Safari to free resources and avoid extra delay

@@ -356,8 +356,26 @@ const AudioPlayer = ({
     setCurrentBeat
   });
 
+  // Log isPlaying state changes
+  useEffect(() => {
+    console.log('🎮 [STATE DEBUG] isPlaying changed:', {
+      isPlaying,
+      beatId: currentBeat?.id,
+      beatTitle: currentBeat?.title,
+      audioSrc: audioSrc?.substring(0, 100),
+      timestamp: new Date().toISOString()
+    });
+  }, [isPlaying, currentBeat?.id, currentBeat?.title, audioSrc]);
+
   // Immediately reset time/progress on beat change (click or programmatic)
   useEffect(() => {
+    console.log('🔄 [BEAT CHANGE DEBUG] Beat changed:', {
+      beatId: currentBeat?.id,
+      beatTitle: currentBeat?.title,
+      audioFile: currentBeat?.audio,
+      isPlaying
+    });
+    
     // Ensure UI shows 00:00 instantly and prevent carryover
     setCurrentTimeState(0);
     setProgress(0);
@@ -571,6 +589,25 @@ const AudioPlayer = ({
 
   // Custom handlers for audio events
   const handleCanPlay = useCallback((e) => {
+    const audio = e.target;
+    console.log('✅ [PLAYBACK DEBUG] canplay event fired:', {
+      beatId: currentBeat?.id,
+      beatTitle: currentBeat?.title,
+      src: audio?.src?.substring(0, 100),
+      readyState: audio?.readyState,
+      networkState: audio?.networkState,
+      duration: audio?.duration,
+      paused: audio?.paused,
+      isPlaying,
+      readyStateMap: {
+        0: 'HAVE_NOTHING',
+        1: 'HAVE_METADATA', 
+        2: 'HAVE_CURRENT_DATA',
+        3: 'HAVE_FUTURE_DATA',
+        4: 'HAVE_ENOUGH_DATA'
+      }[audio?.readyState]
+    });
+    
     // Mark as loaded to prevent duplicate play attempts
     hasLoadedRef.current = true;
     
@@ -589,13 +626,14 @@ const AudioPlayer = ({
     
     // For Safari, we need to manually trigger play if autoPlay is true
     if (isSafari && isPlaying && audioCore.isPaused()) {
+      console.log('🧮 [PLAYBACK DEBUG] Safari: Manually triggering play after canplay');
       setTimeout(() => {
         audioCore.play().catch(error => {
-          console.error('❌ [AUDIO DEBUG] Safari: Error playing audio on canplay event:', error);
+          console.error('❌ [PLAYBACK DEBUG] Safari: Error playing audio on canplay event:', error);
         });
       }, 100);
     }
-  }, [handleAudioReady, isSafari, isPlaying, audioCore]);
+  }, [handleAudioReady, isSafari, isPlaying, audioCore, currentBeat]);
 
   // Custom error handler with better logging
   const handleError = useCallback((e) => {
@@ -701,11 +739,50 @@ const AudioPlayer = ({
           ref={playerRef}
           src={audioSrc || undefined}
           autoPlayAfterSrcChange={false}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPlay={() => {
+            console.log('▶️ [PLAYBACK DEBUG] Play event fired:', {
+              beatId: currentBeat?.id,
+              beatTitle: currentBeat?.title
+            });
+            setIsPlaying(true);
+          }}
+          onPause={() => {
+            console.log('⏸️ [PLAYBACK DEBUG] Pause event fired:', {
+              beatId: currentBeat?.id,
+              beatTitle: currentBeat?.title
+            });
+            setIsPlaying(false);
+          }}
           onCanPlay={handleCanPlay}
           onEnded={() => {
+            console.log('🏁 [PLAYBACK DEBUG] Ended event fired, moving to next track');
             onNext?.();
+          }}
+          onLoadStart={() => {
+            console.log('🔄 [PLAYBACK DEBUG] loadstart event fired:', {
+              beatId: currentBeat?.id,
+              src: audioSrc?.substring(0, 100)
+            });
+          }}
+          onLoadedMetadata={(e) => {
+            console.log('📊 [PLAYBACK DEBUG] loadedmetadata event fired:', {
+              duration: e.target.duration,
+              readyState: e.target.readyState
+            });
+          }}
+          onLoadedData={(e) => {
+            console.log('📊 [PLAYBACK DEBUG] loadeddata event fired:', {
+              readyState: e.target.readyState
+            });
+          }}
+          onWaiting={() => {
+            console.log('⏳ [PLAYBACK DEBUG] waiting event fired (buffering)');
+          }}
+          onStalled={() => {
+            console.warn('⚠️ [PLAYBACK DEBUG] stalled event fired (network stalled)');
+          }}
+          onSuspend={() => {
+            console.log('🔍 [PLAYBACK DEBUG] suspend event fired (browser suspended loading)');
           }}
           onError={handleErrorWithRecovery}
           {...preventDefaultAudioEvents}

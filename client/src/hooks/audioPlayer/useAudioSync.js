@@ -216,7 +216,24 @@ export const useAudioSync = ({
     const isEventForCurrentBeat = () => {
       const src = mainAudio?.src || '';
       const beatKey = currentBeat?.audio || '';
-      return !!beatKey && src.includes(beatKey);
+      
+      // Decode the URL to handle spaces and special characters
+      try {
+        const decodedSrc = decodeURIComponent(src);
+        const matches = !!beatKey && decodedSrc.includes(beatKey);
+        
+        console.log('🔍 [EVENT CHECK DEBUG]', {
+          matches,
+          beatKey,
+          srcSnippet: src.substring(src.length - 50),
+          decodedSnippet: decodedSrc.substring(decodedSrc.length - 50)
+        });
+        
+        return matches;
+      } catch (e) {
+        // Fallback to original check if decoding fails
+        return !!beatKey && src.includes(beatKey);
+      }
     };
 
     // Ensure non-master tabs have their audio muted
@@ -252,7 +269,16 @@ export const useAudioSync = ({
     };
 
     const handleLoadedData = () => {
-      if (!isEventForCurrentBeat()) return;
+      console.log('🎯 [AUTOPLAY DEBUG] handleLoadedData triggered:', {
+        isEventForCurrentBeat: isEventForCurrentBeat(),
+        isPlaying,
+        isCurrentSessionMaster
+      });
+      
+      if (!isEventForCurrentBeat()) {
+        console.warn('⚠️ [AUTOPLAY DEBUG] Event not for current beat, skipping');
+        return;
+      }
       // Ensure progress starts at 0 for new audio data
       if (mainAudio.currentTime > 0) {
         audioCore.setCurrentTime(0);
@@ -267,16 +293,48 @@ export const useAudioSync = ({
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
         
+        console.log('🎯 [AUTOPLAY DEBUG] Checking autoplay conditions (loadeddata):', {
+          hasValidSrc,
+          isPaused: audioCore.isPaused(),
+          isCurrentSessionMaster
+        });
+        
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          console.log('✅ [AUTOPLAY DEBUG] All conditions met, calling audioCore.play()');
           audioCore.play().catch(error => {
-            console.warn('Auto-play failed on loaded data:', error);
+            console.error('❌ [AUTOPLAY DEBUG] Auto-play failed on loaded data:', error);
+          });
+        } else {
+          console.warn('⚠️ [AUTOPLAY DEBUG] Autoplay blocked by conditions (loadeddata):', {
+            hasValidSrc,
+            isPaused: audioCore.isPaused(),
+            isCurrentSessionMaster
           });
         }
+      } else {
+        console.warn('⚠️ [AUTOPLAY DEBUG] Not autoplaying (loadeddata) because:', {
+          hasBeat: !!currentBeat?.audio,
+          isPlaying
+        });
       }
     };
 
     const handleCanPlay = () => {
-      if (!isEventForCurrentBeat()) return;
+      console.log('🎯 [AUTOPLAY DEBUG] handleCanPlay triggered:', {
+        isEventForCurrentBeat: isEventForCurrentBeat(),
+        hasBeat: !!currentBeat,
+        beatAudio: currentBeat?.audio,
+        isPlaying,
+        mainAudioSrc: mainAudio?.src?.substring(0, 100),
+        isPaused: audioCore.isPaused(),
+        isCurrentSessionMaster,
+        readyState: mainAudio?.readyState
+      });
+      
+      if (!isEventForCurrentBeat()) {
+        console.warn('⚠️ [AUTOPLAY DEBUG] Event not for current beat, skipping');
+        return;
+      }
       syncAllPlayers(true);
       
       // Check if we should start playback
@@ -284,11 +342,29 @@ export const useAudioSync = ({
         const currentSrc = mainAudio.src;
         const hasValidSrc = currentSrc && currentSrc !== '';
         
+        console.log('🎯 [AUTOPLAY DEBUG] Checking autoplay conditions:', {
+          hasValidSrc,
+          isPaused: audioCore.isPaused(),
+          isCurrentSessionMaster
+        });
+        
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
+          console.log('✅ [AUTOPLAY DEBUG] All conditions met, calling audioCore.play()');
           audioCore.play().catch(error => {
-            console.warn('Auto-play failed on can play:', error);
+            console.error('❌ [AUTOPLAY DEBUG] Auto-play failed on can play:', error);
+          });
+        } else {
+          console.warn('⚠️ [AUTOPLAY DEBUG] Autoplay blocked by conditions:', {
+            hasValidSrc,
+            isPaused: audioCore.isPaused(),
+            isCurrentSessionMaster
           });
         }
+      } else {
+        console.warn('⚠️ [AUTOPLAY DEBUG] Not autoplaying because:', {
+          hasBeat: !!currentBeat?.audio,
+          isPlaying
+        });
       }
     };
 

@@ -96,9 +96,16 @@ export const useAudioPlayerState = ({
   // Load audio source
   const loadAudio = useCallback(async () => {
     if (!currentBeat) {
+      console.log('🔇 [AUDIO SRC DEBUG] No current beat, clearing audio source');
       setAudioSrc('');
       return;
     }
+
+    console.log('🎵 [AUDIO SRC DEBUG] Loading audio source for:', {
+      beatId: currentBeat.id,
+      beatTitle: currentBeat.title,
+      audioFile: currentBeat.audio
+    });
 
     try {
       setIsLoadingAudio(true);
@@ -120,12 +127,14 @@ export const useAudioPlayerState = ({
 
       // If we have cached audio, try to use it first (especially when offline)
       if (isCached) {
+        console.log('💾 [AUDIO SRC DEBUG] Audio is cached, retrieving...');
         const cachedAudioUrl = await audioCacheService.getAudio(
           currentBeat.user_id,
           currentBeat.audio
         );
         
         if (cachedAudioUrl) {
+          console.log('✅ [AUDIO SRC DEBUG] Setting cached audio URL:', cachedAudioUrl.substring(0, 100));
           setAudioSrc(cachedAudioUrl);
           setAutoPlay(true);
           
@@ -145,11 +154,14 @@ export const useAudioPlayerState = ({
       // If not cached or cached version failed, try to get fresh signed URL
       // This will fail gracefully if offline
       try {
+        console.log('🔗 [AUDIO SRC DEBUG] Fetching signed URL from server...');
         const signedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
         originalUrlRef.current = signedUrl;
+        console.log('✅ [AUDIO SRC DEBUG] Got signed URL:', signedUrl.substring(0, 100));
 
         if (isSafari) {
           // For Safari, use signed URL directly but also store for offline use
+          console.log('🧮 [AUDIO SRC DEBUG] Safari detected, using signed URL directly');
           setAudioSrc(signedUrl);
           
           audioCacheService.originalUrls.set(
@@ -158,11 +170,13 @@ export const useAudioPlayerState = ({
           );
         } else {
           // For other browsers, use cache system
+          console.log('🌐 [AUDIO SRC DEBUG] Non-Safari browser, preloading audio...');
           const audioUrl = await audioCacheService.preloadAudio(
             currentBeat.user_id,
             currentBeat.audio,
             signedUrl
           );
+          console.log('✅ [AUDIO SRC DEBUG] Audio preloaded, setting blob URL:', audioUrl.substring(0, 100));
           
           setAudioSrc(audioUrl);
         }
@@ -175,19 +189,23 @@ export const useAudioPlayerState = ({
           markBeatAsCached(currentBeat.id);
         }
       } catch (networkError) {
-        console.error('Network error loading audio:', networkError);
+        console.error('❌ [AUDIO SRC DEBUG] Network error loading audio:', networkError);
         
         // If we failed to get signed URL but have cached audio, use it
         if (isCached) {
+          console.log('🔄 [AUDIO SRC DEBUG] Falling back to cached audio...');
           const cachedAudioUrl = await audioCacheService.getAudio(
             currentBeat.user_id,
             currentBeat.audio
           );
           
           if (cachedAudioUrl) {
+            console.log('✅ [AUDIO SRC DEBUG] Using fallback cached audio URL');
             setAudioSrc(cachedAudioUrl);
             setAutoPlay(true);
             return;
+          } else {
+            console.error('❌ [AUDIO SRC DEBUG] Fallback failed: No cached audio available');
           }
         }
         
@@ -195,7 +213,11 @@ export const useAudioPlayerState = ({
         throw networkError;
       }
     } catch (error) {
-      console.error('Error loading audio:', error);
+      console.error('❌ [AUDIO SRC DEBUG] Critical error loading audio:', {
+        error: error.message,
+        stack: error.stack,
+        beatId: currentBeat?.id
+      });
       setAudioSrc('');
     } finally {
       setIsLoadingAudio(false);
