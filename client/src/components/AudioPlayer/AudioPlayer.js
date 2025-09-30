@@ -20,7 +20,7 @@ import { DuplicateConfirmModal } from '../Modals';
 
 import MobileAudioPlayer from './MobileAudioPlayer';
 import DesktopAudioPlayer from './DesktopAudioPlayer';
-import FullPageAudioPlayer from './FullPageAudioPlayer';
+import BeatEditPanel from './BeatEditPanel';
 
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
@@ -728,7 +728,7 @@ const AudioPlayer = ({
         />
       )}
 
-      <FullPageAudioPlayer
+      <BeatEditPanel
         ref={fullPagePlayerRef}
         style={{ display: shouldShowFullPagePlayer ? 'flex' : 'none' }}
         fullPageProgressRef={fullPageProgressRef}
