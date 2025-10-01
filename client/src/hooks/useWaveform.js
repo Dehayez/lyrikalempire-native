@@ -13,7 +13,6 @@ export const useWaveform = ({
   isFullPageVisible
 }) => {
   const retryCountRef = useRef(0);
-  const objectUrlRef = useRef(null);
   const maxRetries = 2;
   // Initialize and load waveform
   useEffect(() => {
@@ -29,7 +28,7 @@ export const useWaveform = ({
       if (container && audioSrc && waveform) {
         // Ensure container has a measurable width to avoid 0px canvas
         if (container.clientWidth === 0) {
-          setTimeout(loadWaveform, 120);
+          setTimeout(loadWaveform, 200);
           return;
         }
         if (wavesurfer.current) {
@@ -57,12 +56,35 @@ export const useWaveform = ({
         window.globalWavesurfer = wavesurfer.current;
 
         try {
-          const response = await fetch(audioSrc, { signal });
-          if (!response.ok) throw new Error('Network response was not ok');
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          objectUrlRef.current = url;
-          wavesurfer.current.load(url);
+          
+          // Use XMLHttpRequest instead of fetch to avoid performance monitor interference
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', audioSrc, true);
+          xhr.responseType = 'blob';
+          
+          const loadPromise = new Promise((resolve, reject) => {
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+              } else {
+                reject(new Error(`Network response was not ok: ${xhr.status}`));
+              }
+            };
+            xhr.onerror = () => reject(new Error('Network error'));
+            xhr.onabort = () => reject(new Error('Request aborted'));
+          });
+          
+          // Handle abort signal
+          if (signal) {
+            signal.addEventListener('abort', () => xhr.abort());
+          }
+          
+          xhr.send();
+          const blob = await loadPromise;
+          
+          // Load the blob directly into WaveSurfer instead of creating a URL
+          // This bypasses WaveSurfer's internal fetch calls
+          wavesurfer.current.loadBlob(blob);
           wavesurfer.current.setVolume(0);
 
           // Handle successful decode/ready once
@@ -118,10 +140,6 @@ export const useWaveform = ({
     return () => {
       try { wavesurfer.current && wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
       try { wavesurfer.current && wavesurfer.current.destroy && wavesurfer.current.destroy(); } catch (_) {}
-      if (objectUrlRef.current) {
-        try { URL.revokeObjectURL(objectUrlRef.current); } catch (_) {}
-        objectUrlRef.current = null;
-      }
       controller.abort();
     };
   }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, playerRef]);
@@ -144,11 +162,15 @@ export const useWaveform = ({
       const waveformEl = isFullPage ? waveformRefFullPage.current : waveformRefDesktop.current;
 
       if (container && waveformEl && !container.contains(waveformEl)) {
-        if (waveformEl.parentElement && waveformEl.parentElement.classList.contains('rhap_progress-container')) {
+        // Remove from any existing parent
+        if (waveformEl.parentElement) {
           waveformEl.parentElement.removeChild(waveformEl);
         }
 
+        // Set container styles
         container.style.position = 'relative';
+        
+        // Set waveform element styles
         waveformEl.style.position = 'absolute';
         waveformEl.style.top = '-30px';
         waveformEl.style.left = '0';
@@ -157,9 +179,10 @@ export const useWaveform = ({
         waveformEl.style.zIndex = '0';
         waveformEl.style.pointerEvents = 'none';
 
+        // Add to container
         container.prepend(waveformEl);
       }
-    }, 150);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [waveform, isFullPage, isFullPageVisible, waveformRefDesktop, waveformRefFullPage]);
