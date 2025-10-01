@@ -131,29 +131,31 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
           const wrapper = dropdownRef?.querySelector('.filter-dropdown__wrapper');
           if (dropdownRef && wrapper) {
             const rect = dropdownRef.getBoundingClientRect();
-            const container = document.querySelector('.filter-dropdowns-container');
-            const containerRect = container?.getBoundingClientRect();
+            const parentContainer = document.querySelector('.filter-dropdown-container');
+            const parentRect = parentContainer?.getBoundingClientRect();
+            const scrollContainer = document.querySelector('.filter-dropdowns-container');
+            const scrollContainerRect = scrollContainer?.getBoundingClientRect();
             
-            // Calculate initial position
-            let left = rect.left - 6;
-            let top = 36;
+            // Calculate position relative to parent container
+            let left = rect.left - (parentRect?.left || 0) - 6;
+            let top = rect.bottom - (parentRect?.top || 0) + 8;
             
-            // Check if dropdown would overflow the right edge of the container
-            if (containerRect) {
+            // Check if dropdown would overflow the right edge of the scroll container
+            if (scrollContainerRect && parentRect) {
               const dropdownWidth = 280; // max-width from CSS
-              const rightEdge = left + dropdownWidth;
-              const containerRightEdge = containerRect.right;
+              const absoluteLeft = rect.left - 6;
+              const rightEdge = absoluteLeft + dropdownWidth;
+              const containerRightEdge = scrollContainerRect.right;
               
-                              if (rightEdge > containerRightEdge) {
-                  // Calculate how much we need to shift left
-                  const overflow = rightEdge - containerRightEdge;
-                  // Shift left by only a portion of the overflow to keep it more to the right
-                  left -= (overflow * 0.5);
-                  
-                  // Ensure we don't go too far left (keep at least some of the dropdown visible)
-                  const minLeft = containerRect.left + 10;
-                  left = Math.max(left, minLeft);
-                }
+              if (rightEdge > containerRightEdge) {
+                // Calculate how much we need to shift left
+                const overflow = rightEdge - containerRightEdge;
+                left -= overflow + 10; // Add 10px padding from edge
+                
+                // Ensure we don't go too far left
+                const minLeft = scrollContainerRect.left - parentRect.left + 10;
+                left = Math.max(left, minLeft);
+              }
             }
             
             // Position the dropdown
@@ -366,10 +368,15 @@ export const FilterDropdown = React.forwardRef(({ filters, onFilterChange }, ref
             const wrapper = dropdownRef?.querySelector('.filter-dropdown__wrapper');
             if (dropdownRef && wrapper) {
               const rect = dropdownRef.getBoundingClientRect();
+              const parentContainer = document.querySelector('.filter-dropdown-container');
+              const parentRect = parentContainer?.getBoundingClientRect();
               
-              // Position the dropdown just below the item and perfectly aligned
-              wrapper.style.left = `${rect.left - 6}px`;
-              wrapper.style.top = `36px`;
+              // Position the dropdown relative to parent container
+              const left = rect.left - (parentRect?.left || 0) - 6;
+              const top = rect.bottom - (parentRect?.top || 0) + 8;
+              
+              wrapper.style.left = `${left}px`;
+              wrapper.style.top = `${top}px`;
             }
           }
         });
