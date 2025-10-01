@@ -25,7 +25,7 @@ export const useWaveform = ({
       // Avoid initializing on hidden full-page container
       if (isFullPage && !isFullPageVisible) return;
 
-      if (container && audioSrc && waveform) {
+      if (container && audioSrc) {
         // Ensure container has a measurable width to avoid 0px canvas
         if (container.clientWidth === 0) {
           setTimeout(loadWaveform, 200);
@@ -56,7 +56,6 @@ export const useWaveform = ({
         window.globalWavesurfer = wavesurfer.current;
 
         try {
-          
           // Use XMLHttpRequest instead of fetch to avoid performance monitor interference
           const xhr = new XMLHttpRequest();
           xhr.open('GET', audioSrc, true);
@@ -122,31 +121,18 @@ export const useWaveform = ({
       }
     };
 
-    if (waveform) {
-      const timer = setTimeout(loadWaveform, 100);
-      return () => {
-        clearTimeout(timer);
-        controller.abort();
-      };
-    } else {
-      if (wavesurfer.current) {
-        try { wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
-        wavesurfer.current.destroy();
-        wavesurfer.current = null;
-        window.globalWavesurfer = null; // Clean up global reference
-      }
-    }
-
+    // Always load waveform for hover effects, but only show it when waveform toggle is on
+    const timer = setTimeout(loadWaveform, 100);
     return () => {
+      clearTimeout(timer);
       try { wavesurfer.current && wavesurfer.current.unAll && wavesurfer.current.unAll(); } catch (_) {}
       try { wavesurfer.current && wavesurfer.current.destroy && wavesurfer.current.destroy(); } catch (_) {}
       controller.abort();
     };
   }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, playerRef]);
 
-  // Position waveform in the correct container
+  // Position waveform in the correct container (always, for hover effects)
   useEffect(() => {
-    if (!waveform) return;
 
     let containerSelector;
     if (isFullPage) {
@@ -189,7 +175,7 @@ export const useWaveform = ({
 
   // Ensure waveform resizes/redraws when container visibility/size changes
   useEffect(() => {
-    if (!waveform || !wavesurfer.current) return;
+    if (!wavesurfer.current) return;
 
     const redraw = () => {
       try {

@@ -445,7 +445,7 @@ audio {
       }
 
       .waveform:not(.waveform--active) {
-        opacity: .2;
+        opacity: .3;
       }
     }
     
@@ -461,6 +461,10 @@ audio {
         opacity: 1 !important;
         transform: scale(1.3);
       }
+      
+      .waveform:not(.waveform--active) {
+        opacity: .4;
+      }
     }
     
     // Improve seeking experience on desktop  
@@ -468,6 +472,10 @@ audio {
       .rhap_progress-indicator {
         opacity: 1 !important;
         transform: scale(1.3);
+      }
+      
+      .waveform:not(.waveform--active) {
+        opacity: .35;
       }
     }
 
@@ -518,6 +526,27 @@ audio {
 
     &--active {
       opacity: 0.4;
+    }
+  }
+  
+  // Add hover effects for full-page player
+  .rhap_progress-container {
+    &:hover {
+      .waveform:not(.waveform--active) {
+        opacity: .3;
+      }
+    }
+    
+    &.rhap_progress-dragging {
+      .waveform:not(.waveform--active) {
+        opacity: .4;
+      }
+    }
+    
+    &:active {
+      .waveform:not(.waveform--active) {
+        opacity: .35;
+      }
     }
   }
 }
