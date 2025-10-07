@@ -699,10 +699,14 @@ const BeatRow = React.memo(({
   );
   if (wasSelected !== isSelected) return false;
   
-  // Re-render if this beat is playing or was playing
-  const wasPlaying = prevProps.currentBeat?.id === prevProps.beat.id && prevProps.isPlaying;
-  const isPlayingNow = nextProps.currentBeat?.id === nextProps.beat.id && nextProps.isPlaying;
-  if (wasPlaying !== isPlayingNow) return false;
+  // Re-render if this beat is/was the current beat (regardless of playing state)
+  // This ensures the playing style is properly added/removed
+  const wasCurrent = prevProps.currentBeat?.id === prevProps.beat.id;
+  const isCurrent = nextProps.currentBeat?.id === nextProps.beat.id;
+  if (wasCurrent !== isCurrent) return false;
+  
+  // Also re-render if playing state changed while being current beat
+  if (isCurrent && prevProps.isPlaying !== nextProps.isPlaying) return false;
   
   // Re-render if beat data changed
   if (prevProps.beat.title !== nextProps.beat.title) return false;
