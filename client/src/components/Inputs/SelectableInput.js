@@ -24,6 +24,7 @@ export const SelectableInput = ({
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const inputContainerRef = useRef(null);
+  const blurTimeoutRef = useRef(null);
 
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -31,7 +32,17 @@ export const SelectableInput = ({
   const [pendingAssociations, setPendingAssociations] = useState([]);
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
+
   const items = { moods, genres, keywords, features }[associationType];
+
+  // Cleanup blur timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const associationItems = useMemo(() => 
     items.filter(item => item.name.toLowerCase().includes(inputValue.toLowerCase())),
@@ -51,7 +62,16 @@ export const SelectableInput = ({
   }, []);
   
   const handleContainerClick = useCallback(() => {
+    if (disableFocus) return;
+    
+    // Clear any pending blur timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    
     inputRef.current.classList.remove('selectable-input__input--hidden');
+    setIsFocused(true); // Set focus state first
     inputRef.current.focus();
   
     // Scroll the container to the right
@@ -59,17 +79,29 @@ export const SelectableInput = ({
       const { scrollWidth, clientWidth } = inputContainerRef.current;
       inputContainerRef.current.scrollLeft = scrollWidth - clientWidth;
     }
-  }, []);
+  }, [disableFocus]);
 
   const handleBlur = useCallback((e) => {
+    // Clear any existing blur timeout
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current);
+    }
+    
     // Use setTimeout to allow click events on dropdown items to complete first
-    setTimeout(() => {
-      setIsFocused(false);
-      setFocusedIndex(-1);
-      setInputValue(''); // Clear the input when losing focus
-      if (inputContainerRef.current) {
-        inputContainerRef.current.scrollLeft = 0;
+    blurTimeoutRef.current = setTimeout(() => {
+      // Check if the new focus target is not within our component
+      const relatedTarget = e.relatedTarget;
+      const isWithinComponent = containerRef.current && containerRef.current.contains(relatedTarget);
+      
+      if (!isWithinComponent) {
+        setIsFocused(false);
+        setFocusedIndex(-1);
+        setInputValue(''); // Clear the input when losing focus
+        if (inputContainerRef.current) {
+          inputContainerRef.current.scrollLeft = 0;
+        }
       }
+      blurTimeoutRef.current = null;
     }, 150);
   }, []);
 
@@ -277,10 +309,14 @@ export const SelectableInput = ({
             'selectable-input__input-container--disabled': disableFocus,
             'selectable-input__input-container--edit': mode === 'edit',
           })}
-          {...(mode === 'edit' && { onClick: handleContainerClick })}
+          onClick={handleContainerClick}
           ref={inputContainerRef}
         >
-          <SelectedList selectedItems={selectedItems} isFocused={isFocused} handleRemoveAssociation={handleRemoveAssociation} />
+          <SelectedList 
+            selectedItems={selectedItems} 
+            isFocused={isFocused} 
+            handleRemoveAssociation={handleRemoveAssociation}
+          />
           <input
             ref={inputRef}
             id={`selectable-input-${associationType}-${beatId}-${headerIndex}`}
@@ -293,12 +329,21 @@ export const SelectableInput = ({
             value={inputValue}
             onFocus={(e) => {
               handleFocus();
-              e.target.nextSibling.classList.add('form-group__label--active');
+              const label = e.target.nextSibling;
+              if (label) {
+                label.classList.add('form-group__label--active', 'form-group__label--focused');
+              }
             }}
             onBlur={(e) => {
               handleBlur(e);
-              if (!inputValue && selectedItems.length === 0) {
-                e.target.nextSibling.classList.remove('form-group__label--active');
+              // Remove active and focused classes when blurring
+              const label = e.target.nextSibling;
+              if (label) {
+                label.classList.remove('form-group__label--active', 'form-group__label--focused');
+                // Only add active class if there are selected items or input value
+                if (inputValue || selectedItems.length > 0) {
+                  label.classList.add('form-group__label--active');
+                }
               }
             }}
             onChange={handleInputChange}
@@ -307,7 +352,7 @@ export const SelectableInput = ({
             disabled={disableFocus}
             autoComplete="off"
           />
-          <label htmlFor={`selectable-input-${associationType}-${beatId}-${headerIndex}`} className={`form-group__label ${inputValue || isFocused || selectedItems.length > 0 ? 'form-group__label--active' : ''}`}>
+          <label htmlFor={`selectable-input-${associationType}-${beatId}-${headerIndex}`} className={`form-group__label ${inputValue || isFocused || selectedItems.length > 0 ? 'form-group__label--active' : ''} ${isFocused ? 'form-group__label--focused' : ''}`}>
             {label}
           </label>
         </div>

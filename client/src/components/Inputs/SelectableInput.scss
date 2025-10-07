@@ -83,8 +83,10 @@
             display: flex;
             align-items: center;
             border-radius: 4px;
-            padding-left: 8px;
+            padding: 4px 8px;
             white-space: nowrap;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
 
             &--focused {
                 background-color: $color-gray-dark-active;
@@ -92,6 +94,8 @@
             }
             &__icon {
                 margin: 0 8px;
+                z-index: 1;
+                position: relative;
             }
         }
     }

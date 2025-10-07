@@ -29,13 +29,28 @@ const renderName = (item, genres, moods, keywords, features) => {
 export const SelectedList = ({ selectedItems, isFocused, handleRemoveAssociation }) => {
   const { genres, moods, keywords, features } = useData();
 
+  const handleDeleteClick = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (handleRemoveAssociation) {
+      handleRemoveAssociation(item);
+    }
+  };
+
   return (
     <div className="selectable-input__selected-list">
       {selectedItems.map((item, index) => (
-        <span key={index} className={`selectable-input__selected-list__item ${isFocused ? 'selectable-input__selected-list__item--focused' : ''}`}>
+        <span 
+          key={index} 
+          className={`selectable-input__selected-list__item ${isFocused ? 'selectable-input__selected-list__item--focused' : ''}`}
+        >
           {renderName(item, genres, moods, keywords, features)}
           {isFocused && handleRemoveAssociation && (
-            <IconButton className="selectable-input__selected-list__item__icon" onClick={() => handleRemoveAssociation(item)}>
+            <IconButton 
+              className="selectable-input__selected-list__item__icon" 
+              onClick={(e) => handleDeleteClick(e, item)}
+              onMouseDown={(e) => e.preventDefault()}
+            >
               <IoCloseSharp fontSize={16} />
             </IconButton>
           )}

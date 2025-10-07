@@ -106,6 +106,10 @@ input[type="number"] {
             font-size: 14px;
             padding: 0 4px;
         }
+
+        &--focused {
+            color: $color-primary;
+        }
     }
 
     &__input {
