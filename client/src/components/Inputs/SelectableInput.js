@@ -15,7 +15,8 @@ export const SelectableInput = ({
   form,
   newBeatId,
   mode,
-  beat // Add beat prop to access associations directly
+  beat, // Add beat prop to access associations directly
+  onUpdate // Callback to notify parent when associations change
 }) => {
   const { headerWidths } = useHeaderWidths();
   const { genres, moods, keywords, features } = useData();
@@ -78,7 +79,8 @@ export const SelectableInput = ({
     const associationId = item.id;
     const newAssociation = {
       beat_id: beatId,
-      [`${singularAssociationType}_id`]: associationId
+      [`${singularAssociationType}_id`]: associationId,
+      name: item.name
     };
 
     const isSelected = isItemSelected(item);
@@ -87,12 +89,24 @@ export const SelectableInput = ({
       await handleRemoveAssociation(newAssociation);
     } else {
       if (form) {
-        setSelectedItems(prevItems => [...prevItems, newAssociation]);
+        const updatedItems = [...selectedItems, newAssociation];
+        setSelectedItems(updatedItems);
         setPendingAssociations(prevItems => [...prevItems, associationId]);
+        // Notify parent component with proper format (without beat_id)
+        if (onUpdate) {
+          const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+          onUpdate(formattedItems, associationType);
+        }
       } else {
         try {
           await addAssociationsToBeat(beatId, associationType, [associationId]);
-          setSelectedItems(prevItems => [...prevItems, newAssociation]);
+          const updatedItems = [...selectedItems, newAssociation];
+          setSelectedItems(updatedItems);
+          // Notify parent component after successful database update (without beat_id)
+          if (onUpdate) {
+            const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+            onUpdate(formattedItems, associationType);
+          }
         } catch (error) {
           console.error('Failed to add association:', error);
         }
@@ -100,22 +114,34 @@ export const SelectableInput = ({
     }
     setInputValue('');
     inputRef.current.focus();
-  }, [beatId, associationType, form, isItemSelected, singularAssociationType]);
+  }, [beatId, associationType, form, isItemSelected, singularAssociationType, selectedItems, onUpdate]);
 
   const handleRemoveAssociation = useCallback(async (item) => {
     const associationId = item[`${singularAssociationType}_id`];
     if (form) {
-      setSelectedItems(prevItems => prevItems.filter(item => item[`${singularAssociationType}_id`] !== associationId));
+      const updatedItems = selectedItems.filter(item => item[`${singularAssociationType}_id`] !== associationId);
+      setSelectedItems(updatedItems);
       setPendingAssociations(prevItems => prevItems.filter(id => id !== associationId));
+      // Notify parent component with proper format (without beat_id)
+      if (onUpdate) {
+        const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+        onUpdate(formattedItems, associationType);
+      }
     } else {
       try {
         await removeAssociationFromBeat(beatId, associationType, associationId);
-        setSelectedItems(prevItems => prevItems.filter(item => item[`${singularAssociationType}_id`] !== associationId));
+        const updatedItems = selectedItems.filter(item => item[`${singularAssociationType}_id`] !== associationId);
+        setSelectedItems(updatedItems);
+        // Notify parent component after successful database update (without beat_id)
+        if (onUpdate) {
+          const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+          onUpdate(formattedItems, associationType);
+        }
       } catch (error) {
         console.error('Failed to remove association:', error);
       }
     }
-  }, [beatId, associationType, form, singularAssociationType]);
+  }, [beatId, associationType, form, singularAssociationType, selectedItems, onUpdate]);
 
   const scrollToFocusedItem = useCallback((index) => {
     const listContainer = containerRef.current.querySelector('.selectable-input__list');
@@ -188,14 +214,25 @@ export const SelectableInput = ({
       const fetchAssociations = async () => {
         try {
           const associations = await getAssociationsByBeatId(beatId, associationType);
-          setSelectedItems(associations);
+          // Enrich associations with name from items array if missing
+          const enrichedAssociations = associations.map(assoc => {
+            if (!assoc.name) {
+              const foundItem = items.find(item => item.id === assoc[`${singularAssociationType}_id`]);
+              return {
+                ...assoc,
+                name: foundItem?.name
+              };
+            }
+            return assoc;
+          });
+          setSelectedItems(enrichedAssociations);
         } catch (error) {
           console.error('Error fetching associations:', error);
         }
       };
       fetchAssociations();
     }
-  }, [beatId, associationType, beat, singularAssociationType]);
+  }, [beatId, associationType, beat, singularAssociationType, items]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
