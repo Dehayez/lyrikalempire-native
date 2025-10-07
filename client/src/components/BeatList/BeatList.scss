@@ -9,11 +9,6 @@
   // Prevent momentum scrolling that can cause uncontrolled scroll behavior
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  // GPU acceleration for smoother scrolling
-  will-change: scroll-position;
-  // Enable hardware acceleration
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 
   &__header {
     display: flex;
