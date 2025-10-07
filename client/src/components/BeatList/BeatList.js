@@ -34,6 +34,16 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const [searchInputFocused, setSearchInputFocused] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
+  // Scroll position memory state
+  const scrollPositionKey = `beatListScrollPosition_${location.pathname}_${playlistId || 'all'}`;
+  const [savedScrollPosition, setSavedScrollPosition] = useState(() => {
+    const saved = parseInt(localStorage.getItem(scrollPositionKey)) || 0;
+    // Don't restore positions that are too large (likely corrupted)
+    return saved > 100000 ? 0 : saved;
+  });
+  const [hasRestoredScroll, setHasRestoredScroll] = useState(false);
+  const isRestoringScroll = useRef(false);
+  const scrollSaveTimeout = useRef(null);
   
   const { setPlaylistId } = usePlaylist();
   const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats, loadedFromCache } = useBeat();
@@ -183,6 +193,9 @@ const filterOptionsWithCounts = useMemo(() => {
     setCurrentBeats(filteredAndSortedBeats);
     // Reset visible range when beats change
     setVisibleRange({ start: 0, end: Math.min(30, filteredAndSortedBeats.length - 1) });
+    
+    // Reset scroll restoration flag when beats change significantly
+    setHasRestoredScroll(false);
   }, [filteredAndSortedBeats, setCurrentBeats]);
 
   const { selectedBeats, handleBeatClick } = useHandleBeatClick(beats, tableRef, currentBeat);
@@ -202,7 +215,8 @@ const filterOptionsWithCounts = useMemo(() => {
     mode, 
     searchText,
     urlKey,
-    currentPage
+    currentPage,
+    [scrollPositionKey]: savedScrollPosition
   });
 
   const calculateVisibleRows = useCallback(() => {
@@ -239,31 +253,146 @@ const filterOptionsWithCounts = useMemo(() => {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (container) {
-      calculateVisibleRows();
+    if (!container) return;
+    
+    calculateVisibleRows();
+    
+    // Single unified scroll handler with optimized throttling
+    let rafId = null;
+    
+    const handleScroll = () => {
+      // Prevent scroll handling during restoration to avoid feedback loops
+      if (isRestoringScroll.current) {
+        return;
+      }
       
-      // Throttle scroll events for better performance
-      let isScrolling = false;
+      // Cancel previous frame if it hasn't executed yet
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       
-      const throttledScroll = () => {
-        if (!isScrolling) {
-          isScrolling = true;
-          requestAnimationFrame(() => {
-            calculateVisibleRows();
-            isScrolling = false;
-          });
+      // Schedule next frame
+      rafId = requestAnimationFrame(() => {
+        const scrollPosition = container.scrollTop;
+        const scrollHeight = container.scrollHeight;
+        const clientHeight = container.clientHeight;
+        const maxScrollTop = scrollHeight - clientHeight;
+        
+        // Update visible rows for virtual scrolling
+        calculateVisibleRows();
+        
+        // Update gradient opacities
+        const maxScroll = 40;
+        const topOpacity = Math.min(scrollPosition / maxScroll, 1);
+        setIsScrolled(topOpacity);
+        
+        const distanceFromBottom = maxScrollTop - scrollPosition;
+        const bottomOpacity = Math.min(distanceFromBottom / maxScroll, 1);
+        setScrollOpacityBottom?.(bottomOpacity);
+        setIsScrolledBottom?.(bottomOpacity > 0);
+        
+        // Debounced scroll position saving
+        clearTimeout(scrollSaveTimeout.current);
+        scrollSaveTimeout.current = setTimeout(() => {
+          if (hasRestoredScroll && scrollPosition >= 0 && !isRestoringScroll.current) {
+            setSavedScrollPosition(scrollPosition);
+            localStorage.setItem(scrollPositionKey, scrollPosition.toString());
+          }
+        }, 300);
+        
+        rafId = null;
+      });
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', calculateVisibleRows);
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', calculateVisibleRows);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      clearTimeout(scrollSaveTimeout.current);
+    };
+  }, [calculateVisibleRows, hasRestoredScroll, scrollPositionKey, setScrollOpacityBottom, setIsScrolledBottom]);
+
+  // Restore scroll position after beats are loaded and virtual scrolling is ready
+  useEffect(() => {
+    if (
+      containerRef.current && 
+      filteredAndSortedBeats.length > 0 && 
+      savedScrollPosition > 0 && 
+      !hasRestoredScroll &&
+      !isLoadingBeats &&
+      rowHeight > 0 // Ensure row height is calculated
+    ) {
+      // Wait for virtual scrolling to be properly initialized
+      const restoreScroll = () => {
+        if (containerRef.current && !hasRestoredScroll && !isRestoringScroll.current) {
+          isRestoringScroll.current = true;
+          
+          const container = containerRef.current;
+          const maxScrollTop = container.scrollHeight - container.clientHeight;
+          
+          // Only restore if the saved position is reasonable
+          if (maxScrollTop > 0 && savedScrollPosition <= maxScrollTop) {
+            container.scrollTop = savedScrollPosition;
+            setHasRestoredScroll(true);
+            
+            // Update visible range after restoration
+            setTimeout(() => {
+              calculateVisibleRows();
+              // Release the flag after restoration is complete
+              setTimeout(() => {
+                isRestoringScroll.current = false;
+              }, 200);
+            }, 50);
+          } else {
+            // Invalid scroll position, clear it
+            setSavedScrollPosition(0);
+            localStorage.removeItem(scrollPositionKey);
+            setHasRestoredScroll(true);
+            isRestoringScroll.current = false;
+          }
         }
       };
-      
-      container.addEventListener('scroll', throttledScroll, { passive: true });
-      window.addEventListener('resize', calculateVisibleRows);
-      
-      return () => {
-        container.removeEventListener('scroll', throttledScroll);
-        window.removeEventListener('resize', calculateVisibleRows);
-      };
+
+      // Use multiple requestAnimationFrame calls to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(restoreScroll);
+        });
+      });
     }
-  }, [calculateVisibleRows]);
+  }, [filteredAndSortedBeats.length, savedScrollPosition, hasRestoredScroll, isLoadingBeats, rowHeight, calculateVisibleRows, scrollPositionKey]);
+
+  // Clear scroll position when filters change significantly (search, genre, mood, etc.)
+  useEffect(() => {
+    const shouldClearScroll = searchText || 
+      selectedGenre.length > 0 || 
+      selectedMood.length > 0 || 
+      selectedKeyword.length > 0 || 
+      selectedFeature.length > 0 || 
+      selectedTierlist.length > 0;
+    
+    if (shouldClearScroll && savedScrollPosition > 0) {
+      isRestoringScroll.current = true;
+      localStorage.removeItem(scrollPositionKey);
+      setSavedScrollPosition(0);
+      setHasRestoredScroll(false);
+      
+      // Also scroll to top when clearing
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+      }
+      
+      // Release the flag after scroll is reset
+      setTimeout(() => {
+        isRestoringScroll.current = false;
+      }, 100);
+    }
+  }, [searchText, selectedGenre, selectedMood, selectedKeyword, selectedFeature, selectedTierlist, scrollPositionKey, savedScrollPosition]);
 
   useEffect(() => {
     const updateFilterDropdownHeight = () => {
@@ -467,31 +596,6 @@ const handlePlayPause = useCallback((beat) => {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = containerRef.current.scrollTop;
-      const scrollHeight = containerRef.current.scrollHeight;
-      const clientHeight = containerRef.current.clientHeight;
-      const maxScrollTop = scrollHeight - clientHeight;
-      
-      // Top gradient opacity
-      const maxScroll = 40;
-      const opacity = Math.min(scrollPosition / maxScroll, 1);
-      setIsScrolled(opacity);
-      
-      // Bottom gradient opacity (fade in when near bottom)
-      const distanceFromBottom = maxScrollTop - scrollPosition;
-      const bottomOpacity = Math.min(distanceFromBottom / maxScroll, 1);
-      setScrollOpacityBottom?.(bottomOpacity);
-      setIsScrolledBottom?.(bottomOpacity > 0);
-    };
-
-    const container = containerRef.current;
-    container.addEventListener('scroll', handleScroll);
-
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === 'Enter' && selectedBeats.length > 0) {
         handlePlayPause(selectedBeats[0]);
@@ -585,32 +689,29 @@ const handlePlayPause = useCallback((beat) => {
     visibleRange.start,
     visibleRange.end,
     rowHeight, 
-    filteredAndSortedBeats, 
     hoverIndex, 
     hoverPosition, 
-    currentBeat,
-    selectedBeats, 
+    currentBeat?.id,
     isPlaying, 
     searchText, 
     mode, 
     activeContextMenu,
     playlistId,
-    isOffline
+    isOffline,
+    filteredAndSortedBeats.length,
+    selectedBeats.length,
+    handlePlayPause,
+    handleUpdate,
+    onBeatClick,
+    handleBeatClick,
+    openConfirmModal,
+    moveBeat,
+    addToCustomQueue,
+    deleteMode,
+    onUpdateBeat,
+    setBeats,
+    isBeatCachedSync
   ]);
-
-  // Track modal state changes
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Enter' && selectedBeats.length > 0) {
-        handlePlayPause(selectedBeats[0]);
-      }
-      if (!inputFocused && (event.key === 'Delete' || event.key === 'Backspace') && selectedBeats.length > 0) {
-        openConfirmModal();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedBeats, handlePlayPause, inputFocused]);
 
   return (
     <SimpleBar

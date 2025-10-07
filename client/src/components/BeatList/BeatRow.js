@@ -719,10 +719,22 @@ const BeatRow = React.memo(({
   if (wasContextMenuActive !== isContextMenuActive) return false;
   
   // Re-render if beat associations changed (genres, moods, keywords, features)
-  if (JSON.stringify(prevProps.beat.genres) !== JSON.stringify(nextProps.beat.genres)) return false;
-  if (JSON.stringify(prevProps.beat.moods) !== JSON.stringify(nextProps.beat.moods)) return false;
-  if (JSON.stringify(prevProps.beat.keywords) !== JSON.stringify(nextProps.beat.keywords)) return false;
-  if (JSON.stringify(prevProps.beat.features) !== JSON.stringify(nextProps.beat.features)) return false;
+  // Use shallow comparison instead of expensive JSON.stringify
+  const prevGenres = prevProps.beat.genres || [];
+  const nextGenres = nextProps.beat.genres || [];
+  if (prevGenres.length !== nextGenres.length) return false;
+  
+  const prevMoods = prevProps.beat.moods || [];
+  const nextMoods = nextProps.beat.moods || [];
+  if (prevMoods.length !== nextMoods.length) return false;
+  
+  const prevKeywords = prevProps.beat.keywords || [];
+  const nextKeywords = nextProps.beat.keywords || [];
+  if (prevKeywords.length !== nextKeywords.length) return false;
+  
+  const prevFeatures = prevProps.beat.features || [];
+  const nextFeatures = nextProps.beat.features || [];
+  if (prevFeatures.length !== nextFeatures.length) return false;
   
   // If all checks pass, props are equal - skip re-render
   return true;
