@@ -9,6 +9,7 @@ export const usePlaylist = () => useContext(PlaylistContext);
 
 export const PlaylistProvider = ({ children }) => {
   const [playlists, setPlaylists] = useState([]);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(true);
   const [playedPlaylistId, setPlayedPlaylistId] = useState(() => {
     return localStorage.getItem('playedPlaylistId');
   });
@@ -72,15 +73,21 @@ export const PlaylistProvider = ({ children }) => {
   useEffect(() => {
     const fetchPlaylists = async () => {
       try {
+        setIsLoadingPlaylists(true);
         const data = await getPlaylists(user.id);
         setPlaylists(data);
       } catch (error) {
         console.error('Error fetching playlists:', error);
+      } finally {
+        setIsLoadingPlaylists(false);
       }
     };
 
     if (user.id) {
       fetchPlaylists();
+    } else {
+      // No user, stop loading
+      setIsLoadingPlaylists(false);
     }
 
     const handlePlaylistAdded = () => {
@@ -121,6 +128,7 @@ export const PlaylistProvider = ({ children }) => {
         currentPlaylistId,
         isSamePlaylist,
         playlists,
+        isLoadingPlaylists,
         updatePlaylist,
         handleAddPlaylist
       }}

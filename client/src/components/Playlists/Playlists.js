@@ -19,7 +19,7 @@ import './Playlists.scss';
 const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { playlists, playedPlaylistId, currentPlaylistId, updatePlaylist, handleAddPlaylist } = usePlaylist();
+  const { playlists, isLoadingPlaylists, playedPlaylistId, currentPlaylistId, updatePlaylist, handleAddPlaylist } = usePlaylist();
   
   const isHomePage = location.pathname === '/';
 
@@ -127,7 +127,12 @@ const Playlists = ({ isPlaying, closeSidePanel, toggleSidePanel }) => {
           <IoAddSharp />
         </IconButton>
       </div>
-      {playlists.length === 0 ? (
+      {isLoadingPlaylists ? (
+        <div className="playlists__loading">
+          <div className="playlists__spinner"></div>
+          <p>Loading playlists...</p>
+        </div>
+      ) : playlists.length === 0 ? (
         <div className="playlists__empty-message">
           <p>Your playlist is empty. Create a new playlist to get started!</p>
           <Button text="Create New Playlist" variant="primary" onClick={() => handleAddPlaylist(`Playlist #${playlists.length + 1}`, null)} />

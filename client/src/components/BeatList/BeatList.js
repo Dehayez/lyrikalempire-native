@@ -44,6 +44,19 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   const [hasRestoredScroll, setHasRestoredScroll] = useState(false);
   const isRestoringScroll = useRef(false);
   const scrollSaveTimeout = useRef(null);
+  const lastScrollTop = useRef(0);
+  const isUpdatingRange = useRef(false);
+  
+  // Debug mode - can be enabled via browser console: window.DEBUG_SCROLL = true
+  const DEBUG_SCROLL = typeof window !== 'undefined' && window.DEBUG_SCROLL;
+  
+  // Expose debug toggle to window for easy debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.hasOwnProperty('DEBUG_SCROLL')) {
+      window.DEBUG_SCROLL = false;
+      console.log('💡 Scroll debug mode available. Enable with: window.DEBUG_SCROLL = true');
+    }
+  }, []);
   
   const { setPlaylistId } = usePlaylist();
   const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats, loadedFromCache } = useBeat();
@@ -221,9 +234,16 @@ const filterOptionsWithCounts = useMemo(() => {
 
   const calculateVisibleRows = useCallback(() => {
     if (!containerRef.current || !tableRef.current) return;
+    
+    // Prevent updates if already updating to avoid feedback loops
+    if (isUpdatingRange.current) {
+      if (DEBUG_SCROLL) console.log('⏸️ Skipping calculateVisibleRows - already updating');
+      return;
+    }
 
-    const scrollTop = containerRef.current.scrollTop;
-    const viewportHeight = containerRef.current.clientHeight;
+    const container = containerRef.current;
+    const scrollTop = container.scrollTop;
+    const viewportHeight = container.clientHeight;
     
     // Calculate visible window with buffer
     const buffer = 15; // Render 15 extra rows above and below viewport
@@ -233,14 +253,51 @@ const filterOptionsWithCounts = useMemo(() => {
       Math.ceil((scrollTop + viewportHeight) / rowHeight) + buffer
     );
     
-    // Only update if the range changed meaningfully
+    // Only update if the range changed meaningfully (increased threshold to 8 rows)
     setVisibleRange(prev => {
-      if (Math.abs(prev.start - startIndex) < 5 && Math.abs(prev.end - endIndex) < 5) {
+      const startDiff = Math.abs(prev.start - startIndex);
+      const endDiff = Math.abs(prev.end - endIndex);
+      
+      if (startDiff < 8 && endDiff < 8) {
+        if (DEBUG_SCROLL) console.log('⏭️ Skipping range update - change too small', { startDiff, endDiff });
         return prev; // Skip update for small changes
       }
+      
+      // Mark as updating and store current scroll position
+      isUpdatingRange.current = true;
+      lastScrollTop.current = scrollTop;
+      
+      if (DEBUG_SCROLL) {
+        console.log('📊 Updating visible range', {
+          prev: `${prev.start}-${prev.end}`,
+          next: `${startIndex}-${endIndex}`,
+          scrollTop,
+          startDiff,
+          endDiff
+        });
+      }
+      
+      // Release the lock after React finishes rendering
+      setTimeout(() => {
+        isUpdatingRange.current = false;
+        
+        // Check if scroll position changed unexpectedly during update
+        if (container && Math.abs(container.scrollTop - lastScrollTop.current) > 2) {
+          if (DEBUG_SCROLL) {
+            console.warn('⚠️ Scroll position shifted during update!', {
+              expected: lastScrollTop.current,
+              actual: container.scrollTop,
+              diff: container.scrollTop - lastScrollTop.current
+            });
+          }
+          // Restore the intended scroll position
+          container.scrollTop = lastScrollTop.current;
+        }
+      }, 0);
+      
       return { start: startIndex, end: endIndex };
     });
-  }, [filteredAndSortedBeats.length, rowHeight]);
+  }, [filteredAndSortedBeats.length, rowHeight, DEBUG_SCROLL]);
 
   useEffect(() => {
     if (tbodyRef.current && tbodyRef.current.firstChild) {
@@ -259,10 +316,25 @@ const filterOptionsWithCounts = useMemo(() => {
     
     // Single unified scroll handler with optimized throttling
     let rafId = null;
+    let scrollEventCount = 0;
     
     const handleScroll = () => {
+      scrollEventCount++;
+      const currentScrollTop = container.scrollTop;
+      
       // Prevent scroll handling during restoration to avoid feedback loops
       if (isRestoringScroll.current) {
+        if (DEBUG_SCROLL) console.log('🚫 Ignoring scroll - restoration in progress');
+        return;
+      }
+      
+      // Ignore scroll events triggered by DOM updates (very small changes)
+      if (isUpdatingRange.current && Math.abs(currentScrollTop - lastScrollTop.current) < 3) {
+        if (DEBUG_SCROLL) console.log('🚫 Ignoring scroll - DOM update in progress', {
+          current: currentScrollTop,
+          last: lastScrollTop.current,
+          diff: Math.abs(currentScrollTop - lastScrollTop.current)
+        });
         return;
       }
       
@@ -277,6 +349,15 @@ const filterOptionsWithCounts = useMemo(() => {
         const scrollHeight = container.scrollHeight;
         const clientHeight = container.clientHeight;
         const maxScrollTop = scrollHeight - clientHeight;
+        
+        if (DEBUG_SCROLL && scrollEventCount % 10 === 0) {
+          console.log('🔄 Scroll event', {
+            count: scrollEventCount,
+            scrollTop: scrollPosition,
+            scrollHeight,
+            maxScrollTop
+          });
+        }
         
         // Update visible rows for virtual scrolling
         calculateVisibleRows();
@@ -314,8 +395,12 @@ const filterOptionsWithCounts = useMemo(() => {
         cancelAnimationFrame(rafId);
       }
       clearTimeout(scrollSaveTimeout.current);
+      
+      if (DEBUG_SCROLL) {
+        console.log('📊 Scroll handler cleanup', { totalScrollEvents: scrollEventCount });
+      }
     };
-  }, [calculateVisibleRows, hasRestoredScroll, scrollPositionKey, setScrollOpacityBottom, setIsScrolledBottom]);
+  }, [calculateVisibleRows, hasRestoredScroll, scrollPositionKey, setScrollOpacityBottom, setIsScrolledBottom, DEBUG_SCROLL]);
 
   // Restore scroll position after beats are loaded and virtual scrolling is ready
   useEffect(() => {

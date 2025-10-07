@@ -78,4 +78,40 @@
             }
         }
     }
+
+    &__loading,
+    &__empty-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 24px;
+        text-align: center;
+        color: $color-gray-light;
+        gap: 16px;
+
+        p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    }
+
+    &__spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid $color-gray-dark;
+        border-top-color: $color-primary;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
