@@ -84,9 +84,14 @@
             align-items: center;
             border-radius: 4px;
             padding: 4px 8px;
+            margin-left: 4px;
             white-space: nowrap;
             cursor: pointer;
             transition: background-color 0.2s ease;
+
+            &:first-child {
+                margin-left: 4px;
+            }
 
             &--focused {
                 background-color: $color-gray-dark-active;
