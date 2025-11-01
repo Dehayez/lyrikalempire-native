@@ -2,9 +2,23 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useWebSocket } from '../contexts';
 import { getShortBrowserName } from '../utils';
 
-// Generate a unique session ID for this tab
+// Generate a unique session ID for this tab using cryptographically secure method
 const generateSessionId = () => {
-  return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  // Use crypto.randomUUID() if available (modern browsers), fallback to crypto.getRandomValues()
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `tab_${crypto.randomUUID()}`;
+  }
+  
+  // Fallback for older browsers - use crypto.getRandomValues()
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint32Array(4);
+    crypto.getRandomValues(array);
+    return `tab_${Array.from(array, dec => ('0' + dec.toString(16)).substr(-2)).join('')}_${Date.now()}`;
+  }
+  
+  // Last resort fallback (should not happen in modern browsers)
+  console.warn('Crypto API not available, using less secure session ID generation');
+  return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
 export const useCrossTabSync = ({

@@ -23,7 +23,23 @@ export const WebSocketProvider = ({ children }) => {
       ? window.location.origin  // Use the same origin as the current page
       : 'http://localhost:4000'; // Development WebSocket URL
     
-    const newSocket = io(wsUrl);
+    // Get authentication token from localStorage
+    const accessToken = localStorage.getItem('accessToken');
+    
+    // Only connect if user is authenticated
+    if (!accessToken) {
+      return;
+    }
+    
+    // Connect with authentication token
+    const newSocket = io(wsUrl, {
+      auth: {
+        token: accessToken
+      },
+      query: {
+        token: accessToken
+      }
+    });
     
     newSocket.on('connect', () => {
       setIsConnected(true);
@@ -31,6 +47,26 @@ export const WebSocketProvider = ({ children }) => {
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
+    });
+    
+    newSocket.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      setIsConnected(false);
+    });
+
+    // Listen for authentication errors
+    newSocket.on('connect_error', (error) => {
+      if (error.message === 'Authentication token required' || 
+          error.message === 'Token expired' || 
+          error.message === 'Invalid token') {
+        // Try to refresh token and reconnect
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          // Token refresh would be handled by userService
+          // For now, just log the error
+          console.warn('WebSocket authentication failed, token may need refresh');
+        }
+      }
     });
 
     setSocket(newSocket);
