@@ -257,12 +257,13 @@ const getUserDetails = async (req, res) => {
   try {
     const token = req.headers.authorization.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const [user] = await db.query('SELECT * FROM users WHERE id = ?', [decoded.id]);
+    const [user] = await db.query('SELECT id, email, username FROM users WHERE id = ?', [decoded.id]);
 
     if (!user || user.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    res.setHeader('Cache-Control', 'private, max-age=300');
     res.json({ email: user[0].email, username: user[0].username, id: user[0].id });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -292,12 +293,13 @@ const getUserById = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [user] = await db.query('SELECT * FROM users WHERE id = ?', [id]);
+    const [user] = await db.query('SELECT id, username, email FROM users WHERE id = ?', [id]);
 
     if (!user || user.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    res.setHeader('Cache-Control', 'private, max-age=300');
     res.json({ id: user[0].id, username: user[0].username, email: user[0].email });
   } catch (error) {
     console.error('Error fetching user by ID:', error);

@@ -1,7 +1,7 @@
 const multer = require('multer');
-const B2 = require('backblaze-b2');
 const path = require('path');
 const fs = require('fs');
+const b2Cache = require('./b2Cache');
 
 // Function to sanitize filenames by removing special characters
 const sanitizeFileName = (fileName) => {
@@ -17,11 +17,6 @@ const sanitizeFileName = (fileName) => {
     // Remove leading/trailing underscores
     .replace(/^_+|_+$/g, '');
 };
-
-const b2 = new B2({
-  applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
-  applicationKey: process.env.B2_APPLICATION_KEY,
-});
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -49,7 +44,8 @@ const upload = multer({
 
 const uploadToBackblaze = async (file, userId) => {
   try {
-    await b2.authorize();
+    await b2Cache.authorize();
+    const b2 = b2Cache.getB2Instance();
 
     let finalFileName;
     

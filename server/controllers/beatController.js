@@ -4,12 +4,7 @@ const { uploadToBackblaze } = require('../config/multer');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-const B2 = require('backblaze-b2');
-
-const b2 = new B2({
-  applicationKeyId: process.env.B2_APPLICATION_KEY_ID,
-  applicationKey: process.env.B2_APPLICATION_KEY,
-});
+const b2Cache = require('../config/b2Cache');
 
 const tableMap = {
   genres: 'beats_genres',
@@ -24,7 +19,8 @@ const getSignedUrl = async (req, res) => {
   const { userId } = req.query;
 
   try {
-    await b2.authorize();
+    await b2Cache.authorize();
+    const b2 = b2Cache.getB2Instance();
 
     const filePath = `audio/users/${userId}/${fileName}`;
 
@@ -40,6 +36,7 @@ const getSignedUrl = async (req, res) => {
 
     const signedUrl = `https://f003.backblazeb2.com/file/${process.env.B2_BUCKET_NAME}/${filePath}?Authorization=${response.data.authorizationToken}`;
 
+    res.setHeader('Cache-Control', 'private, max-age=3600');
     res.status(200).json({ signedUrl });
   } catch (error) {
     res.status(500).json({ error: 'An error occurred while getting the signed URL', details: error.message });
@@ -55,125 +52,121 @@ const getTableName = (association_type, res) => {
   return tableName;
 };
 
-const getBeats = (req, res) => {
+const getBeats = async (req, res) => {
   const { associationType, associationIds, user_id } = req.query;
 
-  if (associationType && associationIds) {
-    const tableName = getTableName(associationType, res);
-    if (!tableName) return;
+  try {
+    if (associationType && associationIds) {
+      const tableName = getTableName(associationType, res);
+      if (!tableName) return;
 
-    const ids = associationIds.split(',').map(id => parseInt(id, 10));
-    const placeholders = ids.map(() => '?').join(',');
+      const ids = associationIds.split(',').map(id => parseInt(id, 10));
+      const placeholders = ids.map(() => '?').join(',');
 
-    const query = `
-      SELECT b.* FROM beats b
-      JOIN ${tableName} bg ON b.id = bg.beat_id
-      WHERE bg.${associationType.slice(0, -1)}_id IN (${placeholders}) AND b.user_id = ?
-    `;
+      const query = `
+        SELECT b.* FROM beats b
+        JOIN ${tableName} bg ON b.id = bg.beat_id
+        WHERE bg.${associationType.slice(0, -1)}_id IN (${placeholders}) AND b.user_id = ?
+      `;
 
-    handleQuery(query, [...ids, user_id], res, `Beats with ${associationType} fetched successfully`, true);
-  } else {
-    // Use a simpler approach with separate queries for each association type
-    const beatsQuery = 'SELECT * FROM beats WHERE user_id = ? ORDER BY created_at DESC';
-    
-    db.query(beatsQuery, [user_id])
-      .then(async ([beats]) => {
-        if (beats.length === 0) {
-          return res.status(200).json([]);
-        }
-        
-        const beatIds = beats.map(beat => beat.id);
-        const placeholders = beatIds.map(() => '?').join(',');
-        
-        // Fetch all associations in parallel
-        const [
-          [genreResults],
-          [moodResults], 
-          [keywordResults],
-          [featureResults],
-          [lyricsResults]
-        ] = await Promise.all([
-          db.query(`
-            SELECT bg.beat_id, bg.genre_id, g.name 
-            FROM beats_genres bg 
-            JOIN genres g ON bg.genre_id = g.id 
-            WHERE bg.beat_id IN (${placeholders})
-          `, beatIds),
-          db.query(`
-            SELECT bm.beat_id, bm.mood_id, m.name 
-            FROM beats_moods bm 
-            JOIN moods m ON bm.mood_id = m.id 
-            WHERE bm.beat_id IN (${placeholders})
-          `, beatIds),
-          db.query(`
-            SELECT bk.beat_id, bk.keyword_id, k.name 
-            FROM beats_keywords bk 
-            JOIN keywords k ON bk.keyword_id = k.id 
-            WHERE bk.beat_id IN (${placeholders})
-          `, beatIds),
-          db.query(`
-            SELECT bf.beat_id, bf.feature_id, f.name 
-            FROM beats_features bf 
-            JOIN features f ON bf.feature_id = f.id 
-            WHERE bf.beat_id IN (${placeholders})
-          `, beatIds),
-          db.query(`
-            SELECT bl.beat_id, bl.lyrics_id 
-            FROM beats_lyrics bl 
-            WHERE bl.beat_id IN (${placeholders})
-          `, beatIds)
-        ]);
-        
-        // Group associations by beat_id
-        const genresByBeat = {};
-        const moodsByBeat = {};
-        const keywordsByBeat = {};
-        const featuresByBeat = {};
-        const lyricsByBeat = {};
-        
-        genreResults.forEach(row => {
-          if (!genresByBeat[row.beat_id]) genresByBeat[row.beat_id] = [];
-          genresByBeat[row.beat_id].push({ genre_id: row.genre_id, name: row.name });
-        });
-        
-        moodResults.forEach(row => {
-          if (!moodsByBeat[row.beat_id]) moodsByBeat[row.beat_id] = [];
-          moodsByBeat[row.beat_id].push({ mood_id: row.mood_id, name: row.name });
-        });
-        
-        keywordResults.forEach(row => {
-          if (!keywordsByBeat[row.beat_id]) keywordsByBeat[row.beat_id] = [];
-          keywordsByBeat[row.beat_id].push({ keyword_id: row.keyword_id, name: row.name });
-        });
-        
-        featureResults.forEach(row => {
-          if (!featuresByBeat[row.beat_id]) featuresByBeat[row.beat_id] = [];
-          featuresByBeat[row.beat_id].push({ feature_id: row.feature_id, name: row.name });
-        });
-        
-        lyricsResults.forEach(row => {
-          if (!lyricsByBeat[row.beat_id]) lyricsByBeat[row.beat_id] = [];
-          lyricsByBeat[row.beat_id].push({ lyrics_id: row.lyrics_id });
-        });
-        
-        // Combine beats with their associations
-        const beatsWithAssociations = beats.map(beat => ({
-          ...beat,
-          genres: genresByBeat[beat.id] || [],
-          moods: moodsByBeat[beat.id] || [],
-          keywords: keywordsByBeat[beat.id] || [],
-          features: featuresByBeat[beat.id] || [],
-          lyrics: lyricsByBeat[beat.id] || []
-        }));
-        
-        res.status(200).json(beatsWithAssociations);
-      })
-      .catch(error => {
-        console.error('Database error:', error);
-        res.status(500).json({ error: 'An error occurred while fetching beats' });
+      await handleQuery(query, [...ids, user_id], res, `Beats with ${associationType} fetched successfully`, true);
+    } else {
+      const beatsQuery = 'SELECT * FROM beats WHERE user_id = ? ORDER BY created_at DESC';
+      
+      const [beats] = await db.query(beatsQuery, [user_id]);
+      
+      if (beats.length === 0) {
+        res.setHeader('Cache-Control', 'private, max-age=60');
+        return res.status(200).json([]);
+      }
+      
+      const beatIds = beats.map(beat => beat.id);
+      const placeholders = beatIds.map(() => '?').join(',');
+      
+      const [
+        [genreResults],
+        [moodResults], 
+        [keywordResults],
+        [featureResults],
+        [lyricsResults]
+      ] = await Promise.all([
+        db.query(`
+          SELECT bg.beat_id, bg.genre_id, g.name 
+          FROM beats_genres bg 
+          JOIN genres g ON bg.genre_id = g.id 
+          WHERE bg.beat_id IN (${placeholders})
+        `, beatIds),
+        db.query(`
+          SELECT bm.beat_id, bm.mood_id, m.name 
+          FROM beats_moods bm 
+          JOIN moods m ON bm.mood_id = m.id 
+          WHERE bm.beat_id IN (${placeholders})
+        `, beatIds),
+        db.query(`
+          SELECT bk.beat_id, bk.keyword_id, k.name 
+          FROM beats_keywords bk 
+          JOIN keywords k ON bk.keyword_id = k.id 
+          WHERE bk.beat_id IN (${placeholders})
+        `, beatIds),
+        db.query(`
+          SELECT bf.beat_id, bf.feature_id, f.name 
+          FROM beats_features bf 
+          JOIN features f ON bf.feature_id = f.id 
+          WHERE bf.beat_id IN (${placeholders})
+        `, beatIds),
+        db.query(`
+          SELECT bl.beat_id, bl.lyrics_id 
+          FROM beats_lyrics bl 
+          WHERE bl.beat_id IN (${placeholders})
+        `, beatIds)
+      ]);
+      
+      const genresByBeat = {};
+      const moodsByBeat = {};
+      const keywordsByBeat = {};
+      const featuresByBeat = {};
+      const lyricsByBeat = {};
+      
+      genreResults.forEach(row => {
+        if (!genresByBeat[row.beat_id]) genresByBeat[row.beat_id] = [];
+        genresByBeat[row.beat_id].push({ genre_id: row.genre_id, name: row.name });
       });
       
-    
+      moodResults.forEach(row => {
+        if (!moodsByBeat[row.beat_id]) moodsByBeat[row.beat_id] = [];
+        moodsByBeat[row.beat_id].push({ mood_id: row.mood_id, name: row.name });
+      });
+      
+      keywordResults.forEach(row => {
+        if (!keywordsByBeat[row.beat_id]) keywordsByBeat[row.beat_id] = [];
+        keywordsByBeat[row.beat_id].push({ keyword_id: row.keyword_id, name: row.name });
+      });
+      
+      featureResults.forEach(row => {
+        if (!featuresByBeat[row.beat_id]) featuresByBeat[row.beat_id] = [];
+        featuresByBeat[row.beat_id].push({ feature_id: row.feature_id, name: row.name });
+      });
+      
+      lyricsResults.forEach(row => {
+        if (!lyricsByBeat[row.beat_id]) lyricsByBeat[row.beat_id] = [];
+        lyricsByBeat[row.beat_id].push({ lyrics_id: row.lyrics_id });
+      });
+      
+      const beatsWithAssociations = beats.map(beat => ({
+        ...beat,
+        genres: genresByBeat[beat.id] || [],
+        moods: moodsByBeat[beat.id] || [],
+        keywords: keywordsByBeat[beat.id] || [],
+        features: featuresByBeat[beat.id] || [],
+        lyrics: lyricsByBeat[beat.id] || []
+      }));
+      
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      res.status(200).json(beatsWithAssociations);
+    }
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({ error: 'An error occurred while fetching beats' });
   }
 };
 
@@ -273,7 +266,8 @@ const deleteBeat = async (req, res) => {
         const filePath = `audio/users/${userId}/${fileName}`;
 
         // Delete file from Backblaze B2
-        await b2.authorize();
+        await b2Cache.authorize();
+        const b2 = b2Cache.getB2Instance();
 
         // Retrieve the fileId from Backblaze B2
         const fileListResponse = await b2.listFileNames({
@@ -326,7 +320,8 @@ const replaceAudio = async (req, res) => {
 
     if (oldFilePath) {
       // Delete old file from Backblaze B2
-      await b2.authorize();
+      await b2Cache.authorize();
+      const b2 = b2Cache.getB2Instance();
       const fileName = oldFilePath.split('/').pop();
 
       const fileListResponse = await b2.listFileNames({

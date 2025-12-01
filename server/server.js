@@ -122,14 +122,14 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Input validation
+      // Input validation (only validate if data is provided or required)
       const validation = validateWebSocketEvent(eventName, data);
       if (!validation.valid) {
         socket.emit('error', { message: validation.error });
         return;
       }
 
-      // Execute handler
+      // Execute handler (pass data if provided, otherwise undefined)
       try {
         handler(data);
       } catch (error) {

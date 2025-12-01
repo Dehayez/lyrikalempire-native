@@ -6,13 +6,14 @@ import './PlayPauseButton.scss';
 const PlayPauseButton = ({ isPlaying, setIsPlaying, className, iconSize = 24 }) => {
   const [animatePlayPause, setAnimatePlayPause] = useState(false);
 
-  // Optimized toggle function for Safari
+  // Optimized toggle function for immediate response
   const togglePlayPause = useCallback(() => {
     const newPlayState = !isPlaying;
-    setIsPlaying(newPlayState);
+    // Update animation immediately for visual feedback
     setAnimatePlayPause(true);
-    // Reduced timeout for faster visual feedback
     setTimeout(() => setAnimatePlayPause(false), 150);
+    // Call handlePlayPause immediately with new state
+    setIsPlaying(newPlayState);
   }, [isPlaying, setIsPlaying]);
 
   const handlePlayPauseClick = useCallback((e) => {

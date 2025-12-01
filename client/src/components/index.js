@@ -12,6 +12,7 @@ export * from './Form';
 export * from './Header';
 export * from './Highlight';
 export * from './History';
+export { default as Intro } from './Intro';
 export * from './Inputs';
 export * from './Modals';
 export { default as PlayingIndicator } from './PlayingIndicator';

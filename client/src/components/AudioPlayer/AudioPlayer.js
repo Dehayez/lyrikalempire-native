@@ -352,13 +352,18 @@ const AudioPlayer = ({
 
   // Immediately reset time/progress on beat change (click or programmatic)
   useEffect(() => {
-    // Ensure UI shows 00:00 instantly and prevent carryover
-    setCurrentTimeState(0);
-    setProgress(0);
-    // Pause any current playback to prevent previous track resuming during load
-    try { audioCore.pause(); } catch (e) {}
-    audioCore.setCurrentTime(0);
-    syncAllPlayers(true);
+    // Prevent sync during initial state updates to avoid loops
+    const timeoutId = setTimeout(() => {
+      // Ensure UI shows 00:00 instantly and prevent carryover
+      setCurrentTimeState(0);
+      setProgress(0);
+      // Pause any current playback to prevent previous track resuming during load
+      try { audioCore.pause(); } catch (e) {}
+      audioCore.setCurrentTime(0);
+      syncAllPlayers(true);
+    }, 0);
+    
+    return () => clearTimeout(timeoutId);
   }, [currentBeat?.id]);
 
   // Set up media session

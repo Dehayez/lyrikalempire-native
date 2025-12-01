@@ -1,0 +1,247 @@
+@import '../../globals/variables';
+
+.intro {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  pointer-events: none;
+
+  &__overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba($color-black-dark, 0.85);
+    backdrop-filter: blur(2px);
+    animation: introFadeIn 0.4s ease-out;
+    pointer-events: all;
+  }
+
+  &__highlight {
+    position: absolute;
+    border: 2px solid $color-primary;
+    border-radius: 4px;
+    box-shadow: 0 0 0 9999px rgba($color-black-dark, 0.85),
+                0 0 20px rgba($color-primary, 0.5),
+                inset 0 0 20px rgba($color-primary, 0.1);
+    pointer-events: none;
+    animation: introHighlightPulse 2s ease-in-out infinite;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+  }
+
+  &__tooltip {
+    position: absolute;
+    z-index: 2;
+    pointer-events: all;
+    max-width: 400px;
+
+    &--top-center {
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: introTooltipSlideInTop 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &--left {
+      top: 50%;
+      left: 20px;
+      transform: translateY(-50%);
+      animation: introTooltipSlideInLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &--center {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: introTooltipSlideInCenter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &--right {
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      animation: introTooltipSlideInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &--bottom-center {
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: introTooltipSlideInBottom 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &--bottom-right {
+      bottom: 100px;
+      right: 20px;
+      animation: introTooltipSlideInBottomRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  }
+
+  &__tooltip-content {
+    background-color: $color-gray-dark;
+    border: 1px solid $color-primary-border;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  &__tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  &__tooltip-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: $color-white;
+    margin: 0;
+  }
+
+  &__tooltip-step {
+    font-size: 14px;
+    color: $color-gray-light;
+    background-color: $color-gray-dark-active;
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  &__tooltip-description {
+    font-size: 14px;
+    color: $color-gray-light;
+    line-height: 1.6;
+    margin: 0 0 20px 0;
+  }
+
+  &__tooltip-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  &__button {
+    min-width: 100px;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+
+    &--skip {
+      background-color: transparent;
+      border: 1px solid $color-gray-mid;
+      color: $color-gray-light;
+
+      &:hover {
+        background-color: $color-gray-dark-active;
+        border-color: $color-gray-default;
+        color: $color-white;
+      }
+    }
+
+    &--next {
+      background-color: $color-primary-bg;
+      border: 1px solid $color-primary-border;
+      color: $color-white;
+
+      &:hover {
+        background-color: $color-primary-bg-hover;
+        border-color: $color-primary-border-hover;
+      }
+    }
+  }
+}
+
+@keyframes introFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes introHighlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba($color-black-dark, 0.85),
+                0 0 20px rgba($color-primary, 0.5),
+                inset 0 0 20px rgba($color-primary, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba($color-black-dark, 0.85),
+                0 0 30px rgba($color-primary, 0.7),
+                inset 0 0 30px rgba($color-primary, 0.2);
+  }
+}
+
+@keyframes introTooltipSlideInTop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes introTooltipSlideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) translateY(-50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(-50%) scale(1);
+  }
+}
+
+@keyframes introTooltipSlideInCenter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes introTooltipSlideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px) translateY(-50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(-50%) scale(1);
+  }
+}
+
+@keyframes introTooltipSlideInBottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes introTooltipSlideInBottomRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px) translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+

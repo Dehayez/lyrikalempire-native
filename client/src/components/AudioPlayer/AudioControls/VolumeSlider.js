@@ -36,16 +36,17 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
     const rect = sliderRef.current.getBoundingClientRect();
     const newVolume = clamp((event.clientX - rect.left) / rect.width, 0, 1);
     
+    // Update ref immediately for accurate comparisons
+    volumeRef.current = newVolume;
+    
     // Always update local volume for smooth UI updates
     setLocalVolume(newVolume);
     
-    // Only update parent if volume actually changed by more than 1%
-    if (Math.abs(newVolume - volumeRef.current) > 0.01) {
-      handleVolumeChangeRef.current({ target: { value: newVolume } });
-      setIsMuted(newVolume === 0);
-      localStorage.setItem('isMuted', JSON.stringify(newVolume === 0));
-      localStorage.setItem('prevVolume', newVolume.toString());
-    }
+    // Update parent immediately for responsive volume changes
+    handleVolumeChangeRef.current({ target: { value: newVolume } });
+    setIsMuted(newVolume === 0);
+    localStorage.setItem('isMuted', JSON.stringify(newVolume === 0));
+    localStorage.setItem('prevVolume', newVolume.toString());
   }, [isMobile]);
 
   const toggleMute = useCallback(() => {
@@ -73,8 +74,7 @@ const VolumeSlider = ({ volume, handleVolumeChange }) => {
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       setIsDragging(false);
-      // Sync local volume with actual volume when drag ends
-      setLocalVolume(volumeRef.current);
+      // Sync local volume will be updated by useEffect when volume prop changes
     }
   }, [isDragging]);
 

@@ -13,15 +13,21 @@ const createPlaylist = (req, res) => {
   );
 };
 
-const getPlaylists = (req, res) => {
+const getPlaylists = async (req, res) => {
   const { user_id } = req.query;
-  dbHelpers.handleQuery(
-    'SELECT * FROM playlists WHERE user_id = ? ORDER BY created_at DESC',
-    [user_id],
-    res,
-    null,
-    true
-  );
+  
+  try {
+    const [playlists] = await dbHelpers.db.query(
+      'SELECT * FROM playlists WHERE user_id = ? ORDER BY created_at DESC',
+      [user_id]
+    );
+    
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    res.json(playlists);
+  } catch (error) {
+    console.error('Error fetching playlists:', error);
+    res.status(500).json({ error: 'An error occurred while fetching playlists' });
+  }
 };
 
 const getPlaylistById = (req, res) => {

@@ -6,6 +6,12 @@ const jwt = require('jsonwebtoken');
  */
 const authenticateWebSocket = (socket, next) => {
   try {
+    // Check if JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+      console.error('ERROR: JWT_SECRET environment variable is not set');
+      return next(new Error('Server configuration error'));
+    }
+
     // Get token from handshake query or auth header
     const token = socket.handshake.query?.token || socket.handshake.auth?.token;
     
