@@ -760,6 +760,7 @@ const AudioPlayer = ({
         waveform={waveform}
         toggleWaveform={toggleWaveform}
         isLoadingAudio={isLoadingAudio}
+        showLoadingAnimation={showLoadingAnimation}
         isCachedAudio={isCachedAudio}
         shuffle={shuffle}
         setShuffle={setShuffle}

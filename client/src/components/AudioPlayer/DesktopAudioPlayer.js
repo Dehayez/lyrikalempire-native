@@ -27,6 +27,7 @@ const DesktopAudioPlayer = forwardRef(({
   waveform,
   waveformRef,
   isLoadingAudio,
+  showLoadingAnimation = false,
   isCachedAudio,
   toggleFullPagePlayer,
   progress,
@@ -36,9 +37,12 @@ const DesktopAudioPlayer = forwardRef(({
   isScrolledBottom = false,
   scrollOpacityBottom = 0
 }, ref) => {
+  const loadingClass = showLoadingAnimation ? 'loading' : '';
+  console.log('[SHIMMER DEBUG] DesktopAudioPlayer - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
+
   return (
     <div 
-      className="audio-player audio-player--desktop audio"
+      className={`audio-player audio-player--desktop audio ${loadingClass}`}
       style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
     >
       <div className='audio-player__text audio-player__text--desktop' style={{ flex: '1' }}>

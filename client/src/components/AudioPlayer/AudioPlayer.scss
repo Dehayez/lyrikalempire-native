@@ -10,14 +10,17 @@ $indicator-half-size: math.div($indicator-size, 2);
     transition: background 0.3s ease;
   }
   
-  &.loading .rhap_progress-bar {
-    background: linear-gradient(90deg, 
+  &.loading .rhap_progress-bar,
+  &.loading .rhap_progress-container .rhap_progress-bar {
+    background-color: transparent !important;
+    background-image: linear-gradient(90deg, 
       $color-gray-dark 25%, 
       $color-gray-mid 50%, 
       $color-gray-dark 75%
-    );
-    background-size: 200% 100%;
-    animation: loading-shimmer 3s linear infinite;
+    ) !important;
+    background-size: 200% 100% !important;
+    background-repeat: no-repeat !important;
+    animation: loading-shimmer 3s linear infinite !important;
   }
 }
 
@@ -69,6 +72,9 @@ audio {
   }
 
   &--desktop {
+    // Loading animation
+    @include loading-shimmer-animation;
+    
     .rhap_progress-section {
       padding: 40px 0;
     } 
@@ -392,6 +398,22 @@ audio {
 .rhap_progress-bar {
   background-color: $color-gray-mid;
   z-index: 1;
+  
+  // Ensure shimmer animation works when loading class is present
+  .audio-player.loading &,
+  .audio-player--mobile.loading &,
+  .audio-player--desktop.loading &,
+  .audio-player__full-page.loading & {
+    background-color: transparent !important;
+    background-image: linear-gradient(90deg, 
+      $color-gray-dark 25%, 
+      $color-gray-mid 50%, 
+      $color-gray-dark 75%
+    ) !important;
+    background-size: 200% 100% !important;
+    background-repeat: no-repeat !important;
+    animation: loading-shimmer 3s linear infinite !important;
+  }
 }
 
 .rhap_progress-indicator {
@@ -427,6 +449,9 @@ audio {
 
 // Desktop-only behavior for progress indicator
 .audio-player--desktop {
+  // Loading animation
+  @include loading-shimmer-animation;
+  
   .rhap_progress-container {
     // Hide indicator by default on desktop
     .rhap_progress-indicator {
@@ -566,4 +591,17 @@ audio {
   100% {
     background-position: -200% 0;
   }
+}
+
+// Debug: Test if animation is working - add this temporarily to verify
+.audio-player.loading .rhap_progress-bar {
+  background-color: transparent !important;
+  background-image: linear-gradient(90deg, 
+    $color-gray-dark 25%, 
+    $color-gray-mid 50%, 
+    $color-gray-dark 75%
+  ) !important;
+  background-size: 200% 100% !important;
+  background-repeat: no-repeat !important;
+  animation: loading-shimmer 3s linear infinite !important;
 }

@@ -41,6 +41,9 @@ const BeatEditPanel = forwardRef(({
   style = {}
 }, ref) => {
 
+  const loadingClass = showLoadingAnimation ? 'loading' : '';
+  console.log('[SHIMMER DEBUG] BeatEditPanel - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
+
   return (
     <>
       <div
@@ -49,7 +52,7 @@ const BeatEditPanel = forwardRef(({
       />
       <div
         ref={ref}
-        className={`audio-player audio-player__full-page ${showLoadingAnimation ? 'loading' : ''}`}
+        className={`audio-player audio-player__full-page ${loadingClass}`}
         style={style}
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}

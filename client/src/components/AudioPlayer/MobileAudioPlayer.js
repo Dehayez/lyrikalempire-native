@@ -33,9 +33,12 @@ const MobileAudioPlayer = forwardRef(({
     }
   }, [handlePlayPause, isPlaying, currentBeat]);
 
+  const loadingClass = showLoadingAnimation ? 'loading' : '';
+  console.log('[SHIMMER DEBUG] MobileAudioPlayer - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
+
   return (
     <div
-      className={`audio-player audio-player--mobile ${lyricsModal ? 'audio-player--lyrics-modal-open' : ''} ${showLoadingAnimation ? 'loading' : ''}`}
+      className={`audio-player audio-player--mobile ${lyricsModal ? 'audio-player--lyrics-modal-open' : ''} ${loadingClass}`}
       style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
       onClick={toggleFullPagePlayer}
     >

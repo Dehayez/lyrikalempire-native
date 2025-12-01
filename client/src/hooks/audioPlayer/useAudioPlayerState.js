@@ -39,6 +39,11 @@ export const useAudioPlayerState = ({
   const [showLoadingAnimation, setShowLoadingAnimation] = useState(false);
   const [isCachedAudio, setIsCachedAudio] = useState(false);
   
+  // Debug: Track showLoadingAnimation changes
+  useEffect(() => {
+    console.log('[SHIMMER DEBUG] showLoadingAnimation state changed to:', showLoadingAnimation);
+  }, [showLoadingAnimation]);
+  
   const [waveform, setWaveform] = useState(() => 
     JSON.parse(localStorage.getItem('waveform')) || false
   );
@@ -144,10 +149,9 @@ export const useAudioPlayerState = ({
     try {
       setIsLoadingAudio(true);
       
-      // Start delayed loading animation after 500ms
-      loadingTimeoutRef.current = setTimeout(() => {
-        setShowLoadingAnimation(true);
-      }, 500);
+      // Show loading animation immediately
+      console.log('[SHIMMER DEBUG] Setting showLoadingAnimation to TRUE');
+      setShowLoadingAnimation(true);
       
       cacheInProgressRef.current = true;
 
@@ -170,14 +174,27 @@ export const useAudioPlayerState = ({
           setAudioSrc(cachedAudioUrl);
           setAutoPlay(true);
           
+          // Keep shimmer visible briefly to show loading state
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           // If offline, stop here and use cached version
           if (isOffline()) {
+            // Delay hiding shimmer to ensure it's visible
+            setTimeout(() => {
+              console.log('[SHIMMER DEBUG] Clearing shimmer after offline cached load');
+              setShowLoadingAnimation(false);
+            }, 300);
             return;
           }
           
           // If online and not Safari, we can still try to refresh the signed URL in background
           // but use cached audio immediately for better UX
           if (!isSafari) {
+            // Delay hiding shimmer to ensure it's visible
+            setTimeout(() => {
+              console.log('[SHIMMER DEBUG] Clearing shimmer after cached load (non-Safari)');
+              setShowLoadingAnimation(false);
+            }, 300);
             return;
           }
         }
@@ -232,6 +249,13 @@ export const useAudioPlayerState = ({
           if (cachedAudioUrl) {
             setAudioSrc(cachedAudioUrl);
             setAutoPlay(true);
+            // Keep shimmer visible briefly to show loading state
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // Delay hiding shimmer to ensure it's visible
+            setTimeout(() => {
+              console.log('[SHIMMER DEBUG] Clearing shimmer after error fallback to cached');
+              setShowLoadingAnimation(false);
+            }, 300);
             return;
           }
         }
@@ -244,7 +268,12 @@ export const useAudioPlayerState = ({
       setAudioSrc('');
     } finally {
       setIsLoadingAudio(false);
-      setShowLoadingAnimation(false);
+      
+      // Delay hiding shimmer to ensure it's visible (only if not already handled by early returns)
+      setTimeout(() => {
+        console.log('[SHIMMER DEBUG] Setting showLoadingAnimation to FALSE in finally block (delayed)');
+        setShowLoadingAnimation(false);
+      }, 500);
       
       // Clear the timeout if it hasn't fired yet
       if (loadingTimeoutRef.current) {
@@ -268,10 +297,8 @@ export const useAudioPlayerState = ({
     try {
       setIsLoadingAudio(true);
       
-      // Start delayed loading animation after 500ms
-      loadingTimeoutRef.current = setTimeout(() => {
-        setShowLoadingAnimation(true);
-      }, 500);
+      // Show loading animation immediately
+      setShowLoadingAnimation(true);
       
       const freshSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
       originalUrlRef.current = freshSignedUrl;
