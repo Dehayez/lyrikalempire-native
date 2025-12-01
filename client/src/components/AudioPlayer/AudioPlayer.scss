@@ -12,11 +12,13 @@ $indicator-half-size: math.div($indicator-size, 2);
   
   &.loading .rhap_progress-bar,
   &.loading .rhap_progress-container .rhap_progress-bar {
-    background-color: transparent !important;
+    background-color: $color-gray-mid !important;
     background-image: linear-gradient(90deg, 
-      $color-gray-dark 25%, 
-      $color-gray-mid 50%, 
-      $color-gray-dark 75%
+      $color-gray-mid 0%,
+      $color-gray-mid 25%,
+      lighten($color-gray-mid, 25%) 50%,
+      $color-gray-mid 75%,
+      $color-gray-mid 100%
     ) !important;
     background-size: 200% 100% !important;
     background-repeat: no-repeat !important;
@@ -404,11 +406,13 @@ audio {
   .audio-player--mobile.loading &,
   .audio-player--desktop.loading &,
   .audio-player__full-page.loading & {
-    background-color: transparent !important;
+    background-color: $color-gray-mid !important;
     background-image: linear-gradient(90deg, 
-      $color-gray-dark 25%, 
-      $color-gray-mid 50%, 
-      $color-gray-dark 75%
+      $color-gray-mid 0%,
+      $color-gray-mid 25%,
+      lighten($color-gray-mid, 25%) 50%,
+      $color-gray-mid 75%,
+      $color-gray-mid 100%
     ) !important;
     background-size: 200% 100% !important;
     background-repeat: no-repeat !important;
@@ -593,13 +597,15 @@ audio {
   }
 }
 
-// Debug: Test if animation is working - add this temporarily to verify
+// Ensure shimmer animation works with proper base color
 .audio-player.loading .rhap_progress-bar {
-  background-color: transparent !important;
+  background-color: $color-gray-mid !important;
   background-image: linear-gradient(90deg, 
-    $color-gray-dark 25%, 
-    $color-gray-mid 50%, 
-    $color-gray-dark 75%
+    $color-gray-mid 0%,
+    $color-gray-mid 25%,
+    lighten($color-gray-mid, 25%) 50%,
+    $color-gray-mid 75%,
+    $color-gray-mid 100%
   ) !important;
   background-size: 200% 100% !important;
   background-repeat: no-repeat !important;
