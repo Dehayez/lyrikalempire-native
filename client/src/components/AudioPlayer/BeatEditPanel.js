@@ -42,7 +42,6 @@ const BeatEditPanel = forwardRef(({
 }, ref) => {
 
   const loadingClass = showLoadingAnimation ? 'loading' : '';
-  console.log('[SHIMMER DEBUG] BeatEditPanel - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
 
   return (
     <>

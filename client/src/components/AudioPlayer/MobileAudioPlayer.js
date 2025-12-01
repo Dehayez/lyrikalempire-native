@@ -34,7 +34,6 @@ const MobileAudioPlayer = forwardRef(({
   }, [handlePlayPause, isPlaying, currentBeat]);
 
   const loadingClass = showLoadingAnimation ? 'loading' : '';
-  console.log('[SHIMMER DEBUG] MobileAudioPlayer - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
 
   return (
     <div

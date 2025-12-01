@@ -38,7 +38,6 @@ const DesktopAudioPlayer = forwardRef(({
   scrollOpacityBottom = 0
 }, ref) => {
   const loadingClass = showLoadingAnimation ? 'loading' : '';
-  console.log('[SHIMMER DEBUG] DesktopAudioPlayer - showLoadingAnimation:', showLoadingAnimation, 'loadingClass:', loadingClass, 'isLoadingAudio:', isLoadingAudio);
 
   return (
     <div 
