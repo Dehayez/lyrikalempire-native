@@ -77,11 +77,23 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
     // Mark render performance
     const renderTime = performance.now() - renderStartTime.current;
     if (renderTime > 0) {
-      performance.mark(`${componentName}-render-${renderCount.current}`);
-      performance.measure(
-        `${componentName}-render-duration-${renderCount.current}`,
-        `${componentName}-render-${renderCount.current}`
-      );
+      const markName = `${componentName}-render-${renderCount.current}`;
+      const measureName = `${componentName}-render-duration-${renderCount.current}`;
+      
+      performance.mark(markName);
+      performance.measure(measureName, markName);
+      
+      // Clean up old marks/measures to prevent accumulation (keep last 50)
+      if (renderCount.current > 50) {
+        const oldMarkName = `${componentName}-render-${renderCount.current - 50}`;
+        const oldMeasureName = `${componentName}-render-duration-${renderCount.current - 50}`;
+        try {
+          performance.clearMarks(oldMarkName);
+          performance.clearMeasures(oldMeasureName);
+        } catch (e) {
+          // Ignore errors if mark/measure doesn't exist
+        }
+      }
     }
   });
 

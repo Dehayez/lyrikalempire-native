@@ -31,6 +31,11 @@ class MobilePerformanceMonitor {
     this.startTime = Date.now();
     this.lastCpuCheck = Date.now();
     this.performanceObserver = null;
+    this.cpuTimeoutId = null;
+    this.memoryTimeoutId = null;
+    this.renderAnimationFrameId = null;
+    this.errorHandler = this.handleError.bind(this);
+    this.promiseRejectionHandler = this.handlePromiseRejection.bind(this);
   }
 
   enable(options = {}) {
@@ -54,13 +59,27 @@ class MobilePerformanceMonitor {
     this.testApiMonitoring();
     
     // Add global error handler
-    window.addEventListener('error', this.handleError.bind(this));
-    window.addEventListener('unhandledrejection', this.handlePromiseRejection.bind(this));
+    window.addEventListener('error', this.errorHandler);
+    window.addEventListener('unhandledrejection', this.promiseRejectionHandler);
   }
 
   disable() {
     if (!this.isEnabled) return;
     this.isEnabled = false;
+    
+    // Clear all active timers and animation frames
+    if (this.cpuTimeoutId !== null) {
+      clearTimeout(this.cpuTimeoutId);
+      this.cpuTimeoutId = null;
+    }
+    if (this.memoryTimeoutId !== null) {
+      clearTimeout(this.memoryTimeoutId);
+      this.memoryTimeoutId = null;
+    }
+    if (this.renderAnimationFrameId !== null) {
+      cancelAnimationFrame(this.renderAnimationFrameId);
+      this.renderAnimationFrameId = null;
+    }
     
     this.restoreNetworkRequests();
     this.restoreXMLHttpRequests();
@@ -68,14 +87,20 @@ class MobilePerformanceMonitor {
     this.restoreAudioMethods();
     this.stopMonitoring();
     
-    window.removeEventListener('error', this.handleError.bind(this));
-    window.removeEventListener('unhandledrejection', this.handlePromiseRejection.bind(this));
+    // Clear metrics to prevent memory accumulation
+    this.clearMetrics();
+    
+    window.removeEventListener('error', this.errorHandler);
+    window.removeEventListener('unhandledrejection', this.promiseRejectionHandler);
   }
 
   // CPU Usage Monitoring
   startCpuMonitoring() {
     const checkCpu = () => {
-      if (!this.isEnabled) return;
+      if (!this.isEnabled) {
+        this.cpuTimeoutId = null;
+        return;
+      }
       
       const now = Date.now();
       const timeDiff = now - this.lastCpuCheck;
@@ -113,7 +138,7 @@ class MobilePerformanceMonitor {
       }
       
       this.lastCpuCheck = now;
-      setTimeout(checkCpu, 1000); // Check every second
+      this.cpuTimeoutId = setTimeout(checkCpu, 1000); // Check every second
     };
     
     checkCpu();
@@ -122,7 +147,10 @@ class MobilePerformanceMonitor {
   // Memory Usage Monitoring
   startMemoryMonitoring() {
     const checkMemory = () => {
-      if (!this.isEnabled) return;
+      if (!this.isEnabled) {
+        this.memoryTimeoutId = null;
+        return;
+      }
       
       if ('memory' in performance) {
         const memory = performance.memory;
@@ -146,7 +174,7 @@ class MobilePerformanceMonitor {
         }
       }
       
-      setTimeout(checkMemory, 2000); // Check every 2 seconds
+      this.memoryTimeoutId = setTimeout(checkMemory, 2000); // Check every 2 seconds
     };
     
     checkMemory();
@@ -166,20 +194,15 @@ class MobilePerformanceMonitor {
             startTime: entry.startTime
           });
           
+          // Keep only last 200 render measurements
+          if (this.metrics.renderTimes.length > 200) {
+            this.metrics.renderTimes.shift();
+          }
+          
           // Log slow renders
           if (entry.duration > 16) { // 60fps threshold
             console.warn(`[Performance] Slow render: ${entry.name} took ${entry.duration.toFixed(2)}ms`);
           }
-        }
-        
-        // Also track frame timing for actual render performance
-        if (entry.entryType === 'measure' && entry.name.includes('render')) {
-          this.metrics.renderTimes.push({
-            timestamp: Date.now(),
-            name: entry.name,
-            duration: entry.duration,
-            startTime: entry.startTime
-          });
         }
       }
     });
@@ -196,7 +219,10 @@ class MobilePerformanceMonitor {
     let frameCount = 0;
     
     const checkRenderPerformance = () => {
-      if (!this.isEnabled) return;
+      if (!this.isEnabled) {
+        this.renderAnimationFrameId = null;
+        return;
+      }
       
       const currentTime = performance.now();
       const deltaTime = currentTime - lastFrameTime;
@@ -213,6 +239,11 @@ class MobilePerformanceMonitor {
           startTime: currentTime
         });
         
+        // Keep only last 200 render measurements
+        if (this.metrics.renderTimes.length > 200) {
+          this.metrics.renderTimes.shift();
+        }
+        
         // Log slow frame timing
         if (avgFrameTime > 16.67) {
           console.warn(`[Performance] Slow frame timing: ${avgFrameTime.toFixed(2)}ms (target: 16.67ms for 60fps)`);
@@ -220,10 +251,10 @@ class MobilePerformanceMonitor {
       }
       
       lastFrameTime = currentTime;
-      requestAnimationFrame(checkRenderPerformance);
+      this.renderAnimationFrameId = requestAnimationFrame(checkRenderPerformance);
     };
     
-    requestAnimationFrame(checkRenderPerformance);
+    this.renderAnimationFrameId = requestAnimationFrame(checkRenderPerformance);
   }
 
   // Audio Performance Monitoring
@@ -307,6 +338,11 @@ class MobilePerformanceMonitor {
           size: response.headers.get('content-length') || 'unknown'
         });
         
+        // Keep only last 500 API calls
+        if (this.metrics.apiCalls.length > 500) {
+          this.metrics.apiCalls.shift();
+        }
+        
         // Log slow requests
         if (duration > 1000) {
           console.warn(`[Performance] Slow API call: ${url} took ${duration.toFixed(2)}ms`);
@@ -325,6 +361,11 @@ class MobilePerformanceMonitor {
           status: 'error',
           error: error.message
         });
+        
+        // Keep only last 500 API calls
+        if (this.metrics.apiCalls.length > 500) {
+          this.metrics.apiCalls.shift();
+        }
         
         throw error;
       }
@@ -368,6 +409,11 @@ class MobilePerformanceMonitor {
             size: xhr.getResponseHeader('content-length') || 'unknown',
             type: 'xhr'
           });
+
+          // Keep only last 500 API calls
+          if (performanceMonitor.metrics.apiCalls.length > 500) {
+            performanceMonitor.metrics.apiCalls.shift();
+          }
 
           // Log slow requests
           if (duration > 1000) {
@@ -490,10 +536,27 @@ class MobilePerformanceMonitor {
   stopMonitoring() {
     if (this.performanceObserver) {
       this.performanceObserver.disconnect();
+      this.performanceObserver = null;
     }
     if (this.domObserver) {
       this.domObserver.disconnect();
+      this.domObserver = null;
     }
+  }
+
+  // Clear all metrics to prevent memory accumulation
+  clearMetrics() {
+    this.metrics.cpuUsage = [];
+    this.metrics.memoryUsage = [];
+    this.metrics.renderTimes = [];
+    this.metrics.apiCalls = [];
+    this.metrics.audioOperations = [];
+    this.metrics.domMutations = [];
+    this.metrics.eventListeners = [];
+    this.metrics.intervals.clear();
+    this.metrics.timeouts.clear();
+    this.startTime = Date.now();
+    this.lastCpuCheck = Date.now();
   }
 
   // Get Performance Report
@@ -567,9 +630,7 @@ class MobilePerformanceMonitor {
 // Create singleton instance
 const mobilePerformanceMonitor = new MobilePerformanceMonitor();
 
-// Auto-enable in development
-if (process.env.NODE_ENV === 'development') {
-  mobilePerformanceMonitor.enable();
-}
+// Note: Enable/disable is handled by App.js based on user permissions
+// Auto-enable removed to prevent conflicts and ensure proper cleanup
 
 export default mobilePerformanceMonitor;
