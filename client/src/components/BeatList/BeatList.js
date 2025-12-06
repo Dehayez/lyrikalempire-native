@@ -209,6 +209,8 @@ const filterOptionsWithCounts = useMemo(() => {
     
     // Reset scroll restoration flag when beats change significantly
     setHasRestoredScroll(false);
+    // Reset scroll to currentBeat flag when beats change
+    hasScrolledToCurrentBeat.current = false;
   }, [filteredAndSortedBeats, setCurrentBeats]);
 
   const { selectedBeats, handleBeatClick } = useHandleBeatClick(beats, tableRef, currentBeat);
@@ -402,13 +404,74 @@ const filterOptionsWithCounts = useMemo(() => {
     };
   }, [calculateVisibleRows, hasRestoredScroll, scrollPositionKey, setScrollOpacityBottom, setIsScrolledBottom, DEBUG_SCROLL]);
 
+  // Track if we've scrolled to currentBeat on first render
+  const hasScrolledToCurrentBeat = useRef(false);
+
+  // Reset scroll to currentBeat flag when location changes
+  useEffect(() => {
+    hasScrolledToCurrentBeat.current = false;
+  }, [location.pathname, playlistId]);
+
+  // Scroll to currentBeat on first render
+  useEffect(() => {
+    if (
+      containerRef.current && 
+      currentBeat && 
+      currentBeat.id &&
+      filteredAndSortedBeats.length > 0 && 
+      !hasScrolledToCurrentBeat.current &&
+      !isLoadingBeats &&
+      rowHeight > 0
+    ) {
+      const scrollToCurrentBeat = () => {
+        if (containerRef.current && !isRestoringScroll.current) {
+          // Find the index of currentBeat in filteredAndSortedBeats
+          const beatIndex = filteredAndSortedBeats.findIndex(beat => beat.id === currentBeat.id);
+          
+          if (beatIndex !== -1) {
+            isRestoringScroll.current = true;
+            const container = containerRef.current;
+            
+            // Calculate scroll position: index * rowHeight, centered in viewport
+            const targetScrollTop = beatIndex * rowHeight;
+            const containerHeight = container.clientHeight;
+            const centeredScrollTop = Math.max(0, targetScrollTop - (containerHeight / 2) + (rowHeight / 2));
+            const maxScrollTop = container.scrollHeight - containerHeight;
+            const finalScrollTop = Math.min(centeredScrollTop, maxScrollTop);
+            
+            container.scrollTop = finalScrollTop;
+            hasScrolledToCurrentBeat.current = true;
+            setHasRestoredScroll(true);
+            
+            // Update visible range after scrolling
+            setTimeout(() => {
+              calculateVisibleRows();
+              setTimeout(() => {
+                isRestoringScroll.current = false;
+              }, 200);
+            }, 50);
+          }
+        }
+      };
+
+      // Use multiple requestAnimationFrame calls to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(scrollToCurrentBeat);
+        });
+      });
+    }
+  }, [currentBeat?.id, filteredAndSortedBeats.length, isLoadingBeats, rowHeight, calculateVisibleRows]);
+
   // Restore scroll position after beats are loaded and virtual scrolling is ready
+  // Only restore if we haven't scrolled to currentBeat
   useEffect(() => {
     if (
       containerRef.current && 
       filteredAndSortedBeats.length > 0 && 
       savedScrollPosition > 0 && 
       !hasRestoredScroll &&
+      !hasScrolledToCurrentBeat.current &&
       !isLoadingBeats &&
       rowHeight > 0 // Ensure row height is calculated
     ) {
