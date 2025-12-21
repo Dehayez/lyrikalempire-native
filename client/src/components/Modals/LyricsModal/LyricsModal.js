@@ -102,12 +102,9 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
           }
         }
       } catch (err) {
-        console.error('Failed to fetch lyrics:', err);
-        
         // Retry logic for lyrics fetching
         if (lyricsRetryCount.current < 3) {
           lyricsRetryCount.current += 1;
-          console.log(`Retrying lyrics fetch (${lyricsRetryCount.current}/3)...`);
           setTimeout(fetchLyrics, 2000 * lyricsRetryCount.current); // Exponential backoff
         }
       } finally {

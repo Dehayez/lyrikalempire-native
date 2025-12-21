@@ -132,10 +132,10 @@ class MobilePerformanceMonitor {
         this.metrics.cpuUsage.shift();
       }
       
-      // Log high CPU usage
-      if (cpuUsage > 80) {
-        console.warn(`[Performance] High CPU usage detected: ${cpuUsage.toFixed(2)}%`);
-      }
+      // Log high CPU usage (disabled for production)
+      // if (cpuUsage > 80) {
+      //   console.warn(`[Performance] High CPU usage detected: ${cpuUsage.toFixed(2)}%`);
+      // }
       
       this.lastCpuCheck = now;
       this.cpuTimeoutId = setTimeout(checkCpu, 1000); // Check every second
@@ -168,10 +168,10 @@ class MobilePerformanceMonitor {
           this.metrics.memoryUsage.shift();
         }
         
-        // Log high memory usage
-        if (memoryUsage.used > memoryUsage.limit * 0.8) {
-          console.warn(`[Performance] High memory usage: ${memoryUsage.used}MB / ${memoryUsage.limit}MB`);
-        }
+        // Log high memory usage (disabled for production)
+        // if (memoryUsage.used > memoryUsage.limit * 0.8) {
+        //   console.warn(`[Performance] High memory usage: ${memoryUsage.used}MB / ${memoryUsage.limit}MB`);
+        // }
       }
       
       this.memoryTimeoutId = setTimeout(checkMemory, 2000); // Check every 2 seconds
@@ -199,10 +199,10 @@ class MobilePerformanceMonitor {
             this.metrics.renderTimes.shift();
           }
           
-          // Log slow renders
-          if (entry.duration > 16) { // 60fps threshold
-            console.warn(`[Performance] Slow render: ${entry.name} took ${entry.duration.toFixed(2)}ms`);
-          }
+          // Log slow renders (disabled for production)
+          // if (entry.duration > 16) { // 60fps threshold
+          //   console.warn(`[Performance] Slow render: ${entry.name} took ${entry.duration.toFixed(2)}ms`);
+          // }
         }
       }
     });
@@ -244,10 +244,10 @@ class MobilePerformanceMonitor {
           this.metrics.renderTimes.shift();
         }
         
-        // Log slow frame timing
-        if (avgFrameTime > 16.67) {
-          console.warn(`[Performance] Slow frame timing: ${avgFrameTime.toFixed(2)}ms (target: 16.67ms for 60fps)`);
-        }
+        // Log slow frame timing (disabled for production)
+        // if (avgFrameTime > 16.67) {
+        //   console.warn(`[Performance] Slow frame timing: ${avgFrameTime.toFixed(2)}ms (target: 16.67ms for 60fps)`);
+        // }
       }
       
       lastFrameTime = currentTime;
@@ -265,7 +265,7 @@ class MobilePerformanceMonitor {
     const originalCreateAnalyser = AudioContext.prototype.createAnalyser;
     AudioContext.prototype.createAnalyser = function() {
       const analyser = originalCreateAnalyser.call(this);
-      console.log('[Performance] Audio analyser created');
+      // console.log('[Performance] Audio analyser created'); // Disabled for production
       return analyser;
     };
 
@@ -286,7 +286,7 @@ class MobilePerformanceMonitor {
       return originalAudioPlay.call(this).then(() => {
         const endTime = performance.now();
         const duration = endTime - startTime;
-        console.log(`[Performance] Audio play took ${duration.toFixed(2)}ms`);
+        // console.log(`[Performance] Audio play took ${duration.toFixed(2)}ms`); // Disabled for production
       });
     };
   }
@@ -304,10 +304,10 @@ class MobilePerformanceMonitor {
       
       this.metrics.domMutations.push(domMutations);
       
-      // Log excessive DOM mutations (increased threshold to reduce noise)
-      if (mutations.length > 200) {
-        console.warn(`[Performance] Excessive DOM mutations: ${mutations.length}`);
-      }
+      // Log excessive DOM mutations (disabled for production)
+      // if (mutations.length > 200) {
+      //   console.warn(`[Performance] Excessive DOM mutations: ${mutations.length}`);
+      // }
     });
     
     this.domObserver.observe(document.body, {
@@ -343,10 +343,10 @@ class MobilePerformanceMonitor {
           this.metrics.apiCalls.shift();
         }
         
-        // Log slow requests
-        if (duration > 1000) {
-          console.warn(`[Performance] Slow API call: ${url} took ${duration.toFixed(2)}ms`);
-        }
+      // Log slow requests (disabled for production)
+      // if (duration > 1000) {
+      //   console.warn(`[Performance] Slow API call: ${url} took ${duration.toFixed(2)}ms`);
+      // }
         
         return response;
       } catch (error) {
@@ -415,10 +415,10 @@ class MobilePerformanceMonitor {
             performanceMonitor.metrics.apiCalls.shift();
           }
 
-          // Log slow requests
-          if (duration > 1000) {
-            console.warn(`[Performance] Slow XHR request: ${url} took ${duration.toFixed(2)}ms`);
-          }
+          // Log slow requests (disabled for production)
+          // if (duration > 1000) {
+          //   console.warn(`[Performance] Slow XHR request: ${url} took ${duration.toFixed(2)}ms`);
+          // }
         });
 
         return originalSend.apply(this, [data]);
@@ -446,7 +446,7 @@ class MobilePerformanceMonitor {
         callback: args[0].toString().substring(0, 100)
       });
       
-      console.log(`[Performance] setInterval created: ${args[1]}ms`);
+      // console.log(`[Performance] setInterval created: ${args[1]}ms`); // Disabled for production
       return id;
     };
 
@@ -459,9 +459,10 @@ class MobilePerformanceMonitor {
         callback: args[0].toString().substring(0, 100)
       });
       
-      if (args[1] < 100) { // Log very short timeouts
-        console.log(`[Performance] Short setTimeout: ${args[1]}ms`);
-      }
+      // Log very short timeouts (disabled for production)
+      // if (args[1] < 100) {
+      //   console.log(`[Performance] Short setTimeout: ${args[1]}ms`);
+      // }
       return id;
     };
 
@@ -476,7 +477,7 @@ class MobilePerformanceMonitor {
         }
         return this.originalClearInterval.call(this, id);
       } catch (error) {
-        console.warn('[Performance] Error clearing interval:', error);
+        // console.warn('[Performance] Error clearing interval:', error); // Disabled for production
         return this.originalClearInterval.call(this, id);
       }
     };
@@ -492,7 +493,7 @@ class MobilePerformanceMonitor {
         }
         return this.originalClearTimeout.call(this, id);
       } catch (error) {
-        console.warn('[Performance] Error clearing timeout:', error);
+        // console.warn('[Performance] Error clearing timeout:', error); // Disabled for production
         return this.originalClearTimeout.call(this, id);
       }
     };
@@ -500,11 +501,11 @@ class MobilePerformanceMonitor {
 
   // Error Handling
   handleError(event) {
-    console.error(`[Performance] Global error: ${event.error?.message}`, event.error);
+    // console.error(`[Performance] Global error: ${event.error?.message}`, event.error); // Disabled for production
   }
 
   handlePromiseRejection(event) {
-    console.error(`[Performance] Unhandled promise rejection: ${event.reason}`);
+    // console.error(`[Performance] Unhandled promise rejection: ${event.reason}`); // Disabled for production
   }
 
   // Restore Methods

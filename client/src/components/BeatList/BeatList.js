@@ -54,7 +54,6 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.hasOwnProperty('DEBUG_SCROLL')) {
       window.DEBUG_SCROLL = false;
-      console.log('💡 Scroll debug mode available. Enable with: window.DEBUG_SCROLL = true');
     }
   }, []);
   

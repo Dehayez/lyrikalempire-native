@@ -65,7 +65,8 @@ export const useMobilePerformanceMonitor = (componentName = 'Component') => {
 
     if (newAlerts.length > 0) {
       setAlerts(prev => [...prev.slice(-9), ...newAlerts]);
-      newAlerts.forEach(alert => console.warn(`[Performance Alert] ${alert.message}`));
+      // Performance alerts disabled for production
+      // newAlerts.forEach(alert => console.warn(`[Performance Alert] ${alert.message}`));
     }
   }, [componentName]);
 

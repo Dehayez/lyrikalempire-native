@@ -82,12 +82,9 @@ export const DataProvider = ({ children }) => {
       setFeatures(featuresData);
       retryCount.current = 0; // Reset retry counter on success
     } catch (error) {
-      console.error('Error refetching all data:', error);
-      
       // Retry logic with exponential backoff
       if (retryCount.current < maxRetries) {
         const delay = Math.pow(2, retryCount.current) * 1000; // Exponential backoff: 1s, 2s, 4s
-        console.log(`Retrying data fetch (${retryCount.current + 1}/${maxRetries}) in ${delay/1000}s...`);
         retryCount.current++;
         setTimeout(refetchAll, delay);
       }

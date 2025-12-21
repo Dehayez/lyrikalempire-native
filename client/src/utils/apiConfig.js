@@ -19,9 +19,9 @@ const getAPIBaseURL = () => {
   }
 
   // If localhost, use localhost API
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  /* if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:4000/api';
-  }
+  } */
 
   // Otherwise, use production API
   return 'https://www.lyrikalempire.com/api';

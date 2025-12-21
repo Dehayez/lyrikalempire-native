@@ -2,14 +2,6 @@ import axios from 'axios';
 import { getAuthHeaders } from './authUtils';
 
 const handleApiError = (error) => {
-  // Log the full error for debugging
-  console.error('API Error Details:', {
-    message: error.message,
-    response: error.response,
-    request: error.request ? 'Request exists but no response' : 'No request made',
-    config: error.config
-  });
-  
   if (error.response) {
     const { status, data } = error.response;
     switch (status) {
