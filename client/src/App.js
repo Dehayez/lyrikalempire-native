@@ -183,13 +183,65 @@ function App() {
       }
     };
   }, [isPerfAllowed]);
+
+  // Define logQueue and updateHistory before handlePlayWrapper since they're dependencies
+  const logQueue = useCallback((beats, shuffle, currentBeat, forceShuffle = false) => {
+    let queue = [...beats];
+    
+    if (shuffle) {
+      // If we don't have a shuffled queue yet, or if forceShuffle is true, create one
+      if (shuffledQueue.length === 0 || forceShuffle) {
+        const newShuffledQueue = [...beats];
+        for (let i = newShuffledQueue.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [newShuffledQueue[i], newShuffledQueue[j]] = [newShuffledQueue[j], newShuffledQueue[i]];
+        }
+        setShuffledQueue(newShuffledQueue);
+        queue = newShuffledQueue;
+      } else {
+        // Use existing shuffled queue
+        queue = [...shuffledQueue];
+      }
+    } else {
+      // Clear shuffled queue when shuffle is disabled
+      if (shuffledQueue.length > 0) {
+        setShuffledQueue([]);
+      }
+    }
+    
+    if (currentBeat) {
+      const currentBeatIndex = queue.findIndex(beat => beat.id === currentBeat.id);
   
-  const handlePlayWrapper = (beat, play, beats, shouldUpdateQueue = false) => {
+      if (currentBeatIndex >= 0) {
+        // Get tracks after the current one (upcoming tracks)
+        const upcomingTracks = queue.slice(currentBeatIndex + 1);
+        // Get tracks before the current one (to be played later)
+        const previousTracks = queue.slice(0, currentBeatIndex);
+        // Combine: upcoming tracks first, then previous tracks
+        queue = [...upcomingTracks, ...previousTracks];
+      }
+    }
+    setQueue(queue);
+  }, [shuffledQueue]);
+
+  const updateHistory = useCallback((playedBeat) => {
+    const history = getInitialState('playedBeatsHistory', []);
+    const updatedHistory = [playedBeat, ...history].slice(0, 100);
+    localStorage.setItem('playedBeatsHistory', JSON.stringify(updatedHistory));
+  }, []);
+  
+  // Use a ref for handlePlay to avoid circular dependency issues
+  const handlePlayRef = useRef(null);
+  
+  const handlePlayWrapper = useCallback((beat, play, beats, shouldUpdateQueue = false) => {
     if (shouldUpdateQueue) {
       logQueue(beats, shuffle, beat);
     }
     
-    handlePlay(beat, play, beats, setSelectedBeat, setBeats, currentBeat, setCurrentBeat, setIsPlaying);
+    // Use ref to get the latest handlePlay function
+    if (handlePlayRef.current) {
+      handlePlayRef.current(beat, play, beats, setSelectedBeat, setBeats, currentBeat, setCurrentBeat, setIsPlaying);
+    }
     updateHistory(beat);
     if (window.electron) {
       window.electron.setActivity(beat.title);
@@ -202,9 +254,9 @@ function App() {
         beat: beat
       });
     }
-  };
+  }, [shuffle, setSelectedBeat, setBeats, currentBeat, setCurrentBeat, setIsPlaying, emitBeatChange, logQueue, updateHistory]);
 
-  const handlePrevWrapper = () => {
+  const handlePrevWrapper = useCallback(() => {
     if (!currentBeats.length) return;
     
     // Use shuffled queue if shuffle is enabled, otherwise use regular queue
@@ -218,9 +270,9 @@ function App() {
     if (repeat === 'Repeat One') {
       setRepeat('Repeat');
     }
-  };
+  }, [currentBeats, shuffle, shuffledQueue, currentBeat, repeat, handlePlayWrapper]);
 
- const handleNextWrapper = () => {
+  const handleNextWrapper = useCallback(() => {
     if (customQueue.length > 0) {
       const nextCustomBeat = customQueue[0];
       handlePlayWrapper(nextCustomBeat, true, currentBeats, true);
@@ -236,7 +288,7 @@ function App() {
     if (repeat === 'Repeat One') {
       setRepeat('Repeat');
     }
-  };
+  }, [customQueue, currentBeats, shuffle, shuffledQueue, currentBeat, repeat, handlePlayWrapper]);
 
   const {
     handlePlay,
@@ -255,6 +307,8 @@ function App() {
     setRepeat,
   });
 
+  // Update the handlePlay ref so handlePlayWrapper always has the latest function
+  handlePlayRef.current = handlePlay;
   
   const updateBeatTimeoutRef = useRef(null);
   
@@ -306,52 +360,7 @@ function App() {
     ]);
   };
 
-  const logQueue = (beats, shuffle, currentBeat, forceShuffle = false) => {
-    let queue = [...beats];
-    
-    if (shuffle) {
-      // If we don't have a shuffled queue yet, or if forceShuffle is true, create one
-      if (shuffledQueue.length === 0 || forceShuffle) {
-        const newShuffledQueue = [...beats];
-        for (let i = newShuffledQueue.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [newShuffledQueue[i], newShuffledQueue[j]] = [newShuffledQueue[j], newShuffledQueue[i]];
-        }
-        setShuffledQueue(newShuffledQueue);
-        queue = newShuffledQueue;
-      } else {
-        // Use existing shuffled queue
-        queue = [...shuffledQueue];
-      }
-    } else {
-      // Clear shuffled queue when shuffle is disabled
-      if (shuffledQueue.length > 0) {
-        setShuffledQueue([]);
-      }
-    }
-    
-    if (currentBeat) {
-      const currentBeatIndex = queue.findIndex(beat => beat.id === currentBeat.id);
-  
-      if (currentBeatIndex >= 0) {
-        // Get tracks after the current one (upcoming tracks)
-        const upcomingTracks = queue.slice(currentBeatIndex + 1);
-        // Get tracks before the current one (to be played later)
-        const previousTracks = queue.slice(0, currentBeatIndex);
-        // Combine: upcoming tracks first, then previous tracks
-        queue = [...upcomingTracks, ...previousTracks];
-      }
-    }
-    setQueue(queue);
-  }
-
-  const updateHistory = (playedBeat) => {
-    const history = getInitialState('playedBeatsHistory', []);
-    const updatedHistory = [playedBeat, ...history].slice(0, 100);
-    localStorage.setItem('playedBeatsHistory', JSON.stringify(updatedHistory));
-  };
-
-  const handleBeatClick = (beat) => {
+  const handleBeatClick = useCallback((beat) => {
     setCurrentBeat(beat);
     setIsPlaying(true);
     
@@ -363,7 +372,7 @@ function App() {
         beat: beat
       });
     }
-  };
+  }, [setCurrentBeat, setIsPlaying, emitBeatChange]);
 
   const toggleView = (view) => {
     setViewState(view);
