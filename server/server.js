@@ -12,14 +12,37 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// CORS configuration - only trusted domains (no IP addresses for security)
+// CORS configuration - trusted domains and IP addresses for development
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
   : ['http://localhost:3000', 'https://lyrikalempire.com', 'https://www.lyrikalempire.com'];
 
+// Helper function to check if origin is an IP address (for development)
+const isIPAddress = (origin) => {
+  if (!origin) return false;
+  // Match IPv4 addresses (e.g., http://192.168.1.1:3000)
+  const ipPattern = /^https?:\/\/(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
+  return ipPattern.test(origin);
+};
+
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin
+      if (!origin) return callback(null, true);
+      
+      // Allow if in allowed origins list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } 
+      // Allow IP addresses for development (when not in production)
+      else if (process.env.NODE_ENV !== 'production' && isIPAddress(origin)) {
+        callback(null, true);
+      } 
+      else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -31,9 +54,15 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Allow if in allowed origins list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
-    } else {
+    } 
+    // Allow IP addresses for development (when not in production)
+    else if (process.env.NODE_ENV !== 'production' && isIPAddress(origin)) {
+      callback(null, true);
+    } 
+    else {
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -182,7 +211,8 @@ io.on('connection', (socket) => {
 // Remove the /audio-pause-sync endpoint
 
 const PORT = process.env.PORT || 4000;
+const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces to accept IP connections
 
-server.listen(PORT, () => {
-  // Server is now running silently
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
 });
