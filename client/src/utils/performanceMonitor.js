@@ -3,6 +3,15 @@
  * Tracks CPU usage, memory leaks, excessive re-renders, and API calls
  */
 
+// Store original methods ONCE at module load (before any interception)
+const ORIGINAL_FETCH = window.fetch;
+const ORIGINAL_XHR = window.XMLHttpRequest;
+const ORIGINAL_SET_INTERVAL = window.setInterval;
+const ORIGINAL_SET_TIMEOUT = window.setTimeout;
+const ORIGINAL_CLEAR_INTERVAL = window.clearInterval;
+const ORIGINAL_CLEAR_TIMEOUT = window.clearTimeout;
+const ORIGINAL_AUDIO_PLAY = HTMLAudioElement.prototype.play;
+
 class MobilePerformanceMonitor {
   constructor() {
     this.isEnabled = false;
@@ -18,15 +27,14 @@ class MobilePerformanceMonitor {
       timeouts: new Set()
     };
     
-    this.originalFetch = window.fetch;
-    this.originalXMLHttpRequest = window.XMLHttpRequest;
-    this.originalSetInterval = window.setInterval;
-    this.originalSetTimeout = window.setTimeout;
-    this.originalClearInterval = window.clearInterval;
-    this.originalClearTimeout = window.clearTimeout;
-    
-    // Store original audio methods
-    this.originalAudioPlay = HTMLAudioElement.prototype.play;
+    // Use module-level originals (never overwritten)
+    this.originalFetch = ORIGINAL_FETCH;
+    this.originalXMLHttpRequest = ORIGINAL_XHR;
+    this.originalSetInterval = ORIGINAL_SET_INTERVAL;
+    this.originalSetTimeout = ORIGINAL_SET_TIMEOUT;
+    this.originalClearInterval = ORIGINAL_CLEAR_INTERVAL;
+    this.originalClearTimeout = ORIGINAL_CLEAR_TIMEOUT;
+    this.originalAudioPlay = ORIGINAL_AUDIO_PLAY;
     
     this.startTime = Date.now();
     this.lastCpuCheck = Date.now();
@@ -36,27 +44,33 @@ class MobilePerformanceMonitor {
     this.renderAnimationFrameId = null;
     this.errorHandler = this.handleError.bind(this);
     this.promiseRejectionHandler = this.handlePromiseRejection.bind(this);
+    
+    // Track if methods are currently intercepted
+    this.isIntercepted = false;
   }
 
   enable(options = {}) {
     if (this.isEnabled) return;
     this.isEnabled = true;
     
-    this.interceptNetworkRequests();
+    // Clear any stale metrics first
+    this.clearMetrics();
     
-    // Only intercept timers if explicitly requested (can cause conflicts)
-    if (options.interceptTimers) {
-      this.interceptTimers();
+    // Only intercept if not already intercepted
+    if (!this.isIntercepted) {
+      this.interceptNetworkRequests();
+      
+      // Only intercept timers if explicitly requested (can cause conflicts)
+      if (options.interceptTimers) {
+        this.interceptTimers();
+      }
+      
+      this.isIntercepted = true;
     }
     
     this.startCpuMonitoring();
     this.startMemoryMonitoring();
     this.startRenderMonitoring();
-    // this.startAudioMonitoring(); // Disabled - too intrusive, breaks audio playback
-    // this.startDomMonitoring(); // Temporarily disabled - causing too much noise
-    
-    // Test API monitoring with a simple call
-    this.testApiMonitoring();
     
     // Add global error handler
     window.addEventListener('error', this.errorHandler);
@@ -67,13 +81,13 @@ class MobilePerformanceMonitor {
     if (!this.isEnabled) return;
     this.isEnabled = false;
     
-    // Clear all active timers and animation frames
+    // Clear all active timers and animation frames using original methods
     if (this.cpuTimeoutId !== null) {
-      clearTimeout(this.cpuTimeoutId);
+      ORIGINAL_CLEAR_TIMEOUT(this.cpuTimeoutId);
       this.cpuTimeoutId = null;
     }
     if (this.memoryTimeoutId !== null) {
-      clearTimeout(this.memoryTimeoutId);
+      ORIGINAL_CLEAR_TIMEOUT(this.memoryTimeoutId);
       this.memoryTimeoutId = null;
     }
     if (this.renderAnimationFrameId !== null) {
@@ -81,10 +95,15 @@ class MobilePerformanceMonitor {
       this.renderAnimationFrameId = null;
     }
     
-    this.restoreNetworkRequests();
-    this.restoreXMLHttpRequests();
-    this.restoreTimers();
-    this.restoreAudioMethods();
+    // Restore all intercepted methods
+    if (this.isIntercepted) {
+      this.restoreNetworkRequests();
+      this.restoreXMLHttpRequests();
+      this.restoreTimers();
+      this.restoreAudioMethods();
+      this.isIntercepted = false;
+    }
+    
     this.stopMonitoring();
     
     // Clear metrics to prevent memory accumulation
@@ -320,55 +339,57 @@ class MobilePerformanceMonitor {
 
   // Network Request Monitoring
   interceptNetworkRequests() {
-    window.fetch = async (...args) => {
+    const performanceMonitor = this;
+    
+    window.fetch = function(...args) {
       const startTime = performance.now();
       const url = args[0];
       
-      try {
-        const response = await this.originalFetch.apply(this, args);
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-        
-        this.metrics.apiCalls.push({
-          timestamp: Date.now(),
-          url: typeof url === 'string' ? url : url.toString(),
-          method: 'GET',
-          duration,
-          status: response.status,
-          size: response.headers.get('content-length') || 'unknown'
+      return ORIGINAL_FETCH.apply(window, args)
+        .then(response => {
+          if (!performanceMonitor.isEnabled) return response;
+          
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+          
+          performanceMonitor.metrics.apiCalls.push({
+            timestamp: Date.now(),
+            url: typeof url === 'string' ? url : url.toString(),
+            method: 'GET',
+            duration,
+            status: response.status,
+            size: response.headers.get('content-length') || 'unknown'
+          });
+          
+          // Keep only last 100 API calls (reduced from 500)
+          if (performanceMonitor.metrics.apiCalls.length > 100) {
+            performanceMonitor.metrics.apiCalls.shift();
+          }
+          
+          return response;
+        })
+        .catch(error => {
+          if (!performanceMonitor.isEnabled) throw error;
+          
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+          
+          performanceMonitor.metrics.apiCalls.push({
+            timestamp: Date.now(),
+            url: typeof url === 'string' ? url : url.toString(),
+            method: 'GET',
+            duration,
+            status: 'error',
+            error: error.message
+          });
+          
+          // Keep only last 100 API calls (reduced from 500)
+          if (performanceMonitor.metrics.apiCalls.length > 100) {
+            performanceMonitor.metrics.apiCalls.shift();
+          }
+          
+          throw error;
         });
-        
-        // Keep only last 500 API calls
-        if (this.metrics.apiCalls.length > 500) {
-          this.metrics.apiCalls.shift();
-        }
-        
-      // Log slow requests (disabled for production)
-      // if (duration > 1000) {
-      //   console.warn(`[Performance] Slow API call: ${url} took ${duration.toFixed(2)}ms`);
-      // }
-        
-        return response;
-      } catch (error) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-        
-        this.metrics.apiCalls.push({
-          timestamp: Date.now(),
-          url: typeof url === 'string' ? url : url.toString(),
-          method: 'GET',
-          duration,
-          status: 'error',
-          error: error.message
-        });
-        
-        // Keep only last 500 API calls
-        if (this.metrics.apiCalls.length > 500) {
-          this.metrics.apiCalls.shift();
-        }
-        
-        throw error;
-      }
     };
 
     // Intercept XMLHttpRequest
@@ -376,11 +397,10 @@ class MobilePerformanceMonitor {
   }
 
   interceptXMLHttpRequests() {
-    const originalXHR = this.originalXMLHttpRequest;
     const performanceMonitor = this;
 
     window.XMLHttpRequest = function() {
-      const xhr = new originalXHR();
+      const xhr = new ORIGINAL_XHR();
       const startTime = performance.now();
       let url = '';
       let method = 'GET';
@@ -397,6 +417,8 @@ class MobilePerformanceMonitor {
       const originalSend = xhr.send;
       xhr.send = function(data) {
         xhr.addEventListener('loadend', function() {
+          if (!performanceMonitor.isEnabled) return;
+          
           const endTime = performance.now();
           const duration = endTime - startTime;
 
@@ -410,15 +432,10 @@ class MobilePerformanceMonitor {
             type: 'xhr'
           });
 
-          // Keep only last 500 API calls
-          if (performanceMonitor.metrics.apiCalls.length > 500) {
+          // Keep only last 100 API calls (reduced from 500)
+          if (performanceMonitor.metrics.apiCalls.length > 100) {
             performanceMonitor.metrics.apiCalls.shift();
           }
-
-          // Log slow requests (disabled for production)
-          // if (duration > 1000) {
-          //   console.warn(`[Performance] Slow XHR request: ${url} took ${duration.toFixed(2)}ms`);
-          // }
         });
 
         return originalSend.apply(this, [data]);
@@ -428,74 +445,55 @@ class MobilePerformanceMonitor {
     };
 
     // Copy static properties from original XMLHttpRequest
-    Object.setPrototypeOf(window.XMLHttpRequest, originalXHR);
+    Object.setPrototypeOf(window.XMLHttpRequest, ORIGINAL_XHR);
     Object.defineProperty(window.XMLHttpRequest, 'prototype', {
-      value: originalXHR.prototype,
+      value: ORIGINAL_XHR.prototype,
       writable: false
     });
   }
 
   // Timer Monitoring
   interceptTimers() {
-    window.setInterval = (...args) => {
-      const id = this.originalSetInterval.apply(this, args);
-      this.metrics.intervals.add({
-        id,
-        timestamp: Date.now(),
-        delay: args[1],
-        callback: args[0].toString().substring(0, 100)
-      });
-      
-      // console.log(`[Performance] setInterval created: ${args[1]}ms`); // Disabled for production
+    const performanceMonitor = this;
+    
+    window.setInterval = function(...args) {
+      const id = ORIGINAL_SET_INTERVAL.apply(window, args);
+      if (performanceMonitor.isEnabled) {
+        performanceMonitor.metrics.intervals.add({ id, timestamp: Date.now(), delay: args[1] });
+      }
       return id;
     };
 
-    window.setTimeout = (...args) => {
-      const id = this.originalSetTimeout.apply(this, args);
-      this.metrics.timeouts.add({
-        id,
-        timestamp: Date.now(),
-        delay: args[1],
-        callback: args[0].toString().substring(0, 100)
-      });
-      
-      // Log very short timeouts (disabled for production)
-      // if (args[1] < 100) {
-      //   console.log(`[Performance] Short setTimeout: ${args[1]}ms`);
-      // }
+    window.setTimeout = function(...args) {
+      const id = ORIGINAL_SET_TIMEOUT.apply(window, args);
+      if (performanceMonitor.isEnabled) {
+        performanceMonitor.metrics.timeouts.add({ id, timestamp: Date.now(), delay: args[1] });
+      }
       return id;
     };
 
-    window.clearInterval = (id) => {
-      try {
-        // Find and remove the interval object by ID
-        for (const interval of this.metrics.intervals) {
+    window.clearInterval = function(id) {
+      if (performanceMonitor.isEnabled) {
+        for (const interval of performanceMonitor.metrics.intervals) {
           if (interval.id === id) {
-            this.metrics.intervals.delete(interval);
+            performanceMonitor.metrics.intervals.delete(interval);
             break;
           }
         }
-        return this.originalClearInterval.call(this, id);
-      } catch (error) {
-        // console.warn('[Performance] Error clearing interval:', error); // Disabled for production
-        return this.originalClearInterval.call(this, id);
       }
+      return ORIGINAL_CLEAR_INTERVAL.call(window, id);
     };
 
-    window.clearTimeout = (id) => {
-      try {
-        // Find and remove the timeout object by ID
-        for (const timeout of this.metrics.timeouts) {
+    window.clearTimeout = function(id) {
+      if (performanceMonitor.isEnabled) {
+        for (const timeout of performanceMonitor.metrics.timeouts) {
           if (timeout.id === id) {
-            this.metrics.timeouts.delete(timeout);
+            performanceMonitor.metrics.timeouts.delete(timeout);
             break;
           }
         }
-        return this.originalClearTimeout.call(this, id);
-      } catch (error) {
-        // console.warn('[Performance] Error clearing timeout:', error); // Disabled for production
-        return this.originalClearTimeout.call(this, id);
       }
+      return ORIGINAL_CLEAR_TIMEOUT.call(window, id);
     };
   }
 
@@ -508,30 +506,29 @@ class MobilePerformanceMonitor {
     // console.error(`[Performance] Unhandled promise rejection: ${event.reason}`); // Disabled for production
   }
 
-  // Restore Methods
+  // Restore Methods - use module-level originals
   restoreNetworkRequests() {
-    window.fetch = this.originalFetch;
+    window.fetch = ORIGINAL_FETCH;
   }
 
   restoreXMLHttpRequests() {
-    window.XMLHttpRequest = this.originalXMLHttpRequest;
+    window.XMLHttpRequest = ORIGINAL_XHR;
   }
 
   restoreTimers() {
-    window.setInterval = this.originalSetInterval;
-    window.setTimeout = this.originalSetTimeout;
-    window.clearInterval = this.originalClearInterval;
-    window.clearTimeout = this.originalClearTimeout;
+    window.setInterval = ORIGINAL_SET_INTERVAL;
+    window.setTimeout = ORIGINAL_SET_TIMEOUT;
+    window.clearInterval = ORIGINAL_CLEAR_INTERVAL;
+    window.clearTimeout = ORIGINAL_CLEAR_TIMEOUT;
   }
 
   restoreAudioMethods() {
-    HTMLAudioElement.prototype.play = this.originalAudioPlay;
+    HTMLAudioElement.prototype.play = ORIGINAL_AUDIO_PLAY;
   }
 
-  // Test API monitoring
+  // Test API monitoring - disabled to prevent unnecessary network requests
   testApiMonitoring() {
-    // Make a simple API call to test the monitoring (silent)
-    fetch('/api/test', { method: 'HEAD' }).catch(() => {});
+    // Disabled - was making unnecessary network requests
   }
 
   stopMonitoring() {

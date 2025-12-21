@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 
 const API_URL = `${API_BASE_URL}/users`;
 let refreshTimeoutId = null;
+let tokenValidationIntervalId = null; // Track the validation interval
 
 /**
  * Register a new user
@@ -59,6 +60,12 @@ export const clearTokens = () => {
   if (refreshTimeoutId) {
     clearTimeout(refreshTimeoutId);
     refreshTimeoutId = null;
+  }
+  
+  // Clear the validation interval
+  if (tokenValidationIntervalId) {
+    clearInterval(tokenValidationIntervalId);
+    tokenValidationIntervalId = null;
   }
 };
 
@@ -265,8 +272,14 @@ export const startTokenRefresh = () => {
     }
   }
   
+  // Clear any existing validation interval before creating a new one
+  if (tokenValidationIntervalId) {
+    clearInterval(tokenValidationIntervalId);
+    tokenValidationIntervalId = null;
+  }
+  
   // Set up periodic token validation (every 5 minutes)
-  setInterval(() => {
+  tokenValidationIntervalId = setInterval(() => {
     const currentAccessToken = localStorage.getItem('accessToken');
     if (currentAccessToken) {
       try {

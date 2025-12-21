@@ -3,7 +3,7 @@ import { audioBufferService } from './audioBufferService';
 
 class GaplessPlaybackService {
   constructor() {
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this._audioContext = null; // Lazy initialization
     this.currentSource = null;
     this.nextSource = null;
     this.currentBuffer = null;
@@ -12,6 +12,17 @@ class GaplessPlaybackService {
     this.preloadThreshold = 0.85; // Start preloading when current track is at 85%
     this.isTransitioning = false;
     this.onTrackEnd = null;
+  }
+
+  // Lazy getter for AudioContext - only created when needed
+  get audioContext() {
+    if (!this._audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        this._audioContext = new AudioContextClass();
+      }
+    }
+    return this._audioContext;
   }
 
   async loadAudioBuffer(url) {
@@ -164,6 +175,12 @@ class GaplessPlaybackService {
     this.currentBuffer = null;
     this.nextBuffer = null;
     this.isTransitioning = false;
+    
+    // Close AudioContext to free resources
+    if (this._audioContext) {
+      this._audioContext.close().catch(() => {});
+      this._audioContext = null;
+    }
   }
 }
 

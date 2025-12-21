@@ -3,6 +3,7 @@
 
 const CACHE_NAME = 'lyrikal-empire-v1';
 const AUDIO_CACHE_NAME = 'lyrikal-empire-audio-v1';
+const MAX_AUDIO_CACHE_SIZE = 50; // Maximum number of audio files to cache
 
 // Cache essential assets
 const ESSENTIAL_ASSETS = [
@@ -73,7 +74,10 @@ self.addEventListener('fetch', (event) => {
             // Cache audio files for offline playback
             // Only cache complete responses; the Cache API rejects partial (206) responses.
             if (fetchResponse.ok && fetchResponse.status === 200) {
-              cache.put(request, fetchResponse.clone());
+              // Limit cache size to prevent memory issues
+              limitAudioCacheSize(cache).then(() => {
+                cache.put(request, fetchResponse.clone());
+              });
             }
             return fetchResponse;
           });
@@ -195,6 +199,21 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Helper functions
+
+// Limit audio cache size to prevent memory issues
+async function limitAudioCacheSize(cache) {
+  try {
+    const keys = await cache.keys();
+    if (keys.length >= MAX_AUDIO_CACHE_SIZE) {
+      // Remove oldest entries (first in the list)
+      const keysToDelete = keys.slice(0, keys.length - MAX_AUDIO_CACHE_SIZE + 1);
+      await Promise.all(keysToDelete.map(key => cache.delete(key)));
+    }
+  } catch (error) {
+    // Silent fail - cache cleanup is not critical
+  }
+}
+
 async function handleBackgroundAudio(audioData) {
   // Send audio data to all connected clients
   const clients = await self.clients.matchAll({ type: 'window' });

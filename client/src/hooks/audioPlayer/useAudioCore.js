@@ -303,6 +303,16 @@ export const useAudioCore = (currentBeat) => {
     currentBeatRef.current = currentBeat;
   }, [currentBeat]);
 
+  // Cleanup AudioContext on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
+
   // Track user interactions globally for Safari
   useEffect(() => {
     const trackUserInteraction = (event) => {
@@ -524,14 +534,17 @@ export const useAudioCore = (currentBeat) => {
 
     // Add interruption listeners for iOS
     audio.addEventListener('pause', handleAudioInterruption);
-    document.addEventListener('visibilitychange', () => {
+    
+    const handleVisibilityChange = () => {
       if (!document.hidden) {
         handleAudioResume();
       }
-    });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       audio.removeEventListener('pause', handleAudioInterruption);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [play, pause]);
 

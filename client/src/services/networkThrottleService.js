@@ -1,12 +1,18 @@
+// Store original methods ONCE at module load (before any interception)
+const ORIGINAL_FETCH = window.fetch;
+const ORIGINAL_XHR_OPEN = XMLHttpRequest.prototype.open;
+const ORIGINAL_XHR_SEND = XMLHttpRequest.prototype.send;
+
 class NetworkThrottleService {
   constructor() {
     this.isEnabled = false;
     this.latency = 0;
     this.downloadSpeed = Infinity;
     this.uploadSpeed = Infinity;
-    this.originalFetch = window.fetch;
-    this.originalXHROpen = XMLHttpRequest.prototype.open;
-    this.originalXHRSend = XMLHttpRequest.prototype.send;
+    this.originalFetch = ORIGINAL_FETCH;
+    this.originalXHROpen = ORIGINAL_XHR_OPEN;
+    this.originalXHRSend = ORIGINAL_XHR_SEND;
+    this.isIntercepted = false;
   }
 
   // Enable network throttling
@@ -24,8 +30,12 @@ class NetworkThrottleService {
     this.uploadSpeed = uploadSpeed;
     this.packetLoss = packetLoss;
 
-    this.interceptFetch();
-    this.interceptXHR();
+    // Only intercept if not already intercepted
+    if (!this.isIntercepted) {
+      this.interceptFetch();
+      this.interceptXHR();
+      this.isIntercepted = true;
+    }
 
     console.log(`[Network Throttle] Enabled - Latency: ${latency}ms, Download: ${this.formatSpeed(downloadSpeed)}, Upload: ${this.formatSpeed(uploadSpeed)}`);
   }
@@ -33,16 +43,23 @@ class NetworkThrottleService {
   // Disable network throttling
   disable() {
     this.isEnabled = false;
-    window.fetch = this.originalFetch;
-    XMLHttpRequest.prototype.open = this.originalXHROpen;
-    XMLHttpRequest.prototype.send = this.originalXHRSend;
+    
+    // Restore original methods using module-level originals
+    if (this.isIntercepted) {
+      window.fetch = ORIGINAL_FETCH;
+      XMLHttpRequest.prototype.open = ORIGINAL_XHR_OPEN;
+      XMLHttpRequest.prototype.send = ORIGINAL_XHR_SEND;
+      this.isIntercepted = false;
+    }
   }
 
   // Intercept fetch requests
   interceptFetch() {
-    window.fetch = async (...args) => {
-      if (!this.isEnabled) {
-        return this.originalFetch.apply(this, args);
+    const service = this;
+    
+    window.fetch = async function(...args) {
+      if (!service.isEnabled) {
+        return ORIGINAL_FETCH.apply(window, args);
       }
 
       // Pre-send: latency + upload throttling
@@ -56,24 +73,24 @@ class NetworkThrottleService {
           else if (body instanceof ArrayBuffer) uploadBytes = body.byteLength;
           else if (ArrayBuffer.isView?.(body)) uploadBytes = body.byteLength;
         }
-        const uploadDelayMs = (uploadBytes / this.uploadSpeed) * 1000;
-        const preSendDelay = Math.max(0, this.latency + (isFinite(uploadDelayMs) ? uploadDelayMs : 0));
-        if (preSendDelay > 0) await this.delay(preSendDelay);
+        const uploadDelayMs = (uploadBytes / service.uploadSpeed) * 1000;
+        const preSendDelay = Math.max(0, service.latency + (isFinite(uploadDelayMs) ? uploadDelayMs : 0));
+        if (preSendDelay > 0) await service.delay(preSendDelay);
       } catch (_) {
         // Fallback: latency only if upload size unknown
-        await this.delay(this.latency);
+        await service.delay(service.latency);
       }
 
       // Simulate packet loss before sending
-      if (Math.random() < this.packetLoss) {
+      if (Math.random() < service.packetLoss) {
         throw new Error('Network Error: Packet Loss Simulated');
       }
 
       try {
-        const response = await this.originalFetch.apply(this, args);
+        const response = await ORIGINAL_FETCH.apply(window, args);
 
         // Simulate download speed throttling for streaming bodies
-        if (response.body && isFinite(this.downloadSpeed)) {
+        if (response.body && isFinite(service.downloadSpeed)) {
           const reader = response.body.getReader();
           const chunks = [];
           while (true) {
@@ -81,8 +98,8 @@ class NetworkThrottleService {
             if (done) break;
             chunks.push(value);
             const chunkSize = value.length;
-            const delayTime = (chunkSize / this.downloadSpeed) * 1000;
-            if (delayTime > 0) await this.delay(delayTime);
+            const delayTime = (chunkSize / service.downloadSpeed) * 1000;
+            if (delayTime > 0) await service.delay(delayTime);
           }
           const blob = new Blob(chunks);
           return new Response(blob, {
@@ -95,9 +112,9 @@ class NetworkThrottleService {
         // Non-streaming: approximate using Content-Length
         const contentLengthHeader = response.headers?.get?.('content-length');
         const contentLength = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
-        if (contentLength > 0 && isFinite(this.downloadSpeed)) {
-          const downloadDelayMs = (contentLength / this.downloadSpeed) * 1000;
-          if (downloadDelayMs > 0) await this.delay(downloadDelayMs);
+        if (contentLength > 0 && isFinite(service.downloadSpeed)) {
+          const downloadDelayMs = (contentLength / service.downloadSpeed) * 1000;
+          if (downloadDelayMs > 0) await service.delay(downloadDelayMs);
         }
         return response;
       } catch (error) {
@@ -110,20 +127,18 @@ class NetworkThrottleService {
   // Intercept XMLHttpRequest
   interceptXHR() {
     const service = this;
-    const originalOpen = this.originalXHROpen;
-    const originalSend = this.originalXHRSend;
 
     XMLHttpRequest.prototype.open = function(...args) {
       this._throttleConfig = {
         startTime: performance.now(),
         url: args[1]
       };
-      return originalOpen.apply(this, args);
+      return ORIGINAL_XHR_OPEN.apply(this, args);
     };
 
     XMLHttpRequest.prototype.send = function(data) {
       if (!service.isEnabled) {
-        return originalSend.call(this, data);
+        return ORIGINAL_XHR_SEND.call(this, data);
       }
 
       const xhr = this;
@@ -151,7 +166,7 @@ class NetworkThrottleService {
       const preSendDelay = Math.max(0, service.latency + (isFinite(uploadDelayMs) ? uploadDelayMs : 0));
 
       setTimeout(() => {
-        originalSend.call(xhr, data);
+        ORIGINAL_XHR_SEND.call(xhr, data);
       }, preSendDelay);
     };
   }

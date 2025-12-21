@@ -10,11 +10,27 @@ import reportWebVitals from './reportWebVitals';
 
 import { PlaylistProvider, BeatProvider, DataProvider, HeaderWidthProvider, UserProvider, WebSocketProvider } from './contexts'; 
 
+// Clear old unbounded audio cache on startup to prevent memory bloat
+if ('caches' in window) {
+  caches.open('lyrikal-empire-audio-v1').then(cache => {
+    cache.keys().then(keys => {
+      // If more than 50 items, clear the oldest ones
+      if (keys.length > 50) {
+        const keysToDelete = keys.slice(0, keys.length - 50);
+        keysToDelete.forEach(key => cache.delete(key));
+      }
+    });
+  }).catch(() => {});
+}
+
 // Register service worker for PWA audio support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
+        // Check for updates
+        registration.update();
+        
         // Listen for service worker messages (audio control)
         navigator.serviceWorker.addEventListener('message', (event) => {
           const { type, data, direction } = event.data;

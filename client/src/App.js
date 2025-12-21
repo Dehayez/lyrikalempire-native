@@ -152,20 +152,12 @@ function App() {
       // Enable without timer interception to avoid conflicts
       mobilePerformanceMonitor.enable({ interceptTimers: false });
       
-      // Also enable performance optimizer for better debugging (disabled by default)
-      // if (window.performanceOptimizer) {
-      //   window.performanceOptimizer.enable();
-      // }
-      
       // Enable beat click optimizer
       if (window.beatClickOptimizer) {
         window.beatClickOptimizer.enable();
       }
     } else {
       mobilePerformanceMonitor.disable();
-      // if (window.performanceOptimizer) {
-      //   window.performanceOptimizer.disable();
-      // }
       if (window.beatClickOptimizer) {
         window.beatClickOptimizer.disable();
       }
@@ -174,15 +166,34 @@ function App() {
     return () => {
       if (isPerfAllowed) {
         mobilePerformanceMonitor.disable();
-        // if (window.performanceOptimizer) {
-        //   window.performanceOptimizer.disable();
-        // }
         if (window.beatClickOptimizer) {
           window.beatClickOptimizer.disable();
         }
       }
     };
   }, [isPerfAllowed]);
+
+  // Cleanup all resources on page unload/refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Disable all monitoring services
+      mobilePerformanceMonitor.disable();
+      networkThrottleService.disable();
+      if (window.beatClickOptimizer) {
+        window.beatClickOptimizer.disable();
+      }
+      if (window.performanceOptimizer) {
+        window.performanceOptimizer.disable();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      handleBeforeUnload();
+    };
+  }, []);
 
   // Define logQueue and updateHistory before handlePlayWrapper since they're dependencies
   const logQueue = useCallback((beats, shuffle, currentBeat, forceShuffle = false) => {

@@ -17,6 +17,7 @@ export const DataProvider = ({ children }) => {
   const [keywords, setKeywords] = useState([]);
   const [features, setFeatures] = useState([]);
   const retryCount = useRef(0);
+  const retryTimeoutRef = useRef(null);
   const maxRetries = 3;
 
   const fetchGenres = async () => {
@@ -86,13 +87,24 @@ export const DataProvider = ({ children }) => {
       if (retryCount.current < maxRetries) {
         const delay = Math.pow(2, retryCount.current) * 1000; // Exponential backoff: 1s, 2s, 4s
         retryCount.current++;
-        setTimeout(refetchAll, delay);
+        // Clear any existing retry timeout
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+        retryTimeoutRef.current = setTimeout(refetchAll, delay);
       }
     }
   };
 
   useEffect(() => {
     refetchAll();
+    
+    // Cleanup retry timeout on unmount
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
   }, []);
 
   return (

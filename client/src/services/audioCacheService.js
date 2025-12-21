@@ -43,6 +43,11 @@ class AudioCacheService {
     
     this.init();
     
+    // Clear any existing interval before creating a new one (handles page refresh)
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    
     // Periodic cleanup every 5 minutes
     this.cleanupInterval = setInterval(() => {
       this.performPeriodicCleanup();

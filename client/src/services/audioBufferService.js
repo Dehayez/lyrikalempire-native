@@ -3,30 +3,36 @@ import audioCacheService from './audioCacheService';
 class AudioBufferService {
   constructor() {
     this.bufferSize = 1024 * 1024; // 1MB chunks
-    this.maxBufferCount = 10; // Maximum number of chunks to buffer
+    this.maxBufferCount = 5; // Reduced from 10 to limit memory usage
     this.buffers = new Map(); // Track buffered chunks
     this.activeBuffers = new Set(); // Currently used buffers
     this.preloadQueue = []; // Queue for preloading
     this.networkType = 'unknown'; // Current network type
     this.isBuffering = false; // Buffer state
     
+    // Bind event handlers for proper cleanup
+    this.boundAdjustBufferSize = this.adjustBufferSize.bind(this);
+    this.boundHandleOnline = () => this.handleNetworkChange(true);
+    this.boundHandleOffline = () => this.handleNetworkChange(false);
+    this.boundHandleUnload = () => this.destroy();
+    
     // Initialize network monitoring
     this.initNetworkMonitoring();
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', this.boundHandleUnload);
   }
 
   initNetworkMonitoring() {
     // Monitor network changes
     if ('connection' in navigator) {
-      navigator.connection.addEventListener('change', () => {
-        this.networkType = navigator.connection.effectiveType;
-        this.adjustBufferSize();
-      });
+      navigator.connection.addEventListener('change', this.boundAdjustBufferSize);
       this.networkType = navigator.connection.effectiveType;
     }
 
     // Monitor online/offline status
-    window.addEventListener('online', () => this.handleNetworkChange(true));
-    window.addEventListener('offline', () => this.handleNetworkChange(false));
+    window.addEventListener('online', this.boundHandleOnline);
+    window.addEventListener('offline', this.boundHandleOffline);
   }
 
   adjustBufferSize() {
@@ -110,6 +116,9 @@ class AudioBufferService {
         const blob = new Blob(chunks);
         this.buffers.set(audioSrc, blob);
       }
+
+      // Limit buffer count to prevent memory bloat
+      this.limitBufferCount();
 
       this.isBuffering = false;
       onComplete();
@@ -227,15 +236,29 @@ class AudioBufferService {
     }
   }
 
+  // Limit buffer count to prevent memory bloat
+  limitBufferCount() {
+    while (this.buffers.size > this.maxBufferCount) {
+      // Remove oldest buffer (first entry in Map)
+      const firstKey = this.buffers.keys().next().value;
+      if (firstKey) {
+        this.buffers.delete(firstKey);
+        this.activeBuffers.delete(firstKey);
+      }
+    }
+  }
+
   destroy() {
     this.clearAllBuffers();
     if ('connection' in navigator) {
-      navigator.connection.removeEventListener('change', this.adjustBufferSize);
+      navigator.connection.removeEventListener('change', this.boundAdjustBufferSize);
     }
-    window.removeEventListener('online', this.handleNetworkChange);
-    window.removeEventListener('offline', this.handleNetworkChange);
+    window.removeEventListener('online', this.boundHandleOnline);
+    window.removeEventListener('offline', this.boundHandleOffline);
+    window.removeEventListener('beforeunload', this.boundHandleUnload);
   }
 }
 
 const audioBufferService = new AudioBufferService();
+export { audioBufferService };
 export default audioBufferService;

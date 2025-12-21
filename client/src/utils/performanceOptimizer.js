@@ -13,6 +13,7 @@ class PerformanceOptimizer {
       domMutations: 0,
       renderCount: 0
     };
+    this.domObserver = null;
   }
 
   enable() {
@@ -38,6 +39,16 @@ class PerformanceOptimizer {
     // Restore original console methods
     console.warn = this.originalConsoleWarn;
     console.error = this.originalConsoleError;
+    
+    // Disconnect DOM observer
+    if (this.domObserver) {
+      this.domObserver.disconnect();
+      this.domObserver = null;
+    }
+    
+    // Clear metrics to prevent memory accumulation
+    this.performanceMetrics.slowOperations = [];
+    this.performanceMetrics.domMutations = 0;
   }
 
   interceptConsole() {
@@ -71,10 +82,15 @@ class PerformanceOptimizer {
   }
 
   trackDOMChanges() {
+    // Disconnect existing observer if any
+    if (this.domObserver) {
+      this.domObserver.disconnect();
+    }
+    
     const optimizer = this;
     
     // Simple DOM mutation tracking
-    const observer = new MutationObserver((mutations) => {
+    this.domObserver = new MutationObserver((mutations) => {
       if (!optimizer.isEnabled) return;
       
       optimizer.performanceMetrics.domMutations += mutations.length;
@@ -85,7 +101,7 @@ class PerformanceOptimizer {
       }
     });
 
-    observer.observe(document.body, {
+    this.domObserver.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true
