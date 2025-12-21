@@ -19,7 +19,11 @@ class PerformanceOptimizer {
   enable() {
     if (this.isEnabled) return;
     this.isEnabled = true;
-    console.log('[Performance Optimizer] Enabled');
+    
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Performance Optimizer] Enabled');
+    }
 
     // Override console methods to track performance issues
     this.interceptConsole();
@@ -34,7 +38,11 @@ class PerformanceOptimizer {
   disable() {
     if (!this.isEnabled) return;
     this.isEnabled = false;
-    console.log('[Performance Optimizer] Disabled');
+    
+    // Only log in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Performance Optimizer] Disabled');
+    }
 
     // Restore original console methods
     console.warn = this.originalConsoleWarn;
@@ -57,7 +65,7 @@ class PerformanceOptimizer {
     console.warn = function(...args) {
       const message = args.join(' ');
       
-      // Track specific performance warnings
+      // Track specific performance warnings (silently in production)
       if (message.includes('Violation') || message.includes('handler took')) {
         optimizer.performanceMetrics.slowOperations.push({
           type: 'slow-handler',
@@ -65,10 +73,11 @@ class PerformanceOptimizer {
           timestamp: Date.now()
         });
         
-        // Log only the first few slow operations to avoid spam
-        if (optimizer.performanceMetrics.slowOperations.length <= 3) {
+        // Only log in development, and only first few to avoid spam
+        if (process.env.NODE_ENV === 'development' && optimizer.performanceMetrics.slowOperations.length <= 3) {
           optimizer.originalConsoleWarn.apply(console, args);
         }
+        // In production, silently track but don't log
       } else {
         optimizer.originalConsoleWarn.apply(console, args);
       }
@@ -78,7 +87,9 @@ class PerformanceOptimizer {
   trackSlowOperations() {
     // DISABLED: This was causing infinite logging loops
     // The optimizer was monitoring its own setTimeout calls
-    console.log('[Performance Optimizer] Slow operation tracking disabled to prevent logging loops');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Performance Optimizer] Slow operation tracking disabled to prevent logging loops');
+    }
   }
 
   trackDOMChanges() {
@@ -96,7 +107,8 @@ class PerformanceOptimizer {
       optimizer.performanceMetrics.domMutations += mutations.length;
       
       // Log excessive DOM mutations (increased threshold to reduce noise)
-      if (mutations.length > 500) {
+      // Only log in development
+      if (process.env.NODE_ENV === 'development' && mutations.length > 500) {
         console.warn(`[Performance] High DOM mutation count: ${mutations.length}`);
       }
     });
