@@ -60,6 +60,16 @@ export const SelectableInput = ({
   const handleFocus = useCallback(() => {
     setIsFocused(true);
   }, []);
+
+  const scrollContainerToRight = useCallback(() => {
+    if (inputContainerRef.current) {
+      const { scrollWidth, clientWidth } = inputContainerRef.current;
+      inputContainerRef.current.scrollTo({
+        left: scrollWidth - clientWidth,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
   
   const handleContainerClick = useCallback(() => {
     if (disableFocus) return;
@@ -75,11 +85,8 @@ export const SelectableInput = ({
     inputRef.current.focus();
   
     // Scroll the container to the right
-    if (inputContainerRef.current) {
-      const { scrollWidth, clientWidth } = inputContainerRef.current;
-      inputContainerRef.current.scrollLeft = scrollWidth - clientWidth;
-    }
-  }, [disableFocus]);
+    scrollContainerToRight();
+  }, [disableFocus, scrollContainerToRight]);
 
   const handleBlur = useCallback((e) => {
     // Clear any existing blur timeout
@@ -107,7 +114,35 @@ export const SelectableInput = ({
 
   const handleInputChange = useCallback((e) => setInputValue(e.target.value), []);
 
-  const handleItemSelect = useCallback(async (item) => {
+  const handleRemoveAssociation = useCallback((item) => {
+    const associationId = item[`${singularAssociationType}_id`];
+    if (form) {
+      const updatedItems = selectedItems.filter(i => i[`${singularAssociationType}_id`] !== associationId);
+      setSelectedItems(updatedItems);
+      setPendingAssociations(prevItems => prevItems.filter(id => id !== associationId));
+      // Notify parent component with proper format (without beat_id)
+      if (onUpdate) {
+        const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+        onUpdate(formattedItems, associationType);
+      }
+    } else {
+      removeAssociationFromBeat(beatId, associationType, associationId)
+        .then(() => {
+          const updatedItems = selectedItems.filter(i => i[`${singularAssociationType}_id`] !== associationId);
+          setSelectedItems(updatedItems);
+          // Notify parent component after successful database update (without beat_id)
+          if (onUpdate) {
+            const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+            onUpdate(formattedItems, associationType);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to remove association:', error);
+        });
+    }
+  }, [beatId, associationType, form, singularAssociationType, selectedItems, onUpdate]);
+
+  const handleItemSelect = useCallback((item) => {
     const associationId = item.id;
     const newAssociation = {
       beat_id: beatId,
@@ -118,7 +153,7 @@ export const SelectableInput = ({
     const isSelected = isItemSelected(item);
 
     if (isSelected) {
-      await handleRemoveAssociation(newAssociation);
+      handleRemoveAssociation(newAssociation);
     } else {
       if (form) {
         const updatedItems = [...selectedItems, newAssociation];
@@ -129,51 +164,29 @@ export const SelectableInput = ({
           const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
           onUpdate(formattedItems, associationType);
         }
+        // Scroll to right after DOM updates
+        setTimeout(scrollContainerToRight, 0);
       } else {
-        try {
-          await addAssociationsToBeat(beatId, associationType, [associationId]);
-          const updatedItems = [...selectedItems, newAssociation];
-          setSelectedItems(updatedItems);
-          // Notify parent component after successful database update (without beat_id)
-          if (onUpdate) {
-            const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
-            onUpdate(formattedItems, associationType);
-          }
-        } catch (error) {
-          console.error('Failed to add association:', error);
-        }
+        addAssociationsToBeat(beatId, associationType, [associationId])
+          .then(() => {
+            const updatedItems = [...selectedItems, newAssociation];
+            setSelectedItems(updatedItems);
+            // Notify parent component after successful database update (without beat_id)
+            if (onUpdate) {
+              const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
+              onUpdate(formattedItems, associationType);
+            }
+            // Scroll to right after DOM updates
+            setTimeout(scrollContainerToRight, 0);
+          })
+          .catch((error) => {
+            console.error('Failed to add association:', error);
+          });
       }
     }
     setInputValue('');
     inputRef.current.focus();
-  }, [beatId, associationType, form, isItemSelected, singularAssociationType, selectedItems, onUpdate]);
-
-  const handleRemoveAssociation = useCallback(async (item) => {
-    const associationId = item[`${singularAssociationType}_id`];
-    if (form) {
-      const updatedItems = selectedItems.filter(item => item[`${singularAssociationType}_id`] !== associationId);
-      setSelectedItems(updatedItems);
-      setPendingAssociations(prevItems => prevItems.filter(id => id !== associationId));
-      // Notify parent component with proper format (without beat_id)
-      if (onUpdate) {
-        const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
-        onUpdate(formattedItems, associationType);
-      }
-    } else {
-      try {
-        await removeAssociationFromBeat(beatId, associationType, associationId);
-        const updatedItems = selectedItems.filter(item => item[`${singularAssociationType}_id`] !== associationId);
-        setSelectedItems(updatedItems);
-        // Notify parent component after successful database update (without beat_id)
-        if (onUpdate) {
-          const formattedItems = updatedItems.map(({ beat_id, ...rest }) => rest);
-          onUpdate(formattedItems, associationType);
-        }
-      } catch (error) {
-        console.error('Failed to remove association:', error);
-      }
-    }
-  }, [beatId, associationType, form, singularAssociationType, selectedItems, onUpdate]);
+  }, [beatId, associationType, form, isItemSelected, singularAssociationType, selectedItems, onUpdate, scrollContainerToRight, handleRemoveAssociation]);
 
   const scrollToFocusedItem = useCallback((index) => {
     const listContainer = containerRef.current.querySelector('.selectable-input__list');
