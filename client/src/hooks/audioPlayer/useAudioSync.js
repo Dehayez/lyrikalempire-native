@@ -37,6 +37,12 @@ export const useAudioSync = ({
   // WebSocket functionality disabled - use empty function
   const wsEmitStateRequest = () => {};
   
+  // Store onNext in a ref to prevent handleEnded from recreating when onNext changes
+  const onNextRef = useRef(onNext);
+  useEffect(() => {
+    onNextRef.current = onNext;
+  }, [onNext]);
+  
   // Refs for Safari-specific handling
   const timeUpdateThrottleRef = useRef(false);
   const lastTimeUpdateRef = useRef(0);
@@ -202,10 +208,10 @@ export const useAudioSync = ({
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
-        onNext();
+        onNextRef.current?.();
       }
     }
-  }, [onNext, repeat, audioCore, isCurrentSessionMaster, setCurrentTimeState, setProgress, syncAllPlayers]);
+  }, [repeat, audioCore, isCurrentSessionMaster, setCurrentTimeState, setProgress, syncAllPlayers]);
 
   // Set up main audio player event listeners
   useEffect(() => {

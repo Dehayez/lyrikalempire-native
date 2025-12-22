@@ -169,7 +169,7 @@ const AudioPlayer = ({
       switch (recovery.strategy) {
         case 'skip':
           console.log('⏭️ [ERROR RECOVERY] Skipping to next track');
-          onNext?.();
+          onNextRef.current?.();
           break;
         case 'retry':
           console.log(`🔄 [ERROR RECOVERY] Retrying in ${recovery.retryDelay}ms`);
@@ -186,7 +186,7 @@ const AudioPlayer = ({
 
     console.error('❌ [ERROR RECOVERY] Audio error with recovery:', error, recovery);
     */
-  }, [currentBeat, isPlaying, volume, onNext, audioPlayer, playerRef]);
+  }, [currentBeat, isPlaying, volume, audioPlayer, playerRef]);
 
   // Get audio player state
   const {
@@ -351,6 +351,12 @@ const AudioPlayer = ({
     setCurrentBeat
   });
 
+  // Store onNext in a ref to use in effects without causing re-runs
+  const onNextRef = useRef(onNext);
+  useEffect(() => {
+    onNextRef.current = onNext;
+  }, [onNext]);
+
   // Immediately reset time/progress on beat change (click or programmatic)
   useEffect(() => {
     // Reset retry counters when switching tracks
@@ -379,7 +385,7 @@ const AudioPlayer = ({
                   console.warn('404 detected. Skipping track.');
                   retryCountRef.current = 0;
                   retryDelayRef.current = 1000;
-                  onNext?.();
+                  onNextRef.current?.();
                 }
               })
               .catch(() => {
@@ -387,7 +393,7 @@ const AudioPlayer = ({
                 console.warn('CORS/network error detected. Skipping track.');
                 retryCountRef.current = 0;
                 retryDelayRef.current = 1000;
-                onNext?.();
+                onNextRef.current?.();
               });
           }
         }
@@ -412,7 +418,7 @@ const AudioPlayer = ({
         loadTimeoutRef.current = null;
       }
     };
-  }, [currentBeat?.id, audioSrc, onNext]);
+  }, [currentBeat?.id, audioSrc]);
 
   // Set up media session
   useMediaSession({
@@ -501,7 +507,7 @@ const AudioPlayer = ({
       console.warn(`Max retries (${maxRetries}) exceeded for track "${currentBeat.title}". Skipping to next track.`);
       retryCountRef.current = 0;
       retryDelayRef.current = 1000;
-      onNext?.();
+      onNextRef.current?.();
       return;
     }
     
@@ -521,7 +527,7 @@ const AudioPlayer = ({
         refreshAudioSrc(true); // Force refresh the URL
       }
     }, retryDelayRef.current);
-  }, [currentBeat, refreshAudioSrc, onNext]);
+  }, [currentBeat, refreshAudioSrc]);
 
   // Handle adding to playlist
   const handleAddToPlaylist = useCallback((playlistId) => {
@@ -689,7 +695,7 @@ const AudioPlayer = ({
         console.warn('Format error detected. Skipping track immediately.');
         retryCountRef.current = 0;
         retryDelayRef.current = 1000;
-        onNext?.();
+        onNextRef.current?.();
         return;
       }
       
@@ -703,7 +709,7 @@ const AudioPlayer = ({
               console.warn('404 error detected. Skipping track immediately.');
               retryCountRef.current = 0;
               retryDelayRef.current = 1000;
-              onNext?.();
+              onNextRef.current?.();
               return;
             }
             // If fetch succeeds but audio still failed, try retry
@@ -714,7 +720,7 @@ const AudioPlayer = ({
               console.warn('Max retries exceeded. Skipping track.');
               retryCountRef.current = 0;
               retryDelayRef.current = 1000;
-              onNext?.();
+              onNextRef.current?.();
             }
           })
           .catch((fetchError) => {
@@ -723,7 +729,7 @@ const AudioPlayer = ({
               console.warn('CORS/network error after max retries. Skipping track immediately.');
               retryCountRef.current = 0;
               retryDelayRef.current = 1000;
-              onNext?.();
+              onNextRef.current?.();
             } else {
               // Try retry first
               retryWithFreshUrl();
@@ -744,11 +750,11 @@ const AudioPlayer = ({
           console.warn('Audio stuck at readyState 0. Likely CORS issue. Skipping track.');
           retryCountRef.current = 0;
           retryDelayRef.current = 1000;
-          onNext?.();
+          onNextRef.current?.();
         }
       }, 5000);
     }
-  }, [currentBeat, handleSafariError, isSafari, retryWithFreshUrl, onNext]);
+  }, [currentBeat, handleSafariError, isSafari, retryWithFreshUrl]);
 
   // Clean up on unmount
   useEffect(() => {
