@@ -367,6 +367,7 @@ export const SelectableInput = ({
                     'selectable-input__list-item--selected': isSelected,
                     'selectable-input__list-item--focused': focusedIndex === index,
                   })}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleItemSelect(item)}
                   onMouseEnter={() => setFocusedIndex(index)}
                 >
