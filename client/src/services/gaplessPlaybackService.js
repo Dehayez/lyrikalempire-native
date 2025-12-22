@@ -54,8 +54,6 @@ class GaplessPlaybackService {
 
   async preloadNext(nextTrackUrl) {
     if (!nextTrackUrl || this.nextBuffer) return;
-
-    console.log('🎵 [GAPLESS] Starting preload for next track:', nextTrackUrl);
     
     try {
       this.nextBuffer = await this.loadAudioBuffer(nextTrackUrl);
@@ -66,10 +64,8 @@ class GaplessPlaybackService {
       gainNode.gain.value = 0;
       this.nextSource.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
-      
-      console.log('✅ [GAPLESS] Successfully preloaded next track');
     } catch (error) {
-      console.error('❌ [GAPLESS] Error preloading next track:', error);
+      // Silently fail - preloading is optional
     }
   }
 
@@ -92,12 +88,8 @@ class GaplessPlaybackService {
 
       // Set up track end handling
       this.currentSource.onended = () => {
-        console.log('🎵 [GAPLESS] Track ended in gapless service');
         if (!this.isTransitioning && this.onTrackEnd) {
-          console.log('🎵 [GAPLESS] Calling onTrackEnd');
           this.onTrackEnd();
-        } else {
-          console.log('🎵 [GAPLESS] Skipping onTrackEnd - transitioning or no handler');
         }
       };
 
@@ -111,8 +103,6 @@ class GaplessPlaybackService {
 
   async transitionToNext() {
     if (!this.nextBuffer || !this.nextSource || this.isTransitioning) return false;
-
-    console.log('🔄 [GAPLESS] Starting gapless transition to next track');
     
     this.isTransitioning = true;
     const now = this.audioContext.currentTime;
@@ -133,8 +123,6 @@ class GaplessPlaybackService {
     nextGain.gain.setValueAtTime(0, now);
     nextGain.gain.linearRampToValueAtTime(1, now + this.crossfadeDuration);
 
-    console.log(`🔄 [GAPLESS] Crossfading for ${this.crossfadeDuration}s`);
-
     // Clean up after crossfade
     setTimeout(() => {
       this.currentSource.stop();
@@ -143,7 +131,6 @@ class GaplessPlaybackService {
       this.nextBuffer = null;
       this.nextSource = null;
       this.isTransitioning = false;
-      console.log('✅ [GAPLESS] Gapless transition completed');
     }, this.crossfadeDuration * 1000);
 
     return true;

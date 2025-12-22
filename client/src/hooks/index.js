@@ -11,7 +11,6 @@ export { useWaveform } from './useWaveform';
 export { useMediaSession } from './useMediaSession';
 export { useCrossTabSync } from './useCrossTabSync';
 export { default as useOs } from './useOs';
-export { useSafariPerformanceEnhancer } from './useSafariPerformanceEnhancer';
 
 // Audio Player Hooks - organized in audioPlayer folder
 export {

@@ -1,34 +1,23 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from './components';
-import { IoPersonSharp } from "react-icons/io5";
+import { IoPersonSharp, IoSpeedometer } from "react-icons/io5";
 import classNames from 'classnames';
 
 import { isMobileOrTablet, getInitialState, isAuthPage } from './utils';
-import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache, useOs } from './hooks';
+import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache } from './hooks';
 import { useBeat, useUser, useWebSocket } from './contexts';
 import ProtectedRoute from './routes/ProtectedRoute';
-import userService from './services/userService';
 import { updateBeat as updateBeatService } from './services/beatService';
-import { useSafariPerformanceEnhancer } from './hooks/useSafariPerformanceEnhancer';
 
 import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, KeywordsPage, FeaturesPage, LoginPage, RegisterPage, ConfirmEmailPage, RequestPasswordResetPage, ResetPasswordPage, ProfilePage } from './pages';
 import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queue, Playlists, RightSidePanel, LeftSidePanel, History, PlaylistDetail, LyricsModal, IconButton, PlayingIndicator, Intro } from './components';
-import PerformancePanel from './components/PerformancePanel/PerformancePanel';
-import { IoSpeedometer } from 'react-icons/io5';
-import networkThrottleService from './services/networkThrottleService';
-import mobilePerformanceMonitor from './utils/performanceMonitor';
 import NotFound from './components/NotFound';
 
 import './App.scss';
 
-// Load audio cache debug utilities (development only)
-// Load performance debug utilities (development only)
-if (process.env.NODE_ENV === 'development') {
-  import('./utils/performanceDebug');
-  import('./utils/performanceOptimizer');
-  import('./utils/beatClickOptimizer');
-}
+// Lazy load performance panel only for allowed users
+const PerformancePanel = lazy(() => import('./components/PerformancePanel/PerformancePanel'));
 
 
 function App() {
@@ -43,9 +32,7 @@ function App() {
   const { isDraggingOver, droppedFiles, clearDroppedFiles } = useDragAndDrop(setRefreshBeats, user.id);
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
 
-  // Safari performance enhancer (works behind the scenes)
-  const safariOptimizations = useSafariPerformanceEnhancer();
-
+  // Core state
   const [viewState, setViewState] = useState(() => getInitialState('lastView', 'queue'));
   const [currentBeat, setCurrentBeat] = useState(() => getInitialState('currentBeat', null));
   const [selectedBeat, setSelectedBeat] = useState(() => getInitialState('selectedBeat', null));
@@ -59,22 +46,23 @@ function App() {
   const [shuffle, setShuffle] = useState(() => getInitialState('shuffle', false));
   const [repeat, setRepeat] = useState(() => getInitialState('repeat', 'Disabled Repeat'));
   const [lyricsModal, setLyricsModal] = useState(getInitialState('lyricsModal', false));
-  // Performance testing state
-  const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(() => getInitialState('isPerformancePanelOpen', false));
-  const [isThrottlingEnabled, setIsThrottlingEnabled] = useState(() => getInitialState('isThrottlingEnabled', false));
-  const [networkThrottlePreset, setNetworkThrottlePreset] = useState(() => getInitialState('networkThrottlePreset', 'Custom'));
-  const [networkThrottleConfig, setNetworkThrottleConfig] = useState(() => getInitialState('networkThrottleConfig', {
-    latency: 100,
-    downloadSpeed: 1024 * 1024,
-    uploadSpeed: 512 * 1024,
-    packetLoss: 0,
-  }));
   const [isScrolledBottom, setIsScrolledBottom] = useState(false);
   const [scrollOpacityBottom, setScrollOpacityBottom] = useState(0);
   const [sessionProps, setSessionProps] = useState({
     masterSession: null,
     currentSessionId: null,
     isCurrentSessionMaster: false
+  });
+  
+  // Performance panel state (only for allowed users)
+  const [isPerformancePanelOpen, setIsPerformancePanelOpen] = useState(false);
+  const [isThrottlingEnabled, setIsThrottlingEnabled] = useState(false);
+  const [networkThrottlePreset, setNetworkThrottlePreset] = useState('Custom');
+  const [networkThrottleConfig, setNetworkThrottleConfig] = useState({
+    latency: 100,
+    downloadSpeed: 1024 * 1024,
+    uploadSpeed: 512 * 1024,
+    packetLoss: 0,
   });
 
 
@@ -130,70 +118,39 @@ function App() {
     customQueue,
     sortConfig,
     lyricsModal,
-    // performance settings
-    isPerformancePanelOpen,
-    isThrottlingEnabled,
-    networkThrottleConfig,
-    networkThrottlePreset,
   });
+
+  // Performance panel service refs (lazy loaded)
+  const networkThrottleServiceRef = useRef(null);
 
   // Auto-apply throttling setting on load (only for allowed user)
   useEffect(() => {
-    if (isPerfAllowed && isThrottlingEnabled) {
-      networkThrottleService.enable(networkThrottleConfig);
-    } else {
-      networkThrottleService.disable();
-    }
-  }, [isPerfAllowed, isThrottlingEnabled, networkThrottleConfig]);
-
-  // Auto-enable mobile performance monitoring for allowed user
-  useEffect(() => {
-    if (isPerfAllowed) {
-      // Enable without timer interception to avoid conflicts
-      mobilePerformanceMonitor.enable({ interceptTimers: false });
-      
-      // Enable beat click optimizer
-      if (window.beatClickOptimizer) {
-        window.beatClickOptimizer.enable();
-      }
-    } else {
-      mobilePerformanceMonitor.disable();
-      if (window.beatClickOptimizer) {
-        window.beatClickOptimizer.disable();
-      }
-    }
+    if (!isPerfAllowed) return;
     
-    return () => {
-      if (isPerfAllowed) {
-        mobilePerformanceMonitor.disable();
-        if (window.beatClickOptimizer) {
-          window.beatClickOptimizer.disable();
+    // Lazy load the network throttle service only when needed
+    const loadAndApplyThrottle = async () => {
+      if (isThrottlingEnabled && !networkThrottleServiceRef.current) {
+        const { default: service } = await import('./services/networkThrottleService');
+        networkThrottleServiceRef.current = service;
+      }
+      
+      if (networkThrottleServiceRef.current) {
+        if (isThrottlingEnabled) {
+          networkThrottleServiceRef.current.enable(networkThrottleConfig);
+        } else {
+          networkThrottleServiceRef.current.disable();
         }
       }
     };
-  }, [isPerfAllowed]);
-
-  // Cleanup all resources on page unload/refresh
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Disable all monitoring services
-      mobilePerformanceMonitor.disable();
-      networkThrottleService.disable();
-      if (window.beatClickOptimizer) {
-        window.beatClickOptimizer.disable();
-      }
-      if (window.performanceOptimizer) {
-        window.performanceOptimizer.disable();
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    loadAndApplyThrottle();
     
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      handleBeforeUnload();
+      if (networkThrottleServiceRef.current) {
+        networkThrottleServiceRef.current.disable();
+      }
     };
-  }, []);
+  }, [isPerfAllowed, isThrottlingEnabled, networkThrottleConfig]);
 
   // Define logQueue and updateHistory before handlePlayWrapper since they're dependencies
   const logQueue = useCallback((beats, shuffle, currentBeat, forceShuffle = false) => {
@@ -629,18 +586,20 @@ function App() {
               clearDroppedFiles={clearDroppedFiles} 
             />
           )}
-          {/* Performance Testing Panel - only for user id 39 */}
-          {isPerfAllowed && (
-            <PerformancePanel
-              isOpen={isPerformancePanelOpen}
-              onClose={() => setIsPerformancePanelOpen(false)}
-              networkConfig={networkThrottleConfig}
-              onUpdateNetworkConfig={setNetworkThrottleConfig}
-              selectedPreset={networkThrottlePreset}
-              onChangePreset={setNetworkThrottlePreset}
-              isThrottlingEnabled={isThrottlingEnabled}
-              onToggleThrottling={setIsThrottlingEnabled}
-            />
+          {/* Performance Testing Panel - only for user id 39, lazy loaded */}
+          {isPerfAllowed && isPerformancePanelOpen && (
+            <Suspense fallback={null}>
+              <PerformancePanel
+                isOpen={isPerformancePanelOpen}
+                onClose={() => setIsPerformancePanelOpen(false)}
+                networkConfig={networkThrottleConfig}
+                onUpdateNetworkConfig={setNetworkThrottleConfig}
+                selectedPreset={networkThrottlePreset}
+                onChangePreset={setNetworkThrottlePreset}
+                isThrottlingEnabled={isThrottlingEnabled}
+                onToggleThrottling={setIsThrottlingEnabled}
+              />
+            </Suspense>
           )}
         </div>
         {!isAuthRoute &&

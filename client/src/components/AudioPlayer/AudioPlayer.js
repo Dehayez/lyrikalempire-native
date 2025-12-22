@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import H5AudioPlayer from 'react-h5-audio-player';
 import { isMobileOrTablet, slideOut } from '../../utils';
 import { 
@@ -12,7 +12,6 @@ import {
   useOs
 } from '../../hooks';
 import { usePlaylist, useUser } from '../../contexts';
-import { audioErrorRecovery } from '../../services/audioErrorRecovery';
 import { AudioErrorBoundary } from './AudioErrorBoundary';
 
 import { ContextMenu } from '../ContextMenu';
@@ -57,38 +56,34 @@ const AudioPlayer = ({
   
   // Store onSessionUpdate in a ref to prevent it from causing re-renders
   const onSessionUpdateRef = useRef(onSessionUpdate);
-  
-  // Update the ref when the prop changes
   useEffect(() => {
     onSessionUpdateRef.current = onSessionUpdate;
   }, [onSessionUpdate]);
 
-  // Cleanup performance optimization refs on unmount
+  // Error handling refs - consolidated
+  const errorStateRef = useRef({
+    count: 0,
+    lastTime: 0,
+    isHandling: false,
+    hasLoaded: false,
+    retryCount: 0,
+    retryDelay: 1000
+  });
+  const timersRef = useRef({
+    urlRetry: null,
+    loadTimeout: null,
+    errorRecovery: null
+  });
+  const maxRetries = 3;
+
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (progressUpdateRef.current) {
-        cancelAnimationFrame(progressUpdateRef.current);
-      }
-      if (errorRecoveryRef.current) {
-        clearTimeout(errorRecoveryRef.current);
-      }
+      Object.values(timersRef.current).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
     };
   }, []);
-
-  // Refs for error handling and Safari-specific issues
-  const errorCountRef = useRef(0);
-  const lastErrorTimeRef = useRef(0);
-  const isErrorHandlingRef = useRef(false);
-  const hasLoadedRef = useRef(false);
-  const retryCountRef = useRef(0);
-  const maxRetries = 3;
-  const retryDelayRef = useRef(1000);
-  const urlRetryTimerRef = useRef(null);
-  const loadTimeoutRef = useRef(null);
-
-  // Performance optimization refs
-  const progressUpdateRef = useRef(null);
-  const errorRecoveryRef = useRef(null);
 
   // Get playlists
   const { playlists, playedPlaylistTitle } = usePlaylist();
@@ -148,45 +143,14 @@ const AudioPlayer = ({
     updateCurrentTime,
   } = audioPlayer;
 
-  // Enhanced error recovery (moved after volume extraction)
-  const handleErrorWithRecovery = useCallback(async (error) => {
+  // Simplified error recovery handler
+  const handleErrorWithRecovery = useCallback((error) => {
     // Cancel any pending error recovery
-    if (errorRecoveryRef.current) {
-      clearTimeout(errorRecoveryRef.current);
+    if (timersRef.current.errorRecovery) {
+      clearTimeout(timersRef.current.errorRecovery);
     }
-    
-    /*
-    // Attempt recovery
-    const recovery = await audioErrorRecovery.handleError(error, currentBeat, {
-      isPlaying,
-      volume,
-      loadingPhase: 'playback'
-    });
-
-    console.log('🔄 [ERROR RECOVERY] Recovery strategy:', recovery.strategy);
-
-    if (recovery.success) {
-      switch (recovery.strategy) {
-        case 'skip':
-          console.log('⏭️ [ERROR RECOVERY] Skipping to next track');
-          onNextRef.current?.();
-          break;
-        case 'retry':
-          console.log(`🔄 [ERROR RECOVERY] Retrying in ${recovery.retryDelay}ms`);
-          errorRecoveryRef.current = setTimeout(() => {
-            // Retry playback
-            if (audioPlayer.play) {
-              audioPlayer.play();
-            }
-          }, recovery.retryDelay);
-          break;
-        // ... handle other strategies
-      }
-    }
-
-    console.error('❌ [ERROR RECOVERY] Audio error with recovery:', error, recovery);
-    */
-  }, [currentBeat, isPlaying, volume, audioPlayer, playerRef]);
+    // Error recovery is handled by handleError below
+  }, []);
 
   // Get audio player state
   const {
@@ -249,15 +213,15 @@ const AudioPlayer = ({
 
   // Position state updates are now handled by useMediaSession hook
 
-  // Reset hasLoaded when audio source changes
+  // Reset error state when audio source changes
   useEffect(() => {
-    hasLoadedRef.current = false;
-    retryCountRef.current = 0;
+    errorStateRef.current.hasLoaded = false;
+    errorStateRef.current.retryCount = 0;
     
     // Clear any pending retry timers
-    if (urlRetryTimerRef.current) {
-      clearTimeout(urlRetryTimerRef.current);
-      urlRetryTimerRef.current = null;
+    if (timersRef.current.urlRetry) {
+      clearTimeout(timersRef.current.urlRetry);
+      timersRef.current.urlRetry = null;
     }
   }, [audioSrc]);
 
@@ -357,55 +321,44 @@ const AudioPlayer = ({
     onNextRef.current = onNext;
   }, [onNext]);
 
-  // Immediately reset time/progress on beat change (click or programmatic)
+  // Reset time/progress on beat change
   useEffect(() => {
     // Reset retry counters when switching tracks
-    retryCountRef.current = 0;
-    retryDelayRef.current = 1000;
-    hasLoadedRef.current = false;
+    errorStateRef.current.retryCount = 0;
+    errorStateRef.current.retryDelay = 1000;
+    errorStateRef.current.hasLoaded = false;
     
     // Clear any existing load timeout
-    if (loadTimeoutRef.current) {
-      clearTimeout(loadTimeoutRef.current);
-      loadTimeoutRef.current = null;
+    if (timersRef.current.loadTimeout) {
+      clearTimeout(timersRef.current.loadTimeout);
+      timersRef.current.loadTimeout = null;
     }
     
     // Set a timeout to detect failed loads (CORS errors might not trigger error event)
     if (currentBeat && audioSrc) {
-      // Check immediately after a short delay to catch CORS errors
-      loadTimeoutRef.current = setTimeout(() => {
+      timersRef.current.loadTimeout = setTimeout(() => {
         const audio = playerRef.current?.audio?.current;
-        if (audio && !hasLoadedRef.current) {
-          // Check if audio is stuck at readyState 0 (not loading)
-          if (audio.readyState === 0) {
-            // Try to fetch the URL to confirm it's a CORS/404 issue
-            fetch(audio.src, { method: 'HEAD' })
-              .then(response => {
-                if (response.status === 404) {
-                  console.warn('404 detected. Skipping track.');
-                  retryCountRef.current = 0;
-                  retryDelayRef.current = 1000;
-                  onNextRef.current?.();
-                }
-              })
-              .catch(() => {
-                // CORS error or network failure - skip immediately
-                console.warn('CORS/network error detected. Skipping track.');
-                retryCountRef.current = 0;
-                retryDelayRef.current = 1000;
+        if (audio && !errorStateRef.current.hasLoaded && audio.readyState === 0) {
+          // Try to fetch the URL to confirm it's a CORS/404 issue
+          fetch(audio.src, { method: 'HEAD' })
+            .then(response => {
+              if (response.status === 404) {
+                errorStateRef.current.retryCount = 0;
                 onNextRef.current?.();
-              });
-          }
+              }
+            })
+            .catch(() => {
+              errorStateRef.current.retryCount = 0;
+              onNextRef.current?.();
+            });
         }
-      }, 3000); // 3 second timeout - CORS errors happen quickly
+      }, 3000);
     }
     
-    // Prevent sync during initial state updates to avoid loops
+    // Reset UI state
     const timeoutId = setTimeout(() => {
-      // Ensure UI shows 00:00 instantly and prevent carryover
       setCurrentTimeState(0);
       setProgress(0);
-      // Pause any current playback to prevent previous track resuming during load
       try { audioCore.pause(); } catch (e) {}
       audioCore.setCurrentTime(0);
       syncAllPlayers(true);
@@ -413,9 +366,9 @@ const AudioPlayer = ({
     
     return () => {
       clearTimeout(timeoutId);
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-        loadTimeoutRef.current = null;
+      if (timersRef.current.loadTimeout) {
+        clearTimeout(timersRef.current.loadTimeout);
+        timersRef.current.loadTimeout = null;
       }
     };
   }, [currentBeat?.id, audioSrc]);
@@ -462,71 +415,60 @@ const AudioPlayer = ({
 
   // Safari-specific error handling
   const handleSafariError = useCallback((error) => {
-    // Only handle errors in Safari
     if (!isSafari) return;
-    
-    // Prevent error handling recursion
-    if (isErrorHandlingRef.current) return;
+    if (errorStateRef.current.isHandling) return;
     
     const now = Date.now();
+    const state = errorStateRef.current;
     
-    // Reset error count if it's been more than 5 seconds since the last error
-    if (now - lastErrorTimeRef.current > 5000) {
-      errorCountRef.current = 0;
+    // Reset error count if it's been more than 5 seconds
+    if (now - state.lastTime > 5000) {
+      state.count = 0;
     }
     
-    // Update last error time
-    lastErrorTimeRef.current = now;
+    state.lastTime = now;
+    state.count += 1;
     
-    // Increment error count
-    errorCountRef.current += 1;
-    
-    // If we're getting too many errors, pause playback to prevent infinite loops
-    if (errorCountRef.current > 3) {
-      isErrorHandlingRef.current = true;
-      
-      // Pause playback
+    // Pause playback if too many errors
+    if (state.count > 3) {
+      state.isHandling = true;
       setIsPlaying(false);
       
-      // Reset error handling state after a delay
       setTimeout(() => {
-        errorCountRef.current = 0;
-        isErrorHandlingRef.current = false;
+        state.count = 0;
+        state.isHandling = false;
       }, 1000);
     }
   }, [isSafari, setIsPlaying]);
 
   // Retry loading audio with a fresh URL
   const retryWithFreshUrl = useCallback(() => {
-    if (!currentBeat) {
-      return;
-    }
+    if (!currentBeat) return;
+    
+    const state = errorStateRef.current;
     
     // If max retries exceeded, skip to next track
-    if (retryCountRef.current >= maxRetries) {
-      console.warn(`Max retries (${maxRetries}) exceeded for track "${currentBeat.title}". Skipping to next track.`);
-      retryCountRef.current = 0;
-      retryDelayRef.current = 1000;
+    if (state.retryCount >= maxRetries) {
+      state.retryCount = 0;
+      state.retryDelay = 1000;
       onNextRef.current?.();
       return;
     }
     
-    retryCountRef.current += 1;
-    
-    // Exponential backoff for retries
-    retryDelayRef.current = Math.min(retryDelayRef.current * 2, 8000);
+    state.retryCount += 1;
+    state.retryDelay = Math.min(state.retryDelay * 2, 8000);
     
     // Clear any existing timer
-    if (urlRetryTimerRef.current) {
-      clearTimeout(urlRetryTimerRef.current);
+    if (timersRef.current.urlRetry) {
+      clearTimeout(timersRef.current.urlRetry);
     }
     
     // Set a new timer for retry
-    urlRetryTimerRef.current = setTimeout(() => {
+    timersRef.current.urlRetry = setTimeout(() => {
       if (refreshAudioSrc) {
-        refreshAudioSrc(true); // Force refresh the URL
+        refreshAudioSrc(true);
       }
-    }, retryDelayRef.current);
+    }, state.retryDelay);
   }, [currentBeat, refreshAudioSrc]);
 
   // Handle adding to playlist
@@ -633,140 +575,107 @@ const AudioPlayer = ({
 
   // Custom handlers for audio events
   const handleCanPlay = useCallback((e) => {
-    // Mark as loaded to prevent duplicate play attempts
-    hasLoadedRef.current = true;
+    const state = errorStateRef.current;
     
-    // Reset retry counters on successful load
-    retryCountRef.current = 0;
-    retryDelayRef.current = 1000;
+    // Mark as loaded and reset retry counters
+    state.hasLoaded = true;
+    state.retryCount = 0;
+    state.retryDelay = 1000;
     
-    // Clear any pending retry timers and load timeout
-    if (urlRetryTimerRef.current) {
-      clearTimeout(urlRetryTimerRef.current);
-      urlRetryTimerRef.current = null;
+    // Clear any pending timers
+    if (timersRef.current.urlRetry) {
+      clearTimeout(timersRef.current.urlRetry);
+      timersRef.current.urlRetry = null;
     }
-    if (loadTimeoutRef.current) {
-      clearTimeout(loadTimeoutRef.current);
-      loadTimeoutRef.current = null;
+    if (timersRef.current.loadTimeout) {
+      clearTimeout(timersRef.current.loadTimeout);
+      timersRef.current.loadTimeout = null;
     }
     
     // Call the original handler
     handleAudioReady(e);
     
-    // For Safari, we need to manually trigger play if autoPlay is true
+    // For Safari, manually trigger play if needed
     if (isSafari && isPlaying && audioCore.isPaused()) {
       setTimeout(() => {
-        audioCore.play().catch(error => {
-          console.error('Safari: Error playing audio on canplay event:', error);
-        });
+        audioCore.play().catch(() => {});
       }, 100);
     }
   }, [handleAudioReady, isSafari, isPlaying, audioCore]);
 
-  // Custom error handler with better logging
+  // Simplified error handler
   const handleError = useCallback((e) => {
     const audio = e.target;
     const error = audio?.error;
+    const state = errorStateRef.current;
     
-    // Clear load timeout since we got an error
-    if (loadTimeoutRef.current) {
-      clearTimeout(loadTimeoutRef.current);
-      loadTimeoutRef.current = null;
-    }
-    
-    if (error) {
-      console.error('Audio error:', error.code, error.message);
+    // Clear load timeout
+    if (timersRef.current.loadTimeout) {
+      clearTimeout(timersRef.current.loadTimeout);
+      timersRef.current.loadTimeout = null;
     }
     
     // Handle Safari-specific errors
     if (isSafari && error) {
       handleSafariError(error);
       
-      // For network errors or CORS issues in Safari, retry with fresh URL
-      if ((error.code === 2 || error.code === 4) && !hasLoadedRef.current) {
+      if ((error.code === 2 || error.code === 4) && !state.hasLoaded) {
         retryWithFreshUrl();
         return;
       }
     }
     
     if (error) {
-      // Format errors (code 4) are usually non-recoverable - skip immediately
+      // Format errors (code 4) are non-recoverable - skip immediately
       if (error.code === 4) {
-        console.warn('Format error detected. Skipping track immediately.');
-        retryCountRef.current = 0;
-        retryDelayRef.current = 1000;
+        state.retryCount = 0;
+        state.retryDelay = 1000;
         onNextRef.current?.();
         return;
       }
       
       // For network errors (code 2), check if it's a 404 or CORS issue
       if (error.code === 2 && audio.src) {
-        // Try to fetch the URL to check for 404 or CORS
         fetch(audio.src, { method: 'HEAD' })
           .then(response => {
-            // 404 errors are non-recoverable - skip immediately
             if (response.status === 404) {
-              console.warn('404 error detected. Skipping track immediately.');
-              retryCountRef.current = 0;
-              retryDelayRef.current = 1000;
+              state.retryCount = 0;
               onNextRef.current?.();
               return;
             }
-            // If fetch succeeds but audio still failed, try retry
-            if (!hasLoadedRef.current && retryCountRef.current < maxRetries) {
+            if (!state.hasLoaded && state.retryCount < maxRetries) {
               retryWithFreshUrl();
-            } else if (retryCountRef.current >= maxRetries) {
-              // Max retries exceeded, skip
-              console.warn('Max retries exceeded. Skipping track.');
-              retryCountRef.current = 0;
-              retryDelayRef.current = 1000;
+            } else if (state.retryCount >= maxRetries) {
+              state.retryCount = 0;
               onNextRef.current?.();
             }
           })
-          .catch((fetchError) => {
-            // CORS error or network failure - skip immediately if we've already retried
-            if (retryCountRef.current >= maxRetries) {
-              console.warn('CORS/network error after max retries. Skipping track immediately.');
-              retryCountRef.current = 0;
-              retryDelayRef.current = 1000;
+          .catch(() => {
+            if (state.retryCount >= maxRetries) {
+              state.retryCount = 0;
               onNextRef.current?.();
             } else {
-              // Try retry first
               retryWithFreshUrl();
             }
           });
         return;
       }
       
-      // For non-Safari browsers, also retry on network errors
-      if (!isSafari && error.code === 2 && !hasLoadedRef.current) {
+      // For non-Safari browsers, retry on network errors
+      if (!isSafari && error.code === 2 && !state.hasLoaded) {
         retryWithFreshUrl();
       }
-    } else if (audio && audio.src && !hasLoadedRef.current) {
-      // No error code but audio failed to load - likely CORS issue
-      // Check if audio is stuck
+    } else if (audio && audio.src && !state.hasLoaded) {
+      // Audio stuck - likely CORS issue
       setTimeout(() => {
-        if (audio.readyState === 0 && !hasLoadedRef.current) {
-          console.warn('Audio stuck at readyState 0. Likely CORS issue. Skipping track.');
-          retryCountRef.current = 0;
-          retryDelayRef.current = 1000;
+        if (audio.readyState === 0 && !state.hasLoaded) {
+          state.retryCount = 0;
           onNextRef.current?.();
         }
       }, 5000);
     }
-  }, [currentBeat, handleSafariError, isSafari, retryWithFreshUrl]);
+  }, [handleSafariError, isSafari, retryWithFreshUrl]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (urlRetryTimerRef.current) {
-        clearTimeout(urlRetryTimerRef.current);
-      }
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <AudioErrorBoundary

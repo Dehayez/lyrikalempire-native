@@ -51,12 +51,6 @@ export const useAudioState2 = ({
       // Set source immediately for instant response
       setAudioSrc(beat.audioSrc);
       
-      console.log('🎵 [AUDIO STATE] Loading audio source:', {
-        beatId: beat.id,
-        audioSrc: beat.audioSrc?.substring(0, 100) + '...',
-        timestamp: new Date().toISOString()
-      });
-      
       // For Safari, skip complex caching and use direct URLs
       if (isSafari()) {
         setIsLoading(false);
@@ -158,23 +152,19 @@ export const useAudioState2 = ({
     }
   }, [preloadNextTrack]);
 
-  // Ultra-fast ready state handler
+  // Ready state handler
   const handleReady = useCallback(() => {
     setLoadingPhase('ready');
     setIsLoading(false);
     loadingRef.current = false;
-    
-    console.log('✅ [AUDIO STATE] Audio ready to play');
   }, []);
 
-  // Ultra-fast error handler
+  // Error handler
   const handleError = useCallback((error) => {
     setError(error);
     setLoadingPhase('error');
     setIsLoading(false);
     loadingRef.current = false;
-    
-    console.error('❌ [AUDIO STATE] Audio error:', error);
     onError?.(error);
   }, [onError]);
 
