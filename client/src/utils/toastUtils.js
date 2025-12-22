@@ -72,8 +72,13 @@ class ToastService {
     return toastId;
   }
 
-  updateUploadToast(toastId, fileName, percentage, actionType = 'upload') {
-    const actionText = actionType === 'replace' ? 'Replacing' : 'Uploading';
+  updateUploadToast(toastId, fileName, percentage, actionType = 'upload', isProcessing = false) {
+    let actionText;
+    if (isProcessing) {
+      actionText = 'Processing';
+    } else {
+      actionText = actionType === 'replace' ? 'Replacing' : 'Uploading';
+    }
     
     toast.update(toastId, {
       render: (
@@ -82,7 +87,8 @@ class ToastService {
         </div>
       ),
       progress: percentage / 100,
-      ...TOAST_CONFIGS[TOAST_TYPES.SUCCESS]
+      autoClose: false,
+      closeOnClick: false
     });
   }
 

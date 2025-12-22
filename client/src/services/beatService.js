@@ -20,7 +20,7 @@ export const getBeats = async (user_id) => {
   return result;
 };
 
-export const addBeat = async (beat, audioFile, user_id) => {
+export const addBeat = (beat, audioFile, user_id) => {
   const formData = new FormData();
 
   for (const key in beat) {
@@ -35,7 +35,7 @@ export const addBeat = async (beat, audioFile, user_id) => {
 
   formData.append('user_id', user_id);
 
-  return await apiRequest('post', '', API_URL, formData, null, true, 
+  return apiRequest('post', '', API_URL, formData, null, true, 
     {'Content-Type': 'multipart/form-data'}
   );
 };
@@ -80,13 +80,13 @@ export const getBeatsByAssociation = async (associationType, associationIds, all
   return allBeats ? fetchedBeats.filter(beat => allBeats.some(b => b.id === beat.id)) : fetchedBeats;
 };
 
-export const replaceAudio = async (beatId, audioFile, userId, duration) => {
+export const replaceAudio = (beatId, audioFile, userId, duration) => {
   const formData = new FormData();
   formData.append('audio', audioFile, audioFile.name);
   formData.append('userId', userId);
   formData.append('duration', duration);
 
-  return await apiRequest('put', `/${beatId}/replace-audio`, API_URL, formData, null, true, {
+  return apiRequest('put', `/${beatId}/replace-audio`, API_URL, formData, null, true, {
     'Content-Type': 'multipart/form-data'
   });
 };
