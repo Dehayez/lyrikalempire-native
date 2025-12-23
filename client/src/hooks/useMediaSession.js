@@ -11,8 +11,7 @@ export const useMediaSession = ({
   onNext,
   currentBeat,
   isPlaying,
-  artistName,
-  setIsPlaying // Add this prop to directly update state
+  artistName
 }) => {
   const wakeLockRef = useRef(null);
 
@@ -88,95 +87,46 @@ export const useMediaSession = ({
   // Set up media session handlers (only once on mount)  
   useEffect(() => {
     if ('mediaSession' in navigator) {
-      // CRITICAL: For iOS lock screen controls to work, we must directly control the audio element
-      // Going through React state management can fail due to iOS autoplay restrictions
-      
-      // Play handler - directly play audio, then update state
+      // Play handler - directly control audio element for iOS reliability
       navigator.mediaSession.setActionHandler('play', () => {
         const audio = getAudioElement();
         if (audio) {
-          audio.play()
-            .then(() => {
-              // Update state after successful play
-              if (setIsPlaying) {
-                setIsPlaying(true);
-              } else {
-                handlePlayPause(true);
-              }
-            })
-            .catch((error) => {
-              console.warn('Media session play failed:', error);
-              // Still try the state-based approach as fallback
-              handlePlayPause(true);
-            });
-        } else {
-          handlePlayPause(true);
+          audio.play().catch(() => {});
         }
+        // Always update state
+        handlePlayPause(true);
       });
       
-      // Pause handler - directly pause audio, then update state
+      // Pause handler
       navigator.mediaSession.setActionHandler('pause', () => {
         const audio = getAudioElement();
-        if (audio && !audio.paused) {
+        if (audio) {
           audio.pause();
         }
-        // Update state
-        if (setIsPlaying) {
-          setIsPlaying(false);
-        } else {
-          handlePlayPause(false);
-        }
+        handlePlayPause(false);
       });
       
       // Previous track handler
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        handlePrevClick();
-        // After changing track, try to auto-play
-        setTimeout(() => {
-          const audio = getAudioElement();
-          if (audio) {
-            audio.play().catch(() => {});
-          }
-        }, 100);
-      });
+      navigator.mediaSession.setActionHandler('previoustrack', handlePrevClick);
       
-      // Next track handler
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        onNext();
-        // After changing track, try to auto-play
-        setTimeout(() => {
-          const audio = getAudioElement();
-          if (audio) {
-            audio.play().then(() => {
-              if (setIsPlaying) setIsPlaying(true);
-            }).catch(() => {
-              // Auto-play failed, user will need to press play
-              if (setIsPlaying) setIsPlaying(false);
-            });
-          }
-        }, 100);
-      });
+      // Next track handler  
+      navigator.mediaSession.setActionHandler('nexttrack', onNext);
       
-      // Add additional handlers for better control in background/lock screen
+      // Additional handlers
       try {
-        // Stop handler
         navigator.mediaSession.setActionHandler('stop', () => {
           const audio = getAudioElement();
-          if (audio && !audio.paused) {
+          if (audio) {
             audio.pause();
           }
-          if (setIsPlaying) {
-            setIsPlaying(false);
-          } else {
-            handlePlayPause(false);
-          }
+          handlePlayPause(false);
         });
         
-        // REMOVE seek handlers to ensure Apple UI shows track controls (previous/next) instead of seek controls
+        // Remove seek handlers to show track controls on iOS
         navigator.mediaSession.setActionHandler('seekbackward', null);
         navigator.mediaSession.setActionHandler('seekforward', null);
         
-        // Seek to position handler (keep this for scrubbing functionality)
+        // Seek to position handler
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           const audio = getAudioElement();
           if (audio && details.seekTime !== undefined && !isNaN(details.seekTime)) {
@@ -184,7 +134,7 @@ export const useMediaSession = ({
           }
         });
 
-        // Position state for better lock screen integration
+        // Position state for lock screen progress bar
         if (navigator.mediaSession.setPositionState) {
           const updatePositionState = () => {
             const audio = getAudioElement();
@@ -196,31 +146,28 @@ export const useMediaSession = ({
                   position: audio.currentTime
                 });
               } catch (e) {
-                // Ignore position state errors
+                // Ignore errors
               }
             }
           };
 
-          // Update position state periodically during playback
           const positionInterval = setInterval(() => {
             if (isPlaying) {
               updatePositionState();
             }
           }, 1000);
 
-          // Store interval for cleanup
           return () => {
             clearInterval(positionInterval);
           };
         }
       } catch (error) {
-        // Some browsers might not support all handlers - silent fail
+        // Silent fail for unsupported handlers
       }
     }
 
     return () => {
       if ('mediaSession' in navigator) {
-        // Clean up all handlers on unmount
         navigator.mediaSession.setActionHandler('play', null);
         navigator.mediaSession.setActionHandler('pause', null);
         navigator.mediaSession.setActionHandler('previoustrack', null);
@@ -229,5 +176,5 @@ export const useMediaSession = ({
         navigator.mediaSession.setActionHandler('seekto', null);
       }
     };
-  }, [handlePlayPause, handlePrevClick, onNext, setIsPlaying]);
+  }, [handlePlayPause, handlePrevClick, onNext]);
 }; 
