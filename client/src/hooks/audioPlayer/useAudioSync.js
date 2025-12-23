@@ -11,6 +11,18 @@ const isSafari = () => {
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+const isPWA = () => {
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+  return false;
+};
+
 const isSafariBrowser = isSafari();
 
 export const useAudioSync = ({
@@ -184,6 +196,10 @@ export const useAudioSync = ({
     }
   }, [audioCore, broadcastPlay, broadcastPause, isCurrentSessionMaster, setIsPlaying, masterSession]);
 
+  // Track if we're in iOS PWA mode for special handling
+  const isIOSPWA = isIOS() && isPWA();
+  const isAutoPlayAttemptRef = useRef(false);
+
   // Handle when song ends
   const handleEnded = useCallback(() => {
     // Immediately reset current time and progress to prevent visual glitches with next song
@@ -201,17 +217,39 @@ export const useAudioSync = ({
           audioCore.prepareForNewTrack();
         }
         audioCore.setCurrentTime(0);
-        audioCore.play().catch(error => {
+        
+        // On iOS PWA, mark this as an auto-play attempt after track end
+        if (isIOSPWA) {
+          isAutoPlayAttemptRef.current = true;
+        }
+        
+        audioCore.play({ isAutoPlayAfterEnd: true }).then(result => {
+          if (result && !result.success && result.reason === 'autoplay-blocked') {
+            // Autoplay was blocked on iOS PWA, reset playing state
+            setIsPlaying(false);
+          }
+          isAutoPlayAttemptRef.current = false;
+        }).catch(error => {
           console.warn('Repeat play failed:', error);
+          if (isIOSPWA) {
+            setIsPlaying(false);
+          }
+          isAutoPlayAttemptRef.current = false;
         });
       } else {
         if (audioCore.prepareForNewTrack) {
           audioCore.prepareForNewTrack();
         }
+        
+        // On iOS PWA, mark this as an auto-play attempt
+        if (isIOSPWA) {
+          isAutoPlayAttemptRef.current = true;
+        }
+        
         onNextRef.current?.();
       }
     }
-  }, [repeat, audioCore, isCurrentSessionMaster, setCurrentTimeState, setProgress, syncAllPlayers]);
+  }, [repeat, audioCore, isCurrentSessionMaster, setCurrentTimeState, setProgress, syncAllPlayers, isIOSPWA, setIsPlaying]);
 
   // Set up main audio player event listeners
   useEffect(() => {
@@ -283,8 +321,21 @@ export const useAudioSync = ({
         const hasValidSrc = currentSrc && currentSrc !== '';
         
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
-          audioCore.play().catch(error => {
+          // On iOS PWA, if this is an auto-play attempt after track end, handle it specially
+          const isAutoPlayAttempt = isIOSPWA && isAutoPlayAttemptRef.current;
+          
+          audioCore.play({ isAutoPlayAfterEnd: isAutoPlayAttempt }).then(result => {
+            if (result && !result.success && result.reason === 'autoplay-blocked') {
+              // Autoplay was blocked, reset playing state so UI is correct
+              setIsPlaying(false);
+            }
+            isAutoPlayAttemptRef.current = false;
+          }).catch(error => {
             console.warn('Auto-play failed on loaded data:', error);
+            if (isIOSPWA && isAutoPlayAttemptRef.current) {
+              setIsPlaying(false);
+            }
+            isAutoPlayAttemptRef.current = false;
           });
         }
       }
@@ -300,8 +351,21 @@ export const useAudioSync = ({
         const hasValidSrc = currentSrc && currentSrc !== '';
         
         if (hasValidSrc && audioCore.isPaused() && isCurrentSessionMaster) {
-          audioCore.play().catch(error => {
+          // On iOS PWA, if this is an auto-play attempt after track end, handle it specially
+          const isAutoPlayAttempt = isIOSPWA && isAutoPlayAttemptRef.current;
+          
+          audioCore.play({ isAutoPlayAfterEnd: isAutoPlayAttempt }).then(result => {
+            if (result && !result.success && result.reason === 'autoplay-blocked') {
+              // Autoplay was blocked, reset playing state so UI is correct
+              setIsPlaying(false);
+            }
+            isAutoPlayAttemptRef.current = false;
+          }).catch(error => {
             console.warn('Auto-play failed on can play:', error);
+            if (isIOSPWA && isAutoPlayAttemptRef.current) {
+              setIsPlaying(false);
+            }
+            isAutoPlayAttemptRef.current = false;
           });
         }
       }
@@ -369,7 +433,10 @@ export const useAudioSync = ({
     broadcastPlay,
     broadcastPause,
     handleEnded,
-    setIsPlaying
+    setIsPlaying,
+    isIOSPWA,
+    setCurrentTimeState,
+    setProgress
   ]);
 
   // Listen for custom Safari interaction events
@@ -388,6 +455,26 @@ export const useAudioSync = ({
       document.removeEventListener('safari-user-interaction', handleSafariInteraction);
     };
   }, [audioCore]);
+
+  // Listen for Safari autoplay blocked events (iOS PWA)
+  useEffect(() => {
+    const handleAutoplayBlocked = (event) => {
+      const { needsUserInteraction, isAutoPlayAfterEnd } = event.detail;
+      
+      if (needsUserInteraction && isAutoPlayAfterEnd) {
+        // Autoplay was blocked after a track ended, reset the playing state
+        // This ensures the play button shows correctly and will work on next tap
+        setIsPlaying(false);
+        isAutoPlayAttemptRef.current = false;
+      }
+    };
+
+    window.addEventListener('safari-autoplay-blocked', handleAutoplayBlocked);
+    
+    return () => {
+      window.removeEventListener('safari-autoplay-blocked', handleAutoplayBlocked);
+    };
+  }, [setIsPlaying]);
 
   // Sync display players when view changes
   useEffect(() => {

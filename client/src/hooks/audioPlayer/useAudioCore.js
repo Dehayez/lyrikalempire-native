@@ -9,6 +9,21 @@ const isSafari = () => {
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+const isPWA = () => {
+  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+  return false;
+};
+
+// Track if we're waiting for user interaction to resume playback
+let pendingPlaybackAfterTrackEnd = false;
+
 export const useAudioCore = (currentBeat) => {
   const playerRef = useRef();
   const audioContextRef = useRef(null);
@@ -64,41 +79,97 @@ export const useAudioCore = (currentBeat) => {
   }, []);
 
   // Core audio control functions
-  const play = useCallback(() => {
+  const play = useCallback((options = {}) => {
     const audio = playerRef.current?.audio?.current;
+    const { isUserGesture = false, isAutoPlayAfterEnd = false } = options;
     
     if (!audio) {
-      return Promise.resolve();
+      return Promise.resolve({ success: false, reason: 'no-audio-element' });
     }
 
     initAudioContext();
     updateUserInteraction();
     
-    if (audio.paused && audio.readyState >= 1) {
+    // On iOS PWA, if this is an auto-play after track end (no user gesture),
+    // we need to handle it specially
+    const isIOSPWA = isIOS() && isPWA();
+    
+    // If audio is paused and has some data loaded
+    if (audio.paused) {
       // Cancel any pending play promise
       if (pendingPlayPromiseRef.current) {
         pendingPlayPromiseRef.current.catch(() => {});
         pendingPlayPromiseRef.current = null;
       }
       
-      const playPromise = audio.play().catch(error => {
-        if (error.name === 'NotAllowedError') {
-          // Safari autoplay blocked - dispatch event for UI handling
-          if (isMobile()) {
-            window.dispatchEvent(new CustomEvent('safari-autoplay-blocked', { 
-              detail: { needsUserInteraction: true } 
-            }));
-          }
-        }
+      // On iOS PWA with user gesture, try to play even if not fully ready
+      // The play() call itself can trigger loading on iOS
+      if (isUserGesture && isIOSPWA) {
+        const playPromise = audio.play()
+          .then(() => {
+            pendingPlaybackAfterTrackEnd = false;
+            return { success: true };
+          })
+          .catch(error => {
+            // Ignore AbortError - happens when play is interrupted by pause/load
+            if (error.name === 'AbortError') {
+              return { success: false, reason: 'aborted' };
+            }
+            if (error.name === 'NotAllowedError') {
+              return { success: false, reason: 'autoplay-blocked' };
+            }
+            return { success: false, reason: error.name };
+          });
         
-        return Promise.resolve();
-      });
+        pendingPlayPromiseRef.current = playPromise;
+        return playPromise;
+      }
       
-      pendingPlayPromiseRef.current = playPromise;
-      return playPromise;
+      // Standard play logic - require readyState >= 1
+      if (audio.readyState >= 1) {
+        const playPromise = audio.play()
+          .then(() => {
+            // Successfully playing
+            pendingPlaybackAfterTrackEnd = false;
+            return { success: true };
+          })
+          .catch(error => {
+            if (error.name === 'NotAllowedError') {
+              // Safari autoplay blocked - dispatch event for UI handling
+              if (isMobile() || isIOSPWA) {
+                // Mark that we need user interaction to continue
+                pendingPlaybackAfterTrackEnd = isAutoPlayAfterEnd;
+                
+                window.dispatchEvent(new CustomEvent('safari-autoplay-blocked', { 
+                  detail: { 
+                    needsUserInteraction: true,
+                    isAutoPlayAfterEnd: isAutoPlayAfterEnd
+                  } 
+                }));
+              }
+              return { success: false, reason: 'autoplay-blocked' };
+            }
+            
+            // Ignore AbortError - happens when play is interrupted
+            if (error.name === 'AbortError') {
+              return { success: false, reason: 'aborted' };
+            }
+            
+            return { success: false, reason: error.name };
+          });
+        
+        pendingPlayPromiseRef.current = playPromise;
+        return playPromise;
+      }
+      
+      // If audio isn't ready yet but we want to play, mark as pending
+      if (audio.readyState < 1 && isAutoPlayAfterEnd && isIOSPWA) {
+        pendingPlaybackAfterTrackEnd = true;
+        return Promise.resolve({ success: false, reason: 'not-ready-ios-pwa' });
+      }
     }
     
-    return Promise.resolve();
+    return Promise.resolve({ success: true });
   }, [initAudioContext, updateUserInteraction]);
 
   const pause = useCallback(() => {
@@ -135,16 +206,40 @@ export const useAudioCore = (currentBeat) => {
     if (!audio) return Promise.resolve();
 
     updateUserInteraction();
+    
+    // Clear pending playback state since user is actively interacting
+    pendingPlaybackAfterTrackEnd = false;
 
     const isCurrentlyPaused = audio.paused;
     
     if (shouldPlay && isCurrentlyPaused) {
-      return play();
+      // On iOS PWA, if audio isn't ready yet, we need to wait for it
+      // but since this is a user gesture, we should try to trigger load
+      if (audio.readyState < 1 && isIOS() && isPWA()) {
+        // Try to load the audio first
+        try {
+          audio.load();
+        } catch (e) {
+          // Ignore load errors
+        }
+        
+        // Set up a one-time listener for when audio is ready
+        const playWhenReady = () => {
+          audio.removeEventListener('canplay', playWhenReady);
+          play({ isUserGesture: true });
+        };
+        audio.addEventListener('canplay', playWhenReady, { once: true });
+        
+        // Also try to play immediately in case it becomes ready quickly
+        return play({ isUserGesture: true });
+      }
+      
+      return play({ isUserGesture: true });
     } else if (!shouldPlay && !isCurrentlyPaused) {
       pause();
     }
     
-    return Promise.resolve();
+    return Promise.resolve({ success: true });
   }, [play, pause, updateUserInteraction]);
 
   const setVolume = useCallback((volume) => {
@@ -198,10 +293,23 @@ export const useAudioCore = (currentBeat) => {
     return audio && audio.readyState >= 1;
   }, []);
 
+  // Check if we have pending playback waiting for user interaction
+  const hasPendingPlayback = useCallback(() => {
+    return pendingPlaybackAfterTrackEnd;
+  }, []);
+
+  // Clear pending playback state
+  const clearPendingPlayback = useCallback(() => {
+    pendingPlaybackAfterTrackEnd = false;
+  }, []);
+
   // Safari-specific preparation for new track
   const prepareForNewTrack = useCallback(() => {
     updateUserInteraction();
     initAudioContext();
+    
+    // Reset pending playback state when switching tracks
+    pendingPlaybackAfterTrackEnd = false;
     
     if (isMobile()) {
       const audio = playerRef.current?.audio?.current;
@@ -212,6 +320,12 @@ export const useAudioCore = (currentBeat) => {
         audio._audioSourceConnected = false;
         audio.setAttribute('playsinline', 'true');
         audio.setAttribute('webkit-playsinline', 'true');
+        
+        // Cancel any pending play promise before loading new track
+        if (pendingPlayPromiseRef.current) {
+          pendingPlayPromiseRef.current.catch(() => {});
+          pendingPlayPromiseRef.current = null;
+        }
         
         try {
           // CRITICAL: Reset AudioContext connection for new track BEFORE loading
@@ -557,6 +671,8 @@ export const useAudioCore = (currentBeat) => {
     prepareForNewTrack,
     hasRecentUserInteraction,
     initAudioContext,
+    hasPendingPlayback,
+    clearPendingPlayback,
     // Gapless playback and smart preloading
     setupGaplessPlayback,
     preloadNextTrack,

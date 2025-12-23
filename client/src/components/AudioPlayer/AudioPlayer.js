@@ -696,11 +696,11 @@ const AudioPlayer = ({
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onCanPlay={handleCanPlay}
-          onEnded={() => onNext?.()}
           onError={handleErrorWithRecovery}
           {...preventDefaultAudioEvents}
           className="audio-player__main-player"
           style={{ display: 'none' }} // Hide the main player
+          // Note: onEnded is handled by useAudioSync event listener for proper iOS PWA support
         />
 
       {/* Mobile player */}
