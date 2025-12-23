@@ -8,6 +8,11 @@ export const SelectInput = ({ id, name, placeholder, selectedValue, onChange, op
     const [selectedOption, setSelectedOption] = useState(selectedValue);
     const dropdownRef = useRef(null);
 
+    // Sync internal state with prop changes
+    useEffect(() => {
+        setSelectedOption(selectedValue);
+    }, [selectedValue]);
+
     const handleSelect = (option) => {
         setSelectedOption(option.value);
         onChange({ target: { name, value: option.value } });
