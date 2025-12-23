@@ -380,7 +380,8 @@ const AudioPlayer = ({
     onNext,
     currentBeat,
     isPlaying,
-    artistName // Use the actual username fetched from user data
+    artistName, // Use the actual username fetched from user data
+    setIsPlaying // Direct state setter for iOS lock screen controls
   });
 
   // Pass session props up to App level for PlayingIndicator

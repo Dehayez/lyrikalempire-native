@@ -1,12 +1,18 @@
 import { useEffect, useRef } from 'react';
 
+// Helper to get the main audio element
+const getAudioElement = () => {
+  return document.querySelector('audio[src]') || document.querySelector('audio');
+};
+
 export const useMediaSession = ({
   handlePlayPause,
   handlePrevClick,
   onNext,
   currentBeat,
   isPlaying,
-  artistName
+  artistName,
+  setIsPlaying // Add this prop to directly update state
 }) => {
   const wakeLockRef = useRef(null);
 
@@ -82,25 +88,97 @@ export const useMediaSession = ({
   // Set up media session handlers (only once on mount)  
   useEffect(() => {
     if ('mediaSession' in navigator) {
-      // Set up media session action handlers for playbook controls
-      navigator.mediaSession.setActionHandler('play', () => handlePlayPause(true));
-      navigator.mediaSession.setActionHandler('pause', () => handlePlayPause(false));
-      navigator.mediaSession.setActionHandler('previoustrack', handlePrevClick);
-      navigator.mediaSession.setActionHandler('nexttrack', onNext);
+      // CRITICAL: For iOS lock screen controls to work, we must directly control the audio element
+      // Going through React state management can fail due to iOS autoplay restrictions
+      
+      // Play handler - directly play audio, then update state
+      navigator.mediaSession.setActionHandler('play', () => {
+        const audio = getAudioElement();
+        if (audio) {
+          audio.play()
+            .then(() => {
+              // Update state after successful play
+              if (setIsPlaying) {
+                setIsPlaying(true);
+              } else {
+                handlePlayPause(true);
+              }
+            })
+            .catch((error) => {
+              console.warn('Media session play failed:', error);
+              // Still try the state-based approach as fallback
+              handlePlayPause(true);
+            });
+        } else {
+          handlePlayPause(true);
+        }
+      });
+      
+      // Pause handler - directly pause audio, then update state
+      navigator.mediaSession.setActionHandler('pause', () => {
+        const audio = getAudioElement();
+        if (audio && !audio.paused) {
+          audio.pause();
+        }
+        // Update state
+        if (setIsPlaying) {
+          setIsPlaying(false);
+        } else {
+          handlePlayPause(false);
+        }
+      });
+      
+      // Previous track handler
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        handlePrevClick();
+        // After changing track, try to auto-play
+        setTimeout(() => {
+          const audio = getAudioElement();
+          if (audio) {
+            audio.play().catch(() => {});
+          }
+        }, 100);
+      });
+      
+      // Next track handler
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        onNext();
+        // After changing track, try to auto-play
+        setTimeout(() => {
+          const audio = getAudioElement();
+          if (audio) {
+            audio.play().then(() => {
+              if (setIsPlaying) setIsPlaying(true);
+            }).catch(() => {
+              // Auto-play failed, user will need to press play
+              if (setIsPlaying) setIsPlaying(false);
+            });
+          }
+        }, 100);
+      });
       
       // Add additional handlers for better control in background/lock screen
       try {
         // Stop handler
-        navigator.mediaSession.setActionHandler('stop', () => handlePlayPause(false));
+        navigator.mediaSession.setActionHandler('stop', () => {
+          const audio = getAudioElement();
+          if (audio && !audio.paused) {
+            audio.pause();
+          }
+          if (setIsPlaying) {
+            setIsPlaying(false);
+          } else {
+            handlePlayPause(false);
+          }
+        });
         
         // REMOVE seek handlers to ensure Apple UI shows track controls (previous/next) instead of seek controls
-        // This is crucial for PWA apps to show proper track navigation buttons
         navigator.mediaSession.setActionHandler('seekbackward', null);
         navigator.mediaSession.setActionHandler('seekforward', null);
         
         // Seek to position handler (keep this for scrubbing functionality)
         navigator.mediaSession.setActionHandler('seekto', (details) => {
-          const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+          const audio = getAudioElement();
           if (audio && details.seekTime !== undefined && !isNaN(details.seekTime)) {
             audio.currentTime = details.seekTime;
           }
@@ -109,13 +187,17 @@ export const useMediaSession = ({
         // Position state for better lock screen integration
         if (navigator.mediaSession.setPositionState) {
           const updatePositionState = () => {
-            const audio = document.querySelector('audio[src]') || document.querySelector('audio');
+            const audio = getAudioElement();
             if (audio && !isNaN(audio.duration) && !isNaN(audio.currentTime)) {
-              navigator.mediaSession.setPositionState({
-                duration: audio.duration,
-                playbackRate: audio.playbackRate,
-                position: audio.currentTime
-              });
+              try {
+                navigator.mediaSession.setPositionState({
+                  duration: audio.duration,
+                  playbackRate: audio.playbackRate,
+                  position: audio.currentTime
+                });
+              } catch (e) {
+                // Ignore position state errors
+              }
             }
           };
 
@@ -145,8 +227,7 @@ export const useMediaSession = ({
         navigator.mediaSession.setActionHandler('nexttrack', null);
         navigator.mediaSession.setActionHandler('stop', null);
         navigator.mediaSession.setActionHandler('seekto', null);
-        // Note: seekbackward and seekforward are already set to null above
       }
     };
-  }, [handlePlayPause, handlePrevClick, onNext]);
+  }, [handlePlayPause, handlePrevClick, onNext, setIsPlaying]);
 }; 
