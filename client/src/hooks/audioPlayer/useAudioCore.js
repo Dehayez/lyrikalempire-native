@@ -620,35 +620,28 @@ export const useAudioCore = (currentBeat) => {
       navigator.mediaSession.playbackState = 'none';
     }
 
-    // Listen for audio interruptions (phone calls, etc.)
-    const handleAudioInterruption = () => {
-      if (!audio.paused) {
-        // Audio was interrupted, mark for resumption
-        audio.dataset.wasPlayingBeforeInterruption = 'true';
-      }
-    };
-
-    const handleAudioResume = () => {
-      if (audio.dataset.wasPlayingBeforeInterruption === 'true') {
-        // Resume playback after interruption
-        audio.play().catch(console.warn);
-        delete audio.dataset.wasPlayingBeforeInterruption;
-      }
-    };
-
-    // Add interruption listeners for iOS
-    audio.addEventListener('pause', handleAudioInterruption);
-    
+    // Handle app going to background or being closed - pause audio
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        handleAudioResume();
+      if (document.hidden) {
+        // App is going to background or being closed - pause audio
+        if (!audio.paused) {
+          audio.pause();
+        }
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Also handle pagehide for when app is actually closed (iOS PWA)
+    const handlePageHide = () => {
+      if (!audio.paused) {
+        audio.pause();
+      }
+    };
+    window.addEventListener('pagehide', handlePageHide);
+
     return () => {
-      audio.removeEventListener('pause', handleAudioInterruption);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
     };
   }, [play, pause]);
 
