@@ -4,11 +4,50 @@ import { isMobileOrTablet } from '../../utils';
 import { getSignedUrl, getUserById, audioCacheService } from '../../services';
 import { useOs } from '../useOs';
 
+// Preloaded URLs cache (shared across hook instances)
+const preloadedUrls = new Map();
+const PRELOAD_CACHE_MAX_SIZE = 10;
+
+// Preload a beat's signed URL
+const preloadBeatUrl = (beat) => {
+  if (!beat?.user_id || !beat?.audio) return;
+  
+  const key = `${beat.user_id}_${beat.audio}`;
+  if (preloadedUrls.has(key)) return;
+  
+  // Enforce cache size limit
+  if (preloadedUrls.size >= PRELOAD_CACHE_MAX_SIZE) {
+    const firstKey = preloadedUrls.keys().next().value;
+    preloadedUrls.delete(firstKey);
+  }
+  
+  // Fetch and cache the signed URL
+  getSignedUrl(beat.user_id, beat.audio)
+    .then(url => {
+      preloadedUrls.set(key, { url, timestamp: Date.now() });
+    })
+    .catch(() => {});
+};
+
+// Get preloaded URL if available and fresh (< 5 minutes old)
+const getPreloadedUrl = (userId, fileName) => {
+  const key = `${userId}_${fileName}`;
+  const cached = preloadedUrls.get(key);
+  
+  if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+    return cached.url;
+  }
+  
+  preloadedUrls.delete(key);
+  return null;
+};
+
 export const useAudioPlayerState = ({
   currentBeat,
   lyricsModal,
   setLyricsModal,
-  markBeatAsCached
+  markBeatAsCached,
+  nextBeat // Optional: next beat to preload
 }) => {
   const { isSafari } = useOs();
 
@@ -158,7 +197,7 @@ export const useAudioPlayerState = ({
 
       setIsCachedAudio(isCached);
 
-      // If we have cached audio, try to use it first (especially when offline)
+      // If we have cached audio, use it immediately
       if (isCached) {
         const cachedAudioUrl = await audioCacheService.getAudio(
           currentBeat.user_id,
@@ -168,35 +207,24 @@ export const useAudioPlayerState = ({
         if (cachedAudioUrl) {
           setAudioSrc(cachedAudioUrl);
           setAutoPlay(true);
+          setShowLoadingAnimation(false);
           
-          // Keep shimmer visible briefly to show loading state
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // If offline, stop here and use cached version
-          if (isOffline()) {
-            // Delay hiding shimmer to ensure it's visible
-            setTimeout(() => {
-              setShowLoadingAnimation(false);
-            }, 300);
-            return;
-          }
-          
-          // If online and not Safari, we can still try to refresh the signed URL in background
-          // but use cached audio immediately for better UX
-          if (!isSafari) {
-            // Delay hiding shimmer to ensure it's visible
-            setTimeout(() => {
-              setShowLoadingAnimation(false);
-            }, 300);
+          // If offline or not Safari, use cached version
+          if (isOffline() || !isSafari) {
             return;
           }
         }
       }
 
-      // If not cached or cached version failed, try to get fresh signed URL
-      // This will fail gracefully if offline
+      // If not cached or cached version failed, try to get signed URL
+      // First check if we have a preloaded URL
       try {
-        const rawSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        let rawSignedUrl = getPreloadedUrl(currentBeat.user_id, currentBeat.audio);
+        
+        // If no preloaded URL, fetch from server
+        if (!rawSignedUrl) {
+          rawSignedUrl = await getSignedUrl(currentBeat.user_id, currentBeat.audio);
+        }
         
         // Fix any URL encoding issues (e.g., unencoded commas)
         const signedUrl = fixUrlEncoding(rawSignedUrl);
@@ -242,12 +270,7 @@ export const useAudioPlayerState = ({
           if (cachedAudioUrl) {
             setAudioSrc(cachedAudioUrl);
             setAutoPlay(true);
-            // Keep shimmer visible briefly to show loading state
-            await new Promise(resolve => setTimeout(resolve, 500));
-            // Delay hiding shimmer to ensure it's visible
-            setTimeout(() => {
-              setShowLoadingAnimation(false);
-            }, 300);
+            setShowLoadingAnimation(false);
             return;
           }
         }
@@ -260,11 +283,7 @@ export const useAudioPlayerState = ({
       setAudioSrc('');
     } finally {
       setIsLoadingAudio(false);
-      
-      // Delay hiding shimmer to ensure it's visible (only if not already handled by early returns)
-      setTimeout(() => {
-        setShowLoadingAnimation(false);
-      }, 500);
+      setShowLoadingAnimation(false);
       
       // Clear the timeout if it hasn't fired yet
       if (loadingTimeoutRef.current) {
@@ -420,6 +439,13 @@ export const useAudioPlayerState = ({
     };
   }, []);
 
+  // Preload next beat's URL when provided
+  useEffect(() => {
+    if (nextBeat) {
+      preloadBeatUrl(nextBeat);
+    }
+  }, [nextBeat?.id]);
+
   // Derived state
   const shouldShowFullPagePlayer = isFullPage; // Render when full page is requested
   const shouldShowMobilePlayer = isMobileOrTablet();
@@ -469,6 +495,9 @@ export const useAudioPlayerState = ({
     handleDuplicateConfirm,
     handleDuplicateCancel,
     handleAudioReady,
-    refreshAudioSrc
+    refreshAudioSrc,
+    
+    // Preloading
+    preloadBeatUrl
   };
 }; 

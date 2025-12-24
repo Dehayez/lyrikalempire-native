@@ -94,6 +94,15 @@ const AudioPlayer = ({
   // Get current playlist
   const currentPlaylist = playlists.find(p => p.title === playedPlaylistTitle)?.beats || [];
 
+  // Calculate next beat for preloading
+  const nextBeatForPreload = (() => {
+    if (!currentPlaylist.length || !currentBeat) return null;
+    const currentIndex = currentPlaylist.findIndex(b => b.id === currentBeat.id);
+    if (currentIndex === -1) return null;
+    const nextIndex = (currentIndex + 1) % currentPlaylist.length;
+    return currentPlaylist[nextIndex];
+  })();
+
   // Get audio player functionality (now includes audioCore and audioInteractions)
   const audioPlayer = useAudioPlayer({
     currentBeat,
@@ -206,7 +215,8 @@ const AudioPlayer = ({
     setIsPlaying,
     lyricsModal,
     setLyricsModal,
-    markBeatAsCached
+    markBeatAsCached,
+    nextBeat: nextBeatForPreload
   });
 
   // MediaSession metadata is now handled by useMediaSession hook
