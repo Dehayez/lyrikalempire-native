@@ -141,7 +141,7 @@ export const useWaveform = ({
       try { wavesurfer.current && wavesurfer.current.destroy && wavesurfer.current.destroy(); } catch (_) {}
       controller.abort();
     };
-  }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, waveformRefMobile, playerRef]);
+  }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, waveformRefMobile, playerRef, isFullPageVisible]);
 
   // Position waveform in the correct container (always, for hover effects)
   useEffect(() => {
