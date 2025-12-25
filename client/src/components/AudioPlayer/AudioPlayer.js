@@ -166,6 +166,7 @@ const AudioPlayer = ({
     // Refs
     waveformRefDesktop,
     waveformRefFullPage,
+    waveformRefMobile,
     fullPageOverlayRef,
     wavesurfer,
     
@@ -419,6 +420,7 @@ const AudioPlayer = ({
     wavesurfer,
     waveformRefDesktop,
     waveformRefFullPage,
+    waveformRefMobile,
     playerRef,
     isFullPageVisible
   });
@@ -737,6 +739,7 @@ const AudioPlayer = ({
           lyricsModal={lyricsModal}
           isScrolledBottom={isScrolledBottom}
           scrollOpacityBottom={scrollOpacityBottom}
+          waveformRef={waveformRefMobile}
         />
       )}
 

@@ -24,7 +24,8 @@ const MobileAudioPlayer = forwardRef(({
   isScrolledBottom = false,
   scrollOpacityBottom = 0,
   handlePrevClick,
-  onNext
+  onNext,
+  waveformRef
 }, ref) => {
   const containerRef = useRef(null);
   const isSeekingRef = useRef(false);
@@ -146,6 +147,9 @@ const MobileAudioPlayer = forwardRef(({
         customProgressBarSection={[RHAP_UI.CURRENT_TIME, RHAP_UI.PROGRESS_BAR, RHAP_UI.DURATION]}
         customControlsSection={[]}
       />
+      
+      {/* Waveform element - positioned into progress container by useWaveform hook */}
+      <div ref={waveformRef} className="waveform waveform--mobile"></div>
       
       <div className="audio-player__text" 
            onTouchStart={handleTouchStart} 

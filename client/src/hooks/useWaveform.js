@@ -9,6 +9,7 @@ export const useWaveform = ({
   wavesurfer,
   waveformRefDesktop,
   waveformRefFullPage,
+  waveformRefMobile,
   playerRef,
   isFullPageVisible
 }) => {
@@ -20,7 +21,15 @@ export const useWaveform = ({
     const signal = controller.signal;
 
     const loadWaveform = async () => {
-      const container = isFullPage ? waveformRefFullPage.current : waveformRefDesktop.current;
+      // Determine which container to use based on device and view
+      let container;
+      if (isFullPage) {
+        container = waveformRefFullPage.current;
+      } else if (isMobileOrTablet()) {
+        container = waveformRefMobile?.current;
+      } else {
+        container = waveformRefDesktop.current;
+      }
 
       // Avoid initializing on hidden full-page container
       if (isFullPage && !isFullPageVisible) return;
@@ -37,11 +46,14 @@ export const useWaveform = ({
           window.globalWavesurfer = null; // Clean up global reference
         }
 
+        // Use different height for mobile devices
+        const waveformHeight = isMobileOrTablet() ? 60 : 80;
+        
         wavesurfer.current = WaveSurfer.create({
           container,
           waveColor: '#828282',
           progressColor: '#FFCC44',
-          height: 80,
+          height: waveformHeight,
           responsive: true,
           interact: false,
           cursorColor: '#FFCC44',
@@ -129,7 +141,7 @@ export const useWaveform = ({
       try { wavesurfer.current && wavesurfer.current.destroy && wavesurfer.current.destroy(); } catch (_) {}
       controller.abort();
     };
-  }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, playerRef]);
+  }, [audioSrc, isFullPage, waveform, wavesurfer, waveformRefDesktop, waveformRefFullPage, waveformRefMobile, playerRef]);
 
   // Position waveform in the correct container (always, for hover effects)
   useEffect(() => {
@@ -145,7 +157,14 @@ export const useWaveform = ({
 
     const timer = setTimeout(() => {
       const container = document.querySelector(containerSelector);
-      const waveformEl = isFullPage ? waveformRefFullPage.current : waveformRefDesktop.current;
+      let waveformEl;
+      if (isFullPage) {
+        waveformEl = waveformRefFullPage.current;
+      } else if (isMobileOrTablet()) {
+        waveformEl = waveformRefMobile?.current;
+      } else {
+        waveformEl = waveformRefDesktop.current;
+      }
 
       if (container && waveformEl && !container.contains(waveformEl)) {
         // Remove from any existing parent
@@ -156,12 +175,13 @@ export const useWaveform = ({
         // Set container styles
         container.style.position = 'relative';
         
-        // Set waveform element styles
+        // Set waveform element styles based on device
+        const isMobile = isMobileOrTablet();
         waveformEl.style.position = 'absolute';
-        waveformEl.style.top = '-30px';
+        waveformEl.style.top = isMobile ? '-20px' : '-30px';
         waveformEl.style.left = '0';
         waveformEl.style.width = '100%';
-        waveformEl.style.height = '100%';
+        waveformEl.style.height = isMobile ? '60px' : '100%';
         waveformEl.style.zIndex = '0';
         waveformEl.style.pointerEvents = 'none';
 
@@ -171,7 +191,7 @@ export const useWaveform = ({
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [waveform, isFullPage, isFullPageVisible, waveformRefDesktop, waveformRefFullPage]);
+  }, [waveform, isFullPage, isFullPageVisible, waveformRefDesktop, waveformRefFullPage, waveformRefMobile]);
 
   // Ensure waveform resizes/redraws when container visibility/size changes
   useEffect(() => {

@@ -55,6 +55,7 @@ export const useAudioPlayerState = ({
   const artistCache = useRef(new Map());
   const waveformRefDesktop = useRef(null);
   const waveformRefFullPage = useRef(null);
+  const waveformRefMobile = useRef(null);
   const fullPageOverlayRef = useRef(null);
   const wavesurfer = useRef(null);
   const cacheInProgressRef = useRef(false);
@@ -454,6 +455,7 @@ export const useAudioPlayerState = ({
     // Refs
     waveformRefDesktop,
     waveformRefFullPage,
+    waveformRefMobile,
     fullPageOverlayRef,
     wavesurfer,
 

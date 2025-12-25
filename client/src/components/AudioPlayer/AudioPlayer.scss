@@ -380,6 +380,25 @@ audio {
     .rhap_progress-indicator {
       opacity: 1;
     }
+
+    // Mobile waveform - shown only when dragging
+    .waveform {
+      position: absolute;
+      top: -20px;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    &.rhap_progress-dragging {
+      .waveform {
+        opacity: 0.5;
+      }
+    }
   }
 }
 
