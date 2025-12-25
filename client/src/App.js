@@ -23,7 +23,7 @@ const PerformancePanel = lazy(() => import('./components/PerformancePanel/Perfor
 function App() {
   const location = useLocation();
   const isAuthRoute = isAuthPage(location.pathname);
-  const { beats, setBeats, setRefreshBeats, currentBeats } = useBeat();
+  const { beats, setBeats, setGlobalBeats, setRefreshBeats, currentBeats } = useBeat();
   const navigate = useNavigate();
   const { user } = useUser();
   const { username } = user;
@@ -281,10 +281,13 @@ function App() {
   const updateBeatTimeoutRef = useRef(null);
   
   const handleUpdateBeat = (id, newData) => {
-    // First, update the local state immediately for UI responsiveness
-    setBeats(currentBeats =>
-      currentBeats.map(beat => beat.id === id ? { ...beat, ...newData } : beat)
-    );
+    // Update function to apply to both beats and allBeats
+    const updateFn = currentBeats =>
+      currentBeats.map(beat => beat.id === id ? { ...beat, ...newData } : beat);
+    
+    // Update both states for UI responsiveness
+    setBeats(updateFn);
+    setGlobalBeats(updateFn);
     
     // Always update currentBeat if it matches the updated beat for display purposes
     if (currentBeat && currentBeat.id === id) {
@@ -314,11 +317,12 @@ function App() {
   };
 
   const onUpdate = (id, field, value) => {
-    setBeats(prevBeats =>
+    const updateFn = prevBeats =>
       prevBeats.map(beat =>
         beat.id === id ? { ...beat, [field]: value } : beat
-      )
-    );
+      );
+    setBeats(updateFn);
+    setGlobalBeats(updateFn);
   };
 
   const addToCustomQueue = (beatOrBeats) => {
