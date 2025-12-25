@@ -12,6 +12,6 @@ export * from './audioCacheUtils';
 export * from './stateUtils';
 export { toastService, TOAST_TYPES } from './toastUtils';
 export * from './uploadUtils';
-export { formatTime, syncAllPlayers, toggleFullPagePlayer } from './audioPlayerUtils';
+export { formatTime, syncAllPlayers, toggleFullPagePlayer, setSeekingState } from './audioPlayerUtils';
 export * from './browserUtils';
 export * from './safariOptimizations';

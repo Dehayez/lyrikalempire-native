@@ -56,6 +56,37 @@ export const toggleFullPagePlayer = ({
 let lastSyncTime = 0;
 const SAFARI_SYNC_THROTTLE = 100; // ms
 
+// Track global seeking state for mobile touch interactions
+let isGlobalSeeking = false;
+let seekingTimeout = null;
+
+// Helper to check if any player is currently being seeked
+const isAnyPlayerSeeking = () => {
+  // Check for our custom seeking class on audio players
+  const hasSeekingClass = document.querySelector('.audio-player.seeking, .audio-player--mobile.seeking');
+  // Check for react-h5-audio-player's internal dragging state
+  const hasRhapDragging = document.querySelector('.rhap_progress-container:active');
+  return isGlobalSeeking || hasSeekingClass || hasRhapDragging;
+};
+
+// Export functions to control seeking state from outside
+export const setSeekingState = (isSeeking) => {
+  isGlobalSeeking = isSeeking;
+  
+  // Clear any existing timeout
+  if (seekingTimeout) {
+    clearTimeout(seekingTimeout);
+    seekingTimeout = null;
+  }
+  
+  // Auto-reset seeking state after a longer delay if not explicitly cleared
+  if (isSeeking) {
+    seekingTimeout = setTimeout(() => {
+      isGlobalSeeking = false;
+    }, 1000);
+  }
+};
+
 export const syncAllPlayers = ({
   playerRef,
   setCurrentTimeState,
@@ -74,6 +105,12 @@ export const syncAllPlayers = ({
 }) => {
   const mainAudio = playerRef.current?.audio.current;
   if (!mainAudio) return;
+
+  // Check if user is currently seeking - don't update progress bars while dragging
+  const isDragging = isAnyPlayerSeeking();
+  if (isDragging && !forceUpdate) {
+    return;
+  }
 
   // Throttle updates in Safari to prevent maximum update depth exceeded
   const now = Date.now();
@@ -97,9 +134,7 @@ export const syncAllPlayers = ({
   });
 
   // Update waveform - only if we have a valid wavesurfer instance and duration
-  // Also check if user is dragging any progress bar to prevent conflicts
-  const isDragging = document.querySelector('.rhap_progress-dragging');
-  if (wavesurfer.current && duration && wavesurfer.current.getDuration && !isDragging) {
+  if (wavesurfer.current && duration && wavesurfer.current.getDuration) {
     try {
       wavesurfer.current.seekTo(clampedCurrentTime / duration);
     } catch (error) {
@@ -112,15 +147,6 @@ export const syncAllPlayers = ({
     if (playerRef?.current) {
       const container = playerRef.current.container.current;
       if (!container) return;
-      
-      // Check if user is currently seeking (dragging the progress bar)
-      const progressContainer = container.querySelector('.rhap_progress-container');
-      const isUserSeeking = progressContainer && progressContainer.matches(':active');
-      
-      // Don't update if user is actively seeking, unless it's a force update
-      if (isUserSeeking && !forceUpdate) {
-        return;
-      }
       
       // Use requestAnimationFrame for smoother updates
       requestAnimationFrame(() => {

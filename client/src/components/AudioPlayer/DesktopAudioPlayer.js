@@ -1,10 +1,11 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useRef } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PiWaveform } from "react-icons/pi";
 import { LiaMicrophoneAltSolid } from "react-icons/lia";
 
 import { IconButton } from '../Buttons';
 import { NextButton, PlayPauseButton, PrevButton, VolumeSlider, ShuffleButton, RepeatButton } from './AudioControls';
+import { setSeekingState } from '../../utils';
 
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
@@ -37,10 +38,45 @@ const DesktopAudioPlayer = forwardRef(({
   isScrolledBottom = false,
   scrollOpacityBottom = 0
 }, ref) => {
+  const containerRef = useRef(null);
   const loadingClass = showLoadingAnimation ? 'loading' : '';
+
+  // Handle seeking state for progress bar interactions
+  const handleSeekStart = useCallback((e) => {
+    const target = e.target;
+    if (target.closest('.rhap_progress-container') || 
+        target.closest('.rhap_progress-bar') ||
+        target.closest('.rhap_progress-indicator')) {
+      setSeekingState(true);
+    }
+  }, []);
+
+  const handleSeekEnd = useCallback(() => {
+    setTimeout(() => {
+      setSeekingState(false);
+    }, 100);
+  }, []);
+
+  // Add event listeners for seeking state
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const progressContainer = container.querySelector('.rhap_progress-container');
+    if (!progressContainer) return;
+
+    progressContainer.addEventListener('mousedown', handleSeekStart);
+    document.addEventListener('mouseup', handleSeekEnd);
+
+    return () => {
+      progressContainer.removeEventListener('mousedown', handleSeekStart);
+      document.removeEventListener('mouseup', handleSeekEnd);
+    };
+  }, [handleSeekStart, handleSeekEnd]);
 
   return (
     <div 
+      ref={containerRef}
       className={`audio-player audio-player--desktop audio ${loadingClass}`}
       style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
     >

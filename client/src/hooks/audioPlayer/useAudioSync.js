@@ -279,6 +279,12 @@ export const useAudioSync = ({
     }
 
     const handleTimeUpdate = () => {
+      // Skip updates if user is seeking (dragging progress bar)
+      const isUserSeeking = document.querySelector('.audio-player.seeking, .audio-player--mobile.seeking');
+      if (isUserSeeking) {
+        return;
+      }
+      
       // For Safari, throttle timeupdate events
       if (isSafariBrowser) {
         if (timeUpdateThrottleRef.current) return;

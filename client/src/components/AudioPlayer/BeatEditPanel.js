@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useRef } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PiWaveform } from "react-icons/pi";
 import { LiaMicrophoneAltSolid } from "react-icons/lia";
@@ -7,6 +7,7 @@ import { IoChevronDownSharp, IoEllipsisHorizontalSharp } from "react-icons/io5";
 import { IconButton } from '../Buttons';
 import { NextButton, PlayPauseButton, PrevButton, ShuffleButton, RepeatButton } from './AudioControls';
 import BeatEditInputs from './BeatEditInputs';
+import { setSeekingState } from '../../utils';
 
 import 'react-h5-audio-player/lib/styles.css';
 import './AudioPlayer.scss';
@@ -40,8 +41,50 @@ const BeatEditPanel = forwardRef(({
   handleEllipsisClick,
   style = {}
 }, ref) => {
-
+  const controlsRef = useRef(null);
   const loadingClass = showLoadingAnimation ? 'loading' : '';
+
+  // Handle seeking state for progress bar interactions
+  const handleSeekStart = useCallback((e) => {
+    const target = e.target;
+    if (target.closest('.rhap_progress-container') || 
+        target.closest('.rhap_progress-bar') ||
+        target.closest('.rhap_progress-indicator')) {
+      setSeekingState(true);
+    }
+  }, []);
+
+  const handleSeekEnd = useCallback(() => {
+    setTimeout(() => {
+      setSeekingState(false);
+    }, 100);
+  }, []);
+
+  // Add event listeners for seeking state
+  useEffect(() => {
+    const container = controlsRef.current;
+    if (!container) return;
+
+    const progressContainer = container.querySelector('.rhap_progress-container');
+    if (!progressContainer) return;
+
+    // Touch events
+    progressContainer.addEventListener('touchstart', handleSeekStart, { passive: true });
+    progressContainer.addEventListener('touchend', handleSeekEnd);
+    progressContainer.addEventListener('touchcancel', handleSeekEnd);
+    
+    // Mouse events
+    progressContainer.addEventListener('mousedown', handleSeekStart);
+    document.addEventListener('mouseup', handleSeekEnd);
+
+    return () => {
+      progressContainer.removeEventListener('touchstart', handleSeekStart);
+      progressContainer.removeEventListener('touchend', handleSeekEnd);
+      progressContainer.removeEventListener('touchcancel', handleSeekEnd);
+      progressContainer.removeEventListener('mousedown', handleSeekStart);
+      document.removeEventListener('mouseup', handleSeekEnd);
+    };
+  }, [handleSeekStart, handleSeekEnd]);
 
   return (
     <>
@@ -87,7 +130,7 @@ const BeatEditPanel = forwardRef(({
         </div>
 
         {/* CONTROLS */}
-        <div className="audio-player__full-page-controls">
+        <div ref={controlsRef} className="audio-player__full-page-controls">
           <div className="audio-player__full-page-info">
             <div className="audio-player__full-page-text">
               <p className="audio-player__title">
