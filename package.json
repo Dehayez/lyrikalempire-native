@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "open-cli /Applications/MAMP/MAMP.app && wait-on http://localhost:8888 && concurrently \"yarn --cwd ./server start\" \"yarn --cwd ./client start\"",
     "build": "cd client && yarn build && cd .. && git add . && git commit -m \"Build\" && git push",
+    "deploy": "ssh root@174.138.4.195 'cd /lyrikalempire && git pull origin main && pm2 restart server'",
     "electron": "wait-on http://localhost:3000 && electron ."
   },
   "license": "ISC",
