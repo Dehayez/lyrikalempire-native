@@ -1,5 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { gaplessPlaybackService } from '../../services/gaplessPlaybackService';
+import { mobileAudioPreloader } from '../../services/mobileAudioPreloader';
+import { getSignedUrl } from '../../services';
 
 // Browser detection utilities
 const isSafari = () => {
@@ -357,28 +359,53 @@ export const useAudioCore = (currentBeat) => {
     };
   }, []);
 
+  // Track which beats we've already started preloading to avoid duplicate requests
+  const preloadingBeatsRef = useRef(new Set());
+
   const preloadNextTrack = useCallback(() => {
     if (!currentBeatRef.current || !playlistRef.current.length) return;
 
-    // Skip preloading on mobile
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobileDevice) return;
-
     const currentIndex = playlistRef.current.findIndex(beat => beat.id === currentBeatRef.current.id);
-    if (currentIndex !== -1 && currentIndex < playlistRef.current.length - 1) {
-      const nextBeat = playlistRef.current[currentIndex + 1];
-      if (nextBeat?.audioSrc) {
-        gaplessPlaybackService.preloadNext(nextBeat.audioSrc);
-      }
-    }
+    if (currentIndex === -1 || currentIndex >= playlistRef.current.length - 1) return;
+
+    const nextBeat = playlistRef.current[currentIndex + 1];
+    if (!nextBeat?.user_id || !nextBeat?.audio) return;
+
+    // Skip if already preloading this beat
+    const preloadKey = `${nextBeat.user_id}_${nextBeat.audio}`;
+    if (preloadingBeatsRef.current.has(preloadKey)) return;
+    preloadingBeatsRef.current.add(preloadKey);
+
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Get signed URL then preload audio data
+    getSignedUrl(nextBeat.user_id, nextBeat.audio)
+      .then(signedUrl => {
+        if (isMobileDevice) {
+          // Use lightweight HTML5 Audio preloader for mobile
+          mobileAudioPreloader.preload(signedUrl);
+        } else {
+          // Use gapless playback service for desktop
+          gaplessPlaybackService.preloadNext(signedUrl);
+        }
+      })
+      .catch(() => {
+        // Remove from tracking on error so we can retry
+        preloadingBeatsRef.current.delete(preloadKey);
+      });
   }, []);
 
   const handleTimeUpdate = useCallback((currentTime, duration) => {
     if (!duration) return;
 
     const progress = currentTime / duration;
-    // Start preloading when current track is at 85%
-    if (progress >= 0.85) {
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Start preloading earlier on mobile (50%) since network is slower
+    // Desktop starts at 85%
+    const preloadThreshold = isMobileDevice ? 0.50 : 0.85;
+    
+    if (progress >= preloadThreshold) {
       preloadNextTrack();
     }
   }, [preloadNextTrack]);
@@ -402,18 +429,36 @@ export const useAudioCore = (currentBeat) => {
     }
   }, [play, preloadNextTrack]);
 
-  // Update current beat reference and set up gapless playback
+  // Update current beat reference and immediately start preloading next track
   useEffect(() => {
     currentBeatRef.current = currentBeat;
-  }, [currentBeat]);
+    
+    // Clear preload tracking when beat changes so we can preload the new next track
+    if (currentBeat?.user_id && currentBeat?.audio) {
+      const currentKey = `${currentBeat.user_id}_${currentBeat.audio}`;
+      preloadingBeatsRef.current.delete(currentKey);
+      
+      // Immediately start preloading the next track when current track starts
+      // Small delay to let the current track start loading first
+      const preloadTimer = setTimeout(() => {
+        preloadNextTrack();
+      }, 500);
+      
+      return () => clearTimeout(preloadTimer);
+    }
+  }, [currentBeat, preloadNextTrack]);
 
-  // Cleanup AudioContext on unmount to prevent memory leaks
+  // Cleanup AudioContext and mobile preloader on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close().catch(() => {});
         audioContextRef.current = null;
       }
+      // Cleanup mobile preloader
+      mobileAudioPreloader.cleanup();
+      // Clear preloading tracking
+      preloadingBeatsRef.current.clear();
     };
   }, []);
 
