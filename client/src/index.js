@@ -10,6 +10,17 @@ import reportWebVitals from './reportWebVitals';
 
 import { PlaylistProvider, BeatProvider, DataProvider, HeaderWidthProvider, UserProvider, WebSocketProvider } from './contexts'; 
 
+// Hide splash screen when app is ready
+const hideSplashScreen = () => {
+  const splashScreen = document.getElementById('splash-screen');
+  if (splashScreen) {
+    splashScreen.classList.add('splash-screen--hidden');
+    setTimeout(() => {
+      splashScreen.remove();
+    }, 300);
+  }
+};
+
 // Clear old unbounded audio cache on startup to prevent memory bloat
 if ('caches' in window) {
   caches.open('lyrikal-empire-audio-v1').then(cache => {
@@ -60,6 +71,17 @@ if ('serviceWorker' in navigator) {
 const rootElement = document.getElementById('root');
 const root = ReactDOM.createRoot(rootElement);
 
+// Wrapper component to hide splash after first render
+const AppWithSplash = () => {
+  React.useEffect(() => {
+    // Hide splash screen after a short delay to ensure app is painted
+    const timer = setTimeout(hideSplashScreen, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return <App />;
+};
+
 root.render(
   <React.StrictMode>
     <BrowserRouter>
@@ -70,7 +92,7 @@ root.render(
               <DataProvider>
                 <HeaderWidthProvider>
                   <DndProvider backend={HTML5Backend}>
-                    <App />
+                    <AppWithSplash />
                   </DndProvider>
                 </HeaderWidthProvider>
               </DataProvider>

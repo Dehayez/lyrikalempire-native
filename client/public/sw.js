@@ -1,47 +1,51 @@
 // Service Worker for Lyrikal Empire PWA
 // Enhanced for background audio playback support
 
-const CACHE_NAME = 'lyrikal-empire-v1';
+const CACHE_NAME = 'lyrikal-empire-v2';
 const AUDIO_CACHE_NAME = 'lyrikal-empire-audio-v1';
 const MAX_AUDIO_CACHE_SIZE = 50; // Maximum number of audio files to cache
 
-// Cache essential assets
+// Cache essential assets for instant loading
 const ESSENTIAL_ASSETS = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/index.html',
   '/manifest.json',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/placeholder.png'
 ];
 
-// Install event - cache essential assets
+// Install event - cache essential assets and skip waiting immediately
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(async cache => {
         // Try to add all assets, but ignore any failures (e.g. 404/hashes)
         await Promise.allSettled(
-          ESSENTIAL_ASSETS.map(asset => cache.add(asset))
+          ESSENTIAL_ASSETS.map(asset => cache.add(asset).catch(() => {}))
         );
       })
       .then(() => self.skipWaiting())
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME && cacheName !== AUDIO_CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME && cacheName !== AUDIO_CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Claim all clients immediately to avoid double-open issue
+      self.clients.claim()
+    ])
   );
 });
 
@@ -59,6 +63,30 @@ self.addEventListener('fetch', (event) => {
   if ((isAudioPath && isCrossOrigin) || hasRangeHeader) {
     // Let the network handle it directly without caching/proxying
     return; // Do not call respondWith → default browser fetch path
+  }
+
+  // Handle navigation requests (important for PWA startup)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          // Cache the latest HTML
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cached index.html for offline support
+          return caches.match('/index.html').then(cachedResponse => {
+            return cachedResponse || caches.match('/');
+          });
+        })
+    );
+    return;
   }
   
   // Handle audio files differently for better streaming
