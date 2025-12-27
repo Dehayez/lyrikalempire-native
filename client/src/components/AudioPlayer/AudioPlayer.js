@@ -366,17 +366,14 @@ const AudioPlayer = ({
       }, 3000);
     }
     
-    // Reset UI state
-    const timeoutId = setTimeout(() => {
-      setCurrentTimeState(0);
-      setProgress(0);
-      try { audioCore.pause(); } catch (e) {}
-      audioCore.setCurrentTime(0);
-      syncAllPlayers(true);
-    }, 0);
+    // Reset UI state immediately (no setTimeout to ensure instant stop)
+    setCurrentTimeState(0);
+    setProgress(0);
+    try { audioCore.pause(); } catch (e) {}
+    audioCore.setCurrentTime(0);
+    syncAllPlayers(true);
     
     return () => {
-      clearTimeout(timeoutId);
       if (timersRef.current.loadTimeout) {
         clearTimeout(timersRef.current.loadTimeout);
         timersRef.current.loadTimeout = null;

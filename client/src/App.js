@@ -262,6 +262,7 @@ function App() {
     handlePlay,
     handlePrev,
     handleNext,
+    pause,
   } = useAudioPlayer({
     currentBeat,
     setCurrentBeat,
@@ -333,6 +334,11 @@ function App() {
   };
 
   const handleBeatClick = useCallback((beat) => {
+    // Immediately stop current audio if switching to a different beat
+    if (currentBeat && currentBeat.id !== beat.id) {
+      pause();
+    }
+    
     setCurrentBeat(beat);
     setIsPlaying(true);
     
@@ -344,7 +350,7 @@ function App() {
         beat: beat
       });
     }
-  }, [setCurrentBeat, setIsPlaying, emitBeatChange]);
+  }, [currentBeat, pause, setCurrentBeat, setIsPlaying, emitBeatChange]);
 
   const toggleView = (view) => {
     setViewState(view);

@@ -60,7 +60,8 @@ export const useAudioPlayer = ({
         // Same beat - just toggle play/pause (immediate)
         setIsPlaying(play);
       } else {
-        // Different beat - change track (immediate)
+        // Different beat - immediately stop current audio before changing track
+        audioCore.pause();
         setCurrentBeat(beat);
         setIsPlaying(play);
       }
@@ -71,10 +72,12 @@ export const useAudioPlayer = ({
     if (currentBeatRef.current?.id === beat.id) {
       setIsPlaying(play);
     } else {
+      // Different beat - immediately stop current audio before changing track
+      audioCore.pause();
       setCurrentBeat(beat);
       setIsPlaying(play);
     }
-  }, [setCurrentBeat, setIsPlaying]);
+  }, [setCurrentBeat, setIsPlaying, audioCore]);
 
   // Optimized next track handler
   const handleNext = useCallback((beats) => {
