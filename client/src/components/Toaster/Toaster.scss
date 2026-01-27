@@ -24,15 +24,15 @@
 }
 
 .toaster--mode {
-  background-color: #374151 !important;
+  background-color: $color-black!important;
   color: #ffffff !important;
   margin-bottom: 5px !important;
   min-height: 48px !important;
   justify-content: center !important;
-  border-radius: 4px !important;
+  border-radius: 8px !important;
   margin-left: 2em;
   margin-right: 2em;
-  opacity: 0.9;
+  opacity: 0.7;
 
   .Toastify__toast-body {
     flex: none;
