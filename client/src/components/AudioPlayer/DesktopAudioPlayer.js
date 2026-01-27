@@ -2,6 +2,7 @@ import React, { forwardRef, useCallback, useEffect, useRef } from 'react';
 import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PiWaveform } from "react-icons/pi";
 import { LiaMicrophoneAltSolid } from "react-icons/lia";
+import { IoEnterOutline } from "react-icons/io5";
 
 import { IconButton } from '../Buttons';
 import { NextButton, PlayPauseButton, PrevButton, VolumeSlider, ShuffleButton, RepeatButton } from './AudioControls';
@@ -27,15 +28,8 @@ const DesktopAudioPlayer = forwardRef(({
   handleVolumeChange,
   waveform,
   waveformRef,
-  isLoadingAudio,
   showLoadingAnimation = false,
-  isCachedAudio,
-  toggleFullPagePlayer,
-  progress,
-  currentTime,
-  duration,
   lyricsModal = false, // Add default value
-  isScrolledBottom = false,
   scrollOpacityBottom = 0
 }, ref) => {
   const containerRef = useRef(null);
@@ -56,6 +50,14 @@ const DesktopAudioPlayer = forwardRef(({
       setSeekingState(false);
     }, 100);
   }, []);
+
+  const handleScrollToCurrentBeat = useCallback(() => {
+    if (!currentBeat || !currentBeat.id || typeof window === 'undefined') {
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('scroll-to-current-beat'));
+  }, [currentBeat]);
 
   // Add event listeners for seeking state
   useEffect(() => {
@@ -81,6 +83,17 @@ const DesktopAudioPlayer = forwardRef(({
       style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
     >
       <div className='audio-player__text audio-player__text--desktop' style={{ flex: '1' }}>
+        <div className="audio-player__scroll-row">
+          <IconButton
+            className="audio-player__scroll-button"
+            onClick={handleScrollToCurrentBeat}
+            text="Go to beat"
+            ariaLabel="Scroll to current beat in list"
+            tooltipPosition="right"
+          >
+            <IoEnterOutline />
+          </IconButton>
+        </div>
         <p className="audio-player__title">{currentBeat.title}</p>
         <p className="audio-player__artist">{artistName}</p>
       </div>

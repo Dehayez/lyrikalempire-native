@@ -58,7 +58,7 @@ const BeatList = ({ onPlay, selectedBeat, isPlaying, moveBeat, currentBeat, addT
   }, []);
   
   const { setPlaylistId } = usePlaylist();
-  const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats, loadedFromCache } = useBeat();
+  const { allBeats, paginatedBeats, inputFocused, setRefreshBeats, setCurrentBeats, loadedFromCache, isLoadingFresh } = useBeat();
   const { user } = useUser();
   const beats = externalBeats || allBeats;
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -230,6 +230,10 @@ const filterOptionsWithCounts = useMemo(() => {
     currentPage,
     [scrollPositionKey]: savedScrollPosition
   });
+
+  const showInitialSkeleton = isLoadingBeats || (isLoadingFresh && beats.length === 0);
+  const showInlineSkeleton = !showInitialSkeleton && isLoadingFresh && beats.length > 0;
+  const inlineSkeletonCount = 8;
 
   const calculateVisibleRows = useCallback(() => {
     if (!containerRef.current || !tableRef.current) return;
@@ -450,6 +454,56 @@ const filterOptionsWithCounts = useMemo(() => {
       });
     }
   }, [filteredAndSortedBeats.length, savedScrollPosition, hasRestoredScroll, isLoadingBeats, rowHeight, calculateVisibleRows, scrollPositionKey]);
+
+  const scrollToCurrentBeat = useCallback(() => {
+    if (
+      !containerRef.current ||
+      !currentBeat ||
+      !currentBeat.id ||
+      filteredAndSortedBeats.length === 0 ||
+      isLoadingBeats ||
+      rowHeight <= 0
+    ) {
+      return;
+    }
+
+    const beatIndex = filteredAndSortedBeats.findIndex((beat) => beat.id === currentBeat.id);
+    if (beatIndex === -1) {
+      return;
+    }
+
+    isRestoringScroll.current = true;
+    const container = containerRef.current;
+    const targetScrollTop = beatIndex * rowHeight;
+    const containerHeight = container.clientHeight;
+    const centeredScrollTop = Math.max(0, targetScrollTop - (containerHeight / 2) + (rowHeight / 2));
+    const maxScrollTop = container.scrollHeight - containerHeight;
+
+    container.scrollTop = Math.min(centeredScrollTop, maxScrollTop);
+    setHasRestoredScroll(true);
+
+    setTimeout(() => {
+      calculateVisibleRows();
+      setTimeout(() => {
+        isRestoringScroll.current = false;
+      }, 200);
+    }, 50);
+  }, [currentBeat, filteredAndSortedBeats, isLoadingBeats, rowHeight, calculateVisibleRows]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleScrollToCurrentBeat = () => {
+      scrollToCurrentBeat();
+    };
+
+    window.addEventListener('scroll-to-current-beat', handleScrollToCurrentBeat);
+    return () => {
+      window.removeEventListener('scroll-to-current-beat', handleScrollToCurrentBeat);
+    };
+  }, [scrollToCurrentBeat]);
 
   // Clear scroll position when filters change significantly (search, genre, mood, etc.)
   useEffect(() => {
@@ -856,7 +910,7 @@ const handlePlayPause = useCallback((beat) => {
         ]}
         onFilterChange={handleFilterChange}
       />
-      {isLoadingBeats ? (
+      {showInitialSkeleton ? (
         <BeatListSkeleton />
       ) : beats.length > 0 ? (
         filteredAndSortedBeats.length === 0 ? (
@@ -873,6 +927,13 @@ const handlePlayPause = useCallback((beat) => {
 
               <tbody ref={tbodyRef}>
                 {virtualizedBeats}
+                {showInlineSkeleton && Array.from({ length: inlineSkeletonCount }).map((_, index) => (
+                  <tr key={`inline-skeleton-${index}`} className="beat-list__skeleton-row">
+                    <td colSpan="10" className="beat-list__skeleton-cell">
+                      <div className="beat-list__skeleton-bar" />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

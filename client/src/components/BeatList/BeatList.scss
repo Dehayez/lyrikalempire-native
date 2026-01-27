@@ -273,6 +273,23 @@
       }
     }
   }
+
+  &__skeleton-row {
+    height: 60px;
+  }
+
+  &__skeleton-cell {
+    padding: 12px 20px;
+    height: 60px;
+    border: 4px solid $color-black;
+    box-sizing: border-box;
+  }
+
+  &__skeleton-bar {
+    height: 16px;
+    width: 100%;
+    @include skeleton-shimmer;
+  }
 }
 
 // Toast styles moved to Toaster.scss

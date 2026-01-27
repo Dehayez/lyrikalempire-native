@@ -328,6 +328,20 @@ audio {
     min-width: 0; 
   }
 
+  &__scroll-row {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+  }
+
+  &__scroll-button {
+    font-size: 18px;
+    padding: 0;
+  }
+
   &__title {
     font-weight: 600;
     color: $color-white;
