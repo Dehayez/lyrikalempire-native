@@ -4,7 +4,7 @@ import { apiRequest } from '../utils/apiUtils';
 const API_URL = `${API_BASE_URL}/features`;
 
 export const getFeatures = async () => {
-  return await apiRequest('get', '', API_URL);
+  return await apiRequest('get', '', API_URL, null, null, false);
 };
 
 export const createFeature = async (name) => {

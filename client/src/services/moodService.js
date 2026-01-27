@@ -4,7 +4,7 @@ import { apiRequest } from '../utils/apiUtils';
 const API_URL = `${API_BASE_URL}/moods`;
 
 export const getMoods = async () => {
-  return await apiRequest('get', '', API_URL);
+  return await apiRequest('get', '', API_URL, null, null, false);
 };
 
 export const createMood = async (name) => {

@@ -4,7 +4,7 @@ import { apiRequest } from '../utils/apiUtils';
 const API_URL = `${API_BASE_URL}/genres`;
 
 export const getGenres = async () => {
-  return await apiRequest('get', '', API_URL);
+  return await apiRequest('get', '', API_URL, null, null, false);
 };
 
 export const createGenre = async (name) => {
