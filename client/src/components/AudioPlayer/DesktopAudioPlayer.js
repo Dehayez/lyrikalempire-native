@@ -83,18 +83,20 @@ const DesktopAudioPlayer = forwardRef(({
       style={{ '--scroll-opacity-bottom': scrollOpacityBottom }}
     >
       <div className='audio-player__text audio-player__text--desktop' style={{ flex: '1' }}>
-        <div className="audio-player__scroll-row">
-          <IconButton
-            className="audio-player__scroll-button"
-            onClick={handleScrollToCurrentBeat}
-            text="Go to beat"
-            ariaLabel="Scroll to current beat in list"
-            tooltipPosition="right"
-          >
-            <IoEnterOutline />
-          </IconButton>
-        </div>
-        <p className="audio-player__title">{currentBeat.title}</p>
+        <p
+          className="audio-player__title audio-player__title--scrollable"
+          onClick={handleScrollToCurrentBeat}
+          role="button"
+          tabIndex={0}
+          aria-label="Scroll to current beat in list"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              handleScrollToCurrentBeat();
+            }
+          }}
+        >
+          {currentBeat.title}
+        </p>
         <p className="audio-player__artist">{artistName}</p>
       </div>
       <div style={{ flex: '3' }}>

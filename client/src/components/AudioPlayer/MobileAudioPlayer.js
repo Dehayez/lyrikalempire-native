@@ -168,18 +168,21 @@ const MobileAudioPlayer = forwardRef(({
            onTouchEnd={handleTouchEnd} 
            onTouchMove={handleTouchMove} 
            style={{ transform: `translateX(${dragPosition}px)` }}>
-        <div className="audio-player__scroll-row">
-          <IconButton
-            className="audio-player__scroll-button"
-            onClick={handleScrollToCurrentBeat}
-            text="Go to beat"
-            ariaLabel="Scroll to current beat in list"
-          >
-            <IoLocateSharp />
-          </IconButton>
-        </div>
         <div className="audio-player__title-row">
-          <p className="audio-player__title">{currentBeat.title}</p>
+          <p
+            className="audio-player__title audio-player__title--scrollable"
+            onClick={handleScrollToCurrentBeat}
+            role="button"
+            tabIndex={0}
+            aria-label="Scroll to current beat in list"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleScrollToCurrentBeat();
+              }
+            }}
+          >
+            {currentBeat.title}
+          </p>
         </div>
         <p className="audio-player__artist">{artistName}</p>
       </div>
