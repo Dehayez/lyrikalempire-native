@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from './components';
-import { IoPersonSharp, IoSpeedometer } from "react-icons/io5";
+import { IoPersonSharp, IoSettingsSharp, IoSpeedometer } from "react-icons/io5";
 import classNames from 'classnames';
 
 import { isMobileOrTablet, getInitialState, isAuthPage } from './utils';
@@ -579,6 +579,18 @@ function App() {
                           ariaLabel={`Go to ${username}'s Profile`}
                         >
                           <IoPersonSharp />
+                        </IconButton>
+                        <IconButton
+                          className='beat-list__action-button--profile'
+                          onClick={() => {
+                            toggleSidePanel('right');
+                            navigate('/settings');
+                          }}
+                          text='Settings'
+                          tooltipPosition='left'
+                          ariaLabel='Open settings'
+                        >
+                          <IoSettingsSharp />
                         </IconButton>
                         {isPerfAllowed && (
                           <IconButton

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { isMobileOrTablet } from '../../utils';
-import { NavigationButtons, IconButton } from '../Buttons';
+import { NavigationButtons } from '../Buttons';
 import { Breadcrumb } from '../Breadcrumb';
 import { PanelToggle } from '../PanelToggle';
-import { IoSettingsSharp } from "react-icons/io5";
 
 import './Header.scss';
 
@@ -22,7 +21,6 @@ const Header = ({
   closeSidePanel,
 }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const isDashboard = location.pathname.startsWith('/dashboard');
 
   const [isLeftHovered, setIsLeftHovered] = useState(false);
@@ -67,20 +65,6 @@ const Header = ({
           <img className="header__nav-logo" src="/android-chrome-192x192.png" alt="Logo" />
         </Link>
       </div>
-
-      {!isAuthPage && (
-        <div className="header__actions">
-          <IconButton
-            className="header__settings-button"
-            onClick={() => navigate('/settings')}
-            text="Settings"
-            tooltipPosition="left"
-            ariaLabel="Open settings"
-          >
-            <IoSettingsSharp />
-          </IconButton>
-        </div>
-      )}
 
       {!isAuthPage && (
         <PanelToggle

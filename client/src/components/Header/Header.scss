@@ -24,32 +24,8 @@
     width: 30px;
   }
 
-  &__actions {
-    position: absolute;
-    right: 64px;
-    display: flex;
-    align-items: center;
-  }
-
-  &__settings-button {
-    padding: 6px;
-  }
-    
   & svg {
-      width: 20px;
-      height: 20px;
-  }
-
-  @media (max-width: 900px) {
-    &__actions {
-      right: 56px;
-    }
-  }
-
-  @media (max-width: 600px) {
-    &__actions {
-      right: 0;
-      margin-right: 48px;
-    }
+    width: 20px;
+    height: 20px;
   }
 }
