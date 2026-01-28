@@ -3,8 +3,6 @@ import H5AudioPlayer, { RHAP_UI } from 'react-h5-audio-player';
 import { PlayPauseButton } from './AudioControls';
 import PrevButton from './AudioControls/PrevButton';
 import NextButton from './AudioControls/NextButton';
-import { IoLocateSharp } from "react-icons/io5";
-import { IconButton } from '../Buttons';
 import { setSeekingState } from '../../utils';
 
 import 'react-h5-audio-player/lib/styles.css';
@@ -38,16 +36,6 @@ const MobileAudioPlayer = forwardRef(({
       handlePlayPause(shouldPlay);
     }
   }, [handlePlayPause, isPlaying, currentBeat]);
-
-  const handleScrollToCurrentBeat = useCallback((event) => {
-    event.stopPropagation();
-
-    if (!currentBeat || !currentBeat.id || typeof window === 'undefined') {
-      return;
-    }
-
-    window.dispatchEvent(new CustomEvent('scroll-to-current-beat'));
-  }, [currentBeat]);
 
   // Handle seeking state for progress bar interactions
   const handleSeekStart = useCallback((e) => {
@@ -170,16 +158,7 @@ const MobileAudioPlayer = forwardRef(({
            style={{ transform: `translateX(${dragPosition}px)` }}>
         <div className="audio-player__title-row">
           <p
-            className="audio-player__title audio-player__title--scrollable"
-            onClick={handleScrollToCurrentBeat}
-            role="button"
-            tabIndex={0}
-            aria-label="Scroll to current beat in list"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleScrollToCurrentBeat();
-              }
-            }}
+            className="audio-player__title"
           >
             {currentBeat.title}
           </p>
