@@ -196,6 +196,24 @@
     }
   }
 
+  .lyrics-modal__rhymes-more-text {
+    display: inline-block;
+
+    &--loading {
+      display: none;
+    }
+  }
+
+  .lyrics-modal__rhymes-item--more[aria-busy="true"] {
+    .lyrics-modal__rhymes-more-text {
+      display: none;
+    }
+
+    .lyrics-modal__rhymes-more-text--loading {
+      display: inline-block;
+    }
+  }
+
   .lyrics-modal__rhymes-item {
     display: inline-flex;
     align-items: center;
@@ -221,6 +239,11 @@
       padding: 6px 14px;
       background: $color-primary-bg;
       border: $border-primary;
+    }
+
+    &--more[disabled] {
+      opacity: 0.8;
+      cursor: default;
     }
   }
 

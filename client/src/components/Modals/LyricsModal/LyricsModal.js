@@ -58,6 +58,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   const lyricsRetryCount = useRef(0);
   const rhymesListRef = useRef(null);
   const pendingRhymesScrollPosition = useRef({ left: null, top: null });
+  const prevRhymesCount = useRef(0);
   const saveTimeoutRef = useRef(null);
   const pendingLyricsRef = useRef('');
   const lastSyncedLyricsRef = useRef('');
@@ -81,6 +82,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   const [rhymes, setRhymes] = useState([]);
   const [isRhymesLoading, setIsRhymesLoading] = useState(false);
   const [rhymeLimit, setRhymeLimit] = useState(24);
+  const [isMorePending, setIsMorePending] = useState(false);
 
   const handleCancel = useCallback(() => setLyricsModal(false), [setLyricsModal]);
 
@@ -276,6 +278,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     const nextWord = getSelectedWord(event.target);
     if (nextWord !== selectedWord) {
       setRhymeLimit(24);
+      setIsMorePending(false);
       pendingRhymesScrollPosition.current = { left: null, top: null };
     }
     setSelectedWord((prev) => (prev === nextWord ? prev : nextWord));
@@ -285,6 +288,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     if (!selectedWord) {
       setRhymes([]);
       setIsRhymesLoading(false);
+      setIsMorePending(false);
       pendingRhymesScrollPosition.current = { left: null, top: null };
       return undefined;
     }
@@ -351,6 +355,17 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   }, [rhymes.length]);
 
   useEffect(() => {
+    if (!isMorePending) {
+      prevRhymesCount.current = rhymes.length;
+      return;
+    }
+    if (rhymes.length > prevRhymesCount.current) {
+      setIsMorePending(false);
+    }
+    prevRhymesCount.current = rhymes.length;
+  }, [isMorePending, rhymes.length]);
+
+  useEffect(() => {
     if (!isMobile || !lyricsModal) return undefined;
     const root = document.documentElement;
     const visualViewport = window.visualViewport;
@@ -390,8 +405,11 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
         top: rhymesListRef.current.scrollTop,
       };
     }
+    setIsMorePending(true);
     setRhymeLimit((prev) => prev + 24);
   }, []);
+
+  const shouldShowMoreButton = rhymes.length >= rhymeLimit || isRhymesLoading || isMorePending;
 
   const handleFullscreenToggle = useCallback(() => {
     if (isFullscreen) {
@@ -496,27 +514,32 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
                 className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--mobile"
                 ref={rhymesListRef}
               >
-                {isRhymesLoading ? (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
-                    Loading...
-                  </span>
-                ) : rhymes.length ? (
+                {rhymes.length ? (
                   <>
                     {rhymes.map((rhyme) => (
                       <span className="lyrics-modal__rhymes-item" key={rhyme}>
                         {rhyme}
                       </span>
                     ))}
-                    {rhymes.length >= rhymeLimit && (
+                    {shouldShowMoreButton && (
                       <button
                         className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
                         type="button"
                         onClick={handleLoadMoreRhymes}
+                        disabled={isRhymesLoading}
+                        aria-busy={isRhymesLoading}
                       >
-                        More
+                        <span className="lyrics-modal__rhymes-more-text">More</span>
+                        <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
+                          Loading...
+                        </span>
                       </button>
                     )}
                   </>
+                ) : isRhymesLoading ? (
+                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
+                    Loading...
+                  </span>
                 ) : (
                   <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
                     No rhymes found
@@ -537,27 +560,32 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
                 className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--desktop"
                 ref={rhymesListRef}
               >
-                {isRhymesLoading ? (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
-                    Loading...
-                  </span>
-                ) : rhymes.length ? (
+                {rhymes.length ? (
                   <>
                     {rhymes.map((rhyme) => (
                       <span className="lyrics-modal__rhymes-item" key={rhyme}>
                         {rhyme}
                       </span>
                     ))}
-                    {rhymes.length >= rhymeLimit && (
+                    {shouldShowMoreButton && (
                       <button
                         className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
                         type="button"
                         onClick={handleLoadMoreRhymes}
+                        disabled={isRhymesLoading}
+                        aria-busy={isRhymesLoading}
                       >
-                        More
+                        <span className="lyrics-modal__rhymes-more-text">More</span>
+                        <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
+                          Loading...
+                        </span>
                       </button>
                     )}
                   </>
+                ) : isRhymesLoading ? (
+                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
+                    Loading...
+                  </span>
                 ) : (
                   <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
                     No rhymes found
