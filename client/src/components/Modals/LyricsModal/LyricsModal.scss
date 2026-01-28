@@ -147,7 +147,7 @@
 
   .lyrics-modal__rhymes-bar {
     position: sticky;
-    bottom: 0;
+    bottom: var(--keyboard-offset, 0px);
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     background: $color-gray-dark;
     border-top: $border-bottom-dark;
@@ -228,12 +228,22 @@
     .lyrics-modal__body {
       flex-direction: column;
       gap: 0;
+      padding-bottom: var(--rhymes-bar-height, 0px);
     }
 
     .lyrics-modal__rhymes-panel {
       width: 100%;
       border-left: none;
       padding-left: 0;
+    }
+
+    .lyrics-modal__rhymes-bar {
+      --rhymes-bar-height: 88px;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(var(--keyboard-offset, 0px) + env(safe-area-inset-bottom, 0px));
+      z-index: 30;
     }
   }
 }

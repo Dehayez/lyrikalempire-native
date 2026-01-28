@@ -350,6 +350,39 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     pendingRhymesScrollPosition.current = { left: null, top: null };
   }, [rhymes.length]);
 
+  useEffect(() => {
+    if (!isMobile || !lyricsModal) return undefined;
+    const root = document.documentElement;
+    const visualViewport = window.visualViewport;
+    const updateKeyboardOffset = () => {
+      let offset = 0;
+      if (visualViewport) {
+        const heightDelta = window.innerHeight - visualViewport.height - visualViewport.offsetTop;
+        offset = Math.max(0, Math.round(heightDelta));
+      }
+      root.style.setProperty('--keyboard-offset', `${offset}px`);
+    };
+
+    updateKeyboardOffset();
+
+    if (!visualViewport) {
+      return () => {
+        root.style.setProperty('--keyboard-offset', '0px');
+      };
+    }
+
+    visualViewport.addEventListener('resize', updateKeyboardOffset);
+    visualViewport.addEventListener('scroll', updateKeyboardOffset);
+    window.addEventListener('orientationchange', updateKeyboardOffset);
+
+    return () => {
+      visualViewport.removeEventListener('resize', updateKeyboardOffset);
+      visualViewport.removeEventListener('scroll', updateKeyboardOffset);
+      window.removeEventListener('orientationchange', updateKeyboardOffset);
+      root.style.setProperty('--keyboard-offset', '0px');
+    };
+  }, [isMobile, lyricsModal]);
+
   const handleLoadMoreRhymes = useCallback(() => {
     if (rhymesListRef.current) {
       pendingRhymesScrollPosition.current = {
