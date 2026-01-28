@@ -58,6 +58,8 @@
     width: 100%;
     border: none;
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
 
   .modal__title {
@@ -120,10 +122,27 @@
       padding-bottom: 40px !important;
   }
 
+  .lyrics-modal__body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 16px;
+  }
+
   .lyrics-modal__editor {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 48px);
+    flex: 1;
+    min-height: 0;
+  }
+
+  .lyrics-modal__rhymes-panel {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    border-left: $border-bottom-dark;
+    padding-left: 16px;
+    min-height: 0;
   }
 
   .lyrics-modal__rhymes-bar {
@@ -155,13 +174,26 @@
   }
 
   .lyrics-modal__rhymes-list {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    padding-bottom: 24px;
     @include hide-scrollbar;
+
+    &--mobile {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding-bottom: 24px;
+    }
+
+    &--desktop {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: 100%;
+      padding-right: 6px;
+    }
   }
 
   .lyrics-modal__rhymes-item {
@@ -189,6 +221,19 @@
       padding: 6px 14px;
       background: $color-primary-bg;
       border: $border-primary;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .lyrics-modal__body {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .lyrics-modal__rhymes-panel {
+      width: 100%;
+      border-left: none;
+      padding-left: 0;
     }
   }
 }
