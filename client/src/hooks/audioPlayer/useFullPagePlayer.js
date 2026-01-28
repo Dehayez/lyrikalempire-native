@@ -56,38 +56,21 @@ export const useFullPagePlayer = ({
     const isMobile = isMobileOrTablet();
     
     if (isMobile && lyricsModal && isFullPage) {
-      // Close full page player when lyrics modal opens
-      setIsReturningFromLyrics(true);
-      slideOut(fullPagePlayerRef.current, fullPageOverlayRef.current, () => {
-        setIsFullPageVisible(false);
-      });
-    } else if (isMobile && !lyricsModal && isFullPage && !isFullPageVisible) {
-      // Re-open full page player when lyrics modal closes
-      requestAnimationFrame(() => {
+      // Keep full page player open under lyrics on mobile
+      if (!isFullPageVisible) {
         setIsFullPageVisible(true);
-        
-        requestAnimationFrame(() => {
-          if (fullPagePlayerRef.current) {
-            if (!isReturningFromLyrics) {
-              // Use original slideIn function
-              slideIn(fullPagePlayerRef.current);
-            } else {
-              // Show without animation - minimal style changes
-              fullPagePlayerRef.current.style.transform = 'translateY(0)';
-              fullPagePlayerRef.current.style.opacity = '1';
-              setIsReturningFromLyrics(false);
-            }
-          }
-        });
-      });
+      }
+      if (fullPagePlayerRef.current) {
+        fullPagePlayerRef.current.style.transform = 'translateY(0)';
+        fullPagePlayerRef.current.style.opacity = '1';
+      }
+      setIsReturningFromLyrics(false);
     }
   }, [
     lyricsModal,
     isFullPage,
     isFullPageVisible,
-    isReturningFromLyrics,
     fullPagePlayerRef,
-    fullPageOverlayRef,
     setIsFullPageVisible,
     setIsReturningFromLyrics
   ]);

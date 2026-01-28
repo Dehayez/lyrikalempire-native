@@ -1,8 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './FormTextarea.scss';
 
-export const FormTextarea = ({ id, label, placeholder, value, onChange, required, rows, maxLength }) => {
+export const FormTextarea = ({
+    id,
+    label,
+    placeholder,
+    value,
+    onChange,
+    required,
+    rows,
+    maxLength,
+    onSelect,
+    onKeyUp,
+    onMouseUp,
+    onTouchEnd,
+    inputRef,
+}) => {
     const textareaRef = useRef(null);
+    const resolvedRef = inputRef || textareaRef;
     const [remainingChars, setRemainingChars] = useState(maxLength);
 
     useEffect(() => {
@@ -13,13 +28,17 @@ export const FormTextarea = ({ id, label, placeholder, value, onChange, required
         <div className="form-group form-textarea">
             <textarea
                 id={id}
-                ref={textareaRef}
+                ref={resolvedRef}
                 className={`form-group__input form-textarea__input ${value ? 'form-group__input--filled' : ''}`}
                 value={value}
                 onChange={(e) => {
                     onChange(e);
                     setRemainingChars(maxLength - e.target.value.length);
                 }}
+                onSelect={onSelect}
+                onKeyUp={onKeyUp}
+                onMouseUp={onMouseUp}
+                onTouchEnd={onTouchEnd}
                 required={required}
                 rows={rows}
                 maxLength={maxLength}
@@ -29,7 +48,7 @@ export const FormTextarea = ({ id, label, placeholder, value, onChange, required
             />
             {label && (
                 <label
-                    className={`form-group__label ${value || document.activeElement === textareaRef.current ? 'form-group__label--active' : ''}`}
+                    className={`form-group__label ${value || document.activeElement === resolvedRef.current ? 'form-group__label--active' : ''}`}
                 >
                     {label}
                 </label>

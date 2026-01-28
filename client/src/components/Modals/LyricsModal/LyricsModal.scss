@@ -93,9 +93,10 @@
   }
 
   .form-group {
-    height: calc(100% - 48px);
     margin: 0;
     padding: 0 20px 20px 20px;
+    flex: 1;
+    min-height: 0;
 
     &__input {
         height: 100%;
@@ -117,6 +118,78 @@
           border: none !important;
       }
       padding-bottom: 40px !important;
+  }
+
+  .lyrics-modal__editor {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 48px);
+  }
+
+  .lyrics-modal__rhymes-bar {
+    position: sticky;
+    bottom: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: $color-gray-dark;
+    border-top: $border-bottom-dark;
+    z-index: 2;
+  }
+
+  .lyrics-modal__rhymes-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .lyrics-modal__rhymes-title {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $color-gray-light;
+  }
+
+  .lyrics-modal__rhymes-word {
+    font-size: 14px;
+    color: $color-white;
+  }
+
+  .lyrics-modal__rhymes-list {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    padding-bottom: 24px;
+    @include hide-scrollbar;
+  }
+
+  .lyrics-modal__rhymes-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: $color-gray-dark-active;
+    border: 1px solid $color-gray-mid;
+    font-size: 13px;
+    color: $color-white;
+    font-family: inherit;
+
+    &--loading,
+    &--empty {
+      color: $color-gray-light;
+      background: transparent;
+      border: 1px dashed $color-gray-mid;
+    }
+
+    &--more {
+      @include bg-border-hover;
+      border-radius: 999px;
+      font-size: 13px;
+      padding: 6px 14px;
+      background: $color-primary-bg;
+      border: $border-primary;
+    }
   }
 }
 

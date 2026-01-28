@@ -53,6 +53,8 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   const draggableRef = useRef(null);
   const modalRef = useRef(null);
   const lyricsRetryCount = useRef(0);
+  const rhymesListRef = useRef(null);
+  const pendingRhymesScrollLeft = useRef(null);
 
   const [lyrics, setLyrics] = useState('');
   const [lyricsId, setLyricsId] = useState(null);
@@ -65,6 +67,10 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   });
   const [preFullscreenState, setPreFullscreenState] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedWord, setSelectedWord] = useState('');
+  const [rhymes, setRhymes] = useState([]);
+  const [isRhymesLoading, setIsRhymesLoading] = useState(false);
+  const [rhymeLimit, setRhymeLimit] = useState(24);
 
   const handleCancel = useCallback(() => setLyricsModal(false), [setLyricsModal]);
 
@@ -115,6 +121,17 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     fetchLyrics();
   }, [beatId, beat]);
 
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    if (lyricsModal) return undefined;
+
+    setSelectedWord('');
+    setRhymes([]);
+    setIsRhymesLoading(false);
+
+    return undefined;
+  }, [lyricsModal, isMobile]);
+
   const handleLyricsChange = async (e) => {
     const newLyrics = e.target.value;
     setLyrics(newLyrics);
@@ -131,6 +148,86 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
       console.error('Failed to update/create lyrics:', err);
     }
   };
+
+  const getSelectedWord = useCallback((textarea) => {
+    if (!textarea) return '';
+
+    const { selectionStart, selectionEnd, value } = textarea;
+    if (selectionStart === selectionEnd) return '';
+
+    const selectedText = value.slice(selectionStart, selectionEnd);
+    const match = selectedText.match(/[A-Za-z']+/);
+
+    return match ? match[0].toLowerCase() : '';
+  }, []);
+
+  const handleSelectionChange = useCallback((event) => {
+    const nextWord = getSelectedWord(event.target);
+    if (nextWord !== selectedWord) {
+      setRhymeLimit(24);
+      pendingRhymesScrollLeft.current = null;
+    }
+    setSelectedWord((prev) => (prev === nextWord ? prev : nextWord));
+  }, [getSelectedWord, selectedWord]);
+
+  useEffect(() => {
+    if (!isMobile) return undefined;
+    if (!selectedWord) {
+      setRhymes([]);
+      setIsRhymesLoading(false);
+      pendingRhymesScrollLeft.current = null;
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setIsRhymesLoading(true);
+
+    fetch(`https://api.datamuse.com/words?rel_rhy=${encodeURIComponent(selectedWord)}&max=${rhymeLimit}`, {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch rhymes');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const nextRhymes = Array.isArray(data)
+          ? data
+              .slice()
+              .sort((a, b) => (b.score || 0) - (a.score || 0))
+              .map((item) => item.word)
+              .filter(Boolean)
+          : [];
+        setRhymes(nextRhymes);
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          setRhymes([]);
+        }
+      })
+      .finally(() => {
+        setIsRhymesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedWord, isMobile, rhymeLimit]);
+
+  useEffect(() => {
+    if (!rhymes.length) return;
+    if (!rhymesListRef.current) return;
+    if (pendingRhymesScrollLeft.current === null) return;
+
+    rhymesListRef.current.scrollLeft = pendingRhymesScrollLeft.current;
+    pendingRhymesScrollLeft.current = null;
+  }, [rhymes.length]);
+
+  const handleLoadMoreRhymes = useCallback(() => {
+    if (rhymesListRef.current) {
+      pendingRhymesScrollLeft.current = rhymesListRef.current.scrollLeft;
+    }
+    setRhymeLimit((prev) => prev + 24);
+  }, []);
 
   const handleFullscreenToggle = useCallback(() => {
     if (isFullscreen) {
@@ -213,7 +310,53 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
       {isLoading ? (
         <div className="lyrics-modal__loading">Loading lyrics...</div>
       ) : (
-        <FormTextarea id="lyrics-modal__textarea" value={lyrics} onChange={handleLyricsChange} />
+        <div className="lyrics-modal__editor">
+          <FormTextarea
+            id="lyrics-modal__textarea"
+            value={lyrics}
+            onChange={handleLyricsChange}
+            onSelect={handleSelectionChange}
+            onMouseUp={handleSelectionChange}
+            onKeyUp={handleSelectionChange}
+            onTouchEnd={handleSelectionChange}
+          />
+          {isMobile && selectedWord && (
+            <div className="lyrics-modal__rhymes-bar" aria-live="polite">
+              <div className="lyrics-modal__rhymes-header">
+                <span className="lyrics-modal__rhymes-title">Rhymes</span>
+                <span className="lyrics-modal__rhymes-word">{selectedWord}</span>
+              </div>
+              <div className="lyrics-modal__rhymes-list" ref={rhymesListRef}>
+                {isRhymesLoading ? (
+                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
+                    Loading...
+                  </span>
+                ) : rhymes.length ? (
+                  <>
+                    {rhymes.map((rhyme) => (
+                      <span className="lyrics-modal__rhymes-item" key={rhyme}>
+                        {rhyme}
+                      </span>
+                    ))}
+                    {rhymes.length >= rhymeLimit && (
+                      <button
+                        className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
+                        type="button"
+                        onClick={handleLoadMoreRhymes}
+                      >
+                        More
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
+                    No rhymes found
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
