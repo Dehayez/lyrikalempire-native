@@ -17,6 +17,7 @@ export * from './Inputs';
 export * from './Modals';
 export { default as PlayingIndicator } from './PlayingIndicator';
 export * from './Playlists';
+export * from './PageContainer';
 export * from './Queue';
 export * from './SidePanel';
 export * from './StatCard';

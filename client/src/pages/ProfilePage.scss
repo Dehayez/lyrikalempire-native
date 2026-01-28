@@ -1,20 +1,93 @@
-.profile {
-    &-label {
-        margin-bottom: 8px !important;
-        font-weight: 700;
-    }
-    &-buttons {  
-        margin-top: 20px;
-        &-editing {
-            display: flex;
-            margin-left: 8px;
-            > *:nth-child(2) {
-                margin-left: 20px;
-            }
-        }
-    }
+@import '../globals/variables';
 
-    &-logout {
-        margin-top: 40px;
+.profile-page {
+    display: grid;
+    gap: 24px;
+}
+
+.profile-page__card {
+    background-color: $color-black;
+    border-radius: 10px;
+    padding: 24px;
+    border: $border-bottom-dark;
+    box-shadow: $box-shadow-card;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+
+    &--session {
+        border: $border;
     }
+}
+
+.profile-page__card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    @media (max-width: 720px) {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.profile-page__card-title {
+    margin: 0;
+    font-size: 20px;
+}
+
+.profile-page__card-subtitle {
+    margin: 6px 0 0;
+    color: $color-gray-light;
+}
+
+.profile-page__fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+
+    @media (max-width: 720px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.profile-page__field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-page__label {
+    margin: 0;
+    font-weight: 700;
+    color: $color-gray-light;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+
+.profile-page__value {
+    margin: 0;
+    padding: 10px 0;
+    font-size: 16px;
+}
+
+.profile-page__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.profile-page__error {
+    margin: 0;
+    color: $color-warning;
+    background-color: $color-warning-bg;
+    border: $border-warning;
+    padding: 10px 12px;
+    border-radius: 6px;
+}
+
+.profile-page__logout {
+    align-self: flex-start;
 }

@@ -1,0 +1,65 @@
+@import '../../globals/variables';
+
+.page-container {
+    height: 100%;
+    overflow: auto;
+    padding: 24px;
+    @include hide-scrollbar;
+
+    @media (max-width: 900px) {
+        padding: 20px 16px;
+    }
+
+    @media (max-width: 600px) {
+        padding: 16px 12px;
+    }
+}
+
+.page-container__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-height: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+}
+
+.page-container__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    @media (max-width: 720px) {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.page-container__title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.page-container__title {
+    margin: 0;
+    font-size: 28px;
+}
+
+.page-container__subtitle {
+    margin: 0;
+    color: $color-gray-light;
+}
+
+.page-container__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-container__body {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}

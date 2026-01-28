@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from '../contexts/UserContext';
 import userService from '../services/userService';
-import { FormInput, Button } from '../components';
+import { Button, FormInput, PageContainer } from '../components';
 import { IoLogOutOutline } from "react-icons/io5";
 
 import './ProfilePage.scss';
@@ -39,38 +39,78 @@ const ProfilePage = () => {
   };
 
   return (
-    <div>
-      <h1>Profile Page</h1>
-      {error && <p>{error}</p>}
-      <div>
-        <p className='profile-label'>Email</p>
-        <p>{email}</p>
-      </div>
-      <div>
-        <p className='profile-label'>Username</p>
-        {isEditing ? (
-          <FormInput type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
-        ) : (
-          <p style={{ margin: '0', padding: '12px 0' }}>{username}</p>
-        )}
-      </div>
-      <div className='profile-buttons'>
-        {isEditing ? (
-          <div className='profile-buttons-editing'>
-            <Button variant='transparent' onClick={handleCancel} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button variant='primary' onClick={handleSave} disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save'}
-            </Button>
+    <PageContainer
+      title="Profile"
+      subtitle="Manage your account details and preferences."
+    >
+      <div className="profile-page">
+        <section className="profile-page__card profile-page__card--details">
+          <div className="profile-page__card-header">
+            <div>
+              <h2 className="profile-page__card-title">Account details</h2>
+              <p className="profile-page__card-subtitle">Keep your info up to date.</p>
+            </div>
+            {!isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                Edit
+              </Button>
+            )}
           </div>
-        ) : (
-            <Button variant='outline' onClick={() => setIsEditing(true)}>Edit</Button>
-        )}
-        
+
+          <div className="profile-page__fields">
+            <div className="profile-page__field">
+              <p className="profile-page__label">Email</p>
+              <p className="profile-page__value">{email}</p>
+            </div>
+            <div className="profile-page__field">
+              <p className="profile-page__label">Username</p>
+              {isEditing ? (
+                <FormInput
+                  id="profile-username"
+                  label="Username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              ) : (
+                <p className="profile-page__value">{username}</p>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <p className="profile-page__error" role="alert">
+              {error}
+            </p>
+          )}
+
+          {isEditing && (
+            <div className="profile-page__actions">
+              <Button variant="transparent" onClick={handleCancel} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={handleSave} disabled={isLoading}>
+                {isLoading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          )}
+        </section>
+
+        <section className="profile-page__card profile-page__card--session">
+          <div className="profile-page__card-header">
+            <div>
+              <h2 className="profile-page__card-title">Session</h2>
+              <p className="profile-page__card-subtitle">
+                Log out from this device whenever you need.
+              </p>
+            </div>
+          </div>
+          <Button className="profile-page__logout" variant="transparent" onClick={logout}>
+            Log Out <IoLogOutOutline />
+          </Button>
+        </section>
       </div>
-      <Button className='profile-logout' variant='transparent' onClick={logout}>Log Out <IoLogOutOutline/></Button>
-    </div>
+    </PageContainer>
   );
 };
 
