@@ -264,9 +264,12 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     if (selectionStart === selectionEnd) return '';
 
     const selectedText = value.slice(selectionStart, selectionEnd);
-    const match = selectedText.match(/[A-Za-z']+/);
+    const words = selectedText.match(/[A-Za-z']+/g);
 
-    return match ? match[0].toLowerCase() : '';
+    if (!words || !words.length) return '';
+
+    const phrase = words.slice(-3).join(' ').toLowerCase();
+    return phrase;
   }, []);
 
   const handleSelectionChange = useCallback((event) => {
@@ -288,15 +291,26 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
 
     const controller = new AbortController();
     setIsRhymesLoading(true);
+    const hasMultipleWords = selectedWord.trim().includes(' ');
+    const fallbackWord = selectedWord.trim().split(' ').slice(-1)[0];
+    const fetchRhymes = (query) => {
+      return fetch(`https://api.datamuse.com/words?rel_rhy=${encodeURIComponent(query)}&max=${rhymeLimit}`, {
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch rhymes');
+          }
+          return response.json();
+        });
+    };
 
-    fetch(`https://api.datamuse.com/words?rel_rhy=${encodeURIComponent(selectedWord)}&max=${rhymeLimit}`, {
-      signal: controller.signal,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch rhymes');
+    fetchRhymes(selectedWord)
+      .then((data) => {
+        if (hasMultipleWords && (!Array.isArray(data) || !data.length) && fallbackWord) {
+          return fetchRhymes(fallbackWord);
         }
-        return response.json();
+        return data;
       })
       .then((data) => {
         const nextRhymes = Array.isArray(data)
