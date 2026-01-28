@@ -228,6 +228,7 @@
     .lyrics-modal__body {
       flex-direction: column;
       gap: 0;
+      position: relative;
       padding-bottom: var(--rhymes-bar-height, 0px);
     }
 
@@ -239,7 +240,7 @@
 
     .lyrics-modal__rhymes-bar {
       --rhymes-bar-height: 88px;
-      position: fixed;
+      position: absolute;
       left: 0;
       right: 0;
       bottom: calc(var(--keyboard-offset, 0px) + env(safe-area-inset-bottom, 0px));
