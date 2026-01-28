@@ -44,6 +44,9 @@ const MODAL_STYLE = {
   },
 };
 
+const LYRICS_SAVE_DEBOUNCE_MS = 1200;
+const LYRICS_POLL_INTERVAL_MS = 2000;
+
 const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   const location = useLocation();
   const isAuthRoute = useMemo(() => isAuthPage(location.pathname), [location.pathname]);
@@ -55,6 +58,13 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   const lyricsRetryCount = useRef(0);
   const rhymesListRef = useRef(null);
   const pendingRhymesScrollPosition = useRef({ left: null, top: null });
+  const saveTimeoutRef = useRef(null);
+  const pendingLyricsRef = useRef('');
+  const lastSyncedLyricsRef = useRef('');
+  const currentLyricsRef = useRef('');
+  const scheduleLyricsSaveRef = useRef(null);
+  const isSavingRef = useRef(false);
+  const isDirtyRef = useRef(false);
 
   const [lyrics, setLyrics] = useState('');
   const [lyricsId, setLyricsId] = useState(null);
@@ -77,6 +87,10 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
   useLocalStorageSync({ dimensions, position });
 
   useEffect(() => {
+    currentLyricsRef.current = lyrics;
+  }, [lyrics]);
+
+  useEffect(() => {
     if (!beatId) return;
 
     const fetchLyrics = async () => {
@@ -87,24 +101,38 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
           const lyricsAssoc = beat.lyrics[0];
           if (lyricsAssoc?.lyrics_id) {
             const [lyricData] = await getLyricsById(lyricsAssoc.lyrics_id);
-            setLyrics(lyricData?.lyrics || '');
+            const nextLyrics = lyricData?.lyrics || '';
+            setLyrics(nextLyrics);
             setLyricsId(lyricsAssoc.lyrics_id);
+            pendingLyricsRef.current = nextLyrics;
+            lastSyncedLyricsRef.current = nextLyrics;
+            isDirtyRef.current = false;
             lyricsRetryCount.current = 0; // Reset retry counter on success
           } else {
             setLyrics('');
             setLyricsId(null);
+            pendingLyricsRef.current = '';
+            lastSyncedLyricsRef.current = '';
+            isDirtyRef.current = false;
           }
         } else {
           // Fallback to API call if beat prop doesn't have lyrics
           const [assoc] = await getAssociationsByBeatId(beatId, 'lyrics');
           if (assoc?.lyrics_id) {
             const [lyricData] = await getLyricsById(assoc.lyrics_id);
-            setLyrics(lyricData?.lyrics || '');
+            const nextLyrics = lyricData?.lyrics || '';
+            setLyrics(nextLyrics);
             setLyricsId(assoc.lyrics_id);
+            pendingLyricsRef.current = nextLyrics;
+            lastSyncedLyricsRef.current = nextLyrics;
+            isDirtyRef.current = false;
             lyricsRetryCount.current = 0; // Reset retry counter on success
           } else {
             setLyrics('');
             setLyricsId(null);
+            pendingLyricsRef.current = '';
+            lastSyncedLyricsRef.current = '';
+            isDirtyRef.current = false;
           }
         }
       } catch (err) {
@@ -131,22 +159,103 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     return undefined;
   }, [lyricsModal]);
 
-  const handleLyricsChange = async (e) => {
+  const performLyricsSave = useCallback((lyricsToSave) => {
+    if (!beatId || lyricsToSave === null || typeof lyricsToSave === 'undefined') return;
+
+    isSavingRef.current = true;
+
+    const saveRequest = lyricsId
+      ? updateLyricsById(lyricsId, lyricsToSave)
+      : createLyrics(lyricsToSave).then((newId) => {
+          setLyricsId(newId);
+          return addAssociationsToBeat(beatId, 'lyrics', newId);
+        });
+
+    saveRequest
+      .then(() => {
+        lastSyncedLyricsRef.current = lyricsToSave;
+        if (pendingLyricsRef.current === lyricsToSave) {
+          isDirtyRef.current = false;
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to update/create lyrics:', err);
+      })
+      .finally(() => {
+        isSavingRef.current = false;
+        if (pendingLyricsRef.current !== lyricsToSave && scheduleLyricsSaveRef.current) {
+          scheduleLyricsSaveRef.current(pendingLyricsRef.current);
+        }
+      });
+  }, [beatId, lyricsId]);
+
+  const scheduleLyricsSave = useCallback((lyricsToSave) => {
+    if (!beatId) return;
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    pendingLyricsRef.current = lyricsToSave;
+
+    if (isSavingRef.current) return;
+
+    saveTimeoutRef.current = setTimeout(() => {
+      performLyricsSave(pendingLyricsRef.current);
+    }, LYRICS_SAVE_DEBOUNCE_MS);
+  }, [beatId, performLyricsSave]);
+
+  useEffect(() => {
+    scheduleLyricsSaveRef.current = scheduleLyricsSave;
+  }, [scheduleLyricsSave]);
+
+  const flushLyricsSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    if (!isDirtyRef.current || isSavingRef.current) return;
+
+    performLyricsSave(pendingLyricsRef.current);
+  }, [performLyricsSave]);
+
+  const handleLyricsChange = useCallback((e) => {
     const newLyrics = e.target.value;
     setLyrics(newLyrics);
+    isDirtyRef.current = true;
+    scheduleLyricsSave(newLyrics);
+  }, [scheduleLyricsSave]);
 
-    try {
-      if (lyricsId) {
-        await updateLyricsById(lyricsId, newLyrics);
-      } else {
-        const newId = await createLyrics(newLyrics);
-        setLyricsId(newId);
-        await addAssociationsToBeat(beatId, 'lyrics', newId);
-      }
-    } catch (err) {
-      console.error('Failed to update/create lyrics:', err);
-    }
-  };
+  useEffect(() => {
+    if (lyricsModal) return undefined;
+
+    flushLyricsSave();
+    return undefined;
+  }, [lyricsModal, flushLyricsSave]);
+
+  useEffect(() => {
+    if (!lyricsModal || !lyricsId) return undefined;
+
+    const pollLyrics = () => {
+      if (isDirtyRef.current || isSavingRef.current) return;
+
+      getLyricsById(lyricsId)
+        .then(([lyricData]) => {
+          const nextLyrics = lyricData?.lyrics || '';
+          if (nextLyrics !== lastSyncedLyricsRef.current) {
+            if (nextLyrics !== currentLyricsRef.current) {
+              setLyrics(nextLyrics);
+            }
+            lastSyncedLyricsRef.current = nextLyrics;
+            pendingLyricsRef.current = nextLyrics;
+          }
+        })
+        .catch(() => {});
+    };
+
+    const intervalId = setInterval(pollLyrics, LYRICS_POLL_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [lyricsModal, lyricsId]);
 
   const getSelectedWord = useCallback((textarea) => {
     if (!textarea) return '';
