@@ -10,7 +10,7 @@ import { useBeat, useUser, useWebSocket } from './contexts';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { updateBeat as updateBeatService } from './services/beatService';
 
-import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, KeywordsPage, FeaturesPage, LoginPage, RegisterPage, ConfirmEmailPage, RequestPasswordResetPage, ResetPasswordPage, ProfilePage } from './pages';
+import { DashboardPage, BeatsPage, PlaylistsPage, GenresPage, MoodsPage, KeywordsPage, FeaturesPage, LoginPage, RegisterPage, ConfirmEmailPage, RequestPasswordResetPage, ResetPasswordPage, ProfilePage, SettingsPage } from './pages';
 import { Header, BeatList, AddBeatForm, AddBeatButton, AudioPlayer, Footer, Queue, Playlists, RightSidePanel, LeftSidePanel, History, PlaylistDetail, LyricsModal, IconButton, PlayingIndicator, Intro } from './components';
 import NotFound from './components/NotFound';
 
@@ -105,6 +105,7 @@ function App() {
     handleMouseLeaveRight,
     toggleSidePanel,
     closeSidePanel,
+    setPanelState,
   } = usePanels();
   
   useLocalStorageSync({
@@ -119,6 +120,32 @@ function App() {
     sortConfig,
     lyricsModal,
   });
+
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      const { key, value } = event.detail || {};
+      if (!key) return;
+
+      if (key === 'defaultView') {
+        setViewState(value);
+      }
+      if (key === 'shuffleOnStart') {
+        setShuffle(Boolean(value));
+      }
+      if (key === 'repeatMode') {
+        setRepeat(value);
+      }
+      if (key === 'leftPanelPinned') {
+        setPanelState('left', Boolean(value));
+      }
+      if (key === 'rightPanelPinned') {
+        setPanelState('right', Boolean(value));
+      }
+    };
+
+    window.addEventListener('settingsUpdated', handleSettingsUpdate);
+    return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
+  }, [setPanelState, setViewState, setShuffle, setRepeat]);
 
   // Performance panel service refs (lazy loaded)
   const networkThrottleServiceRef = useRef(null);
@@ -511,6 +538,7 @@ function App() {
               <Route path="/dashboard/keywords" element={<ProtectedRoute element={<KeywordsPage />} />} />
               <Route path="/dashboard/features" element={<ProtectedRoute element={<FeaturesPage />} />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/confirm-email" element={<ConfirmEmailPage />} />

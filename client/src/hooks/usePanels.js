@@ -89,6 +89,34 @@ export const usePanels = () => {
     }, 200);
   };
 
+  const setPanelState = (panel, isOpen) => {
+    if (leftHoverTimeoutRef.current) {
+      clearTimeout(leftHoverTimeoutRef.current);
+      leftHoverTimeoutRef.current = null;
+    }
+    if (rightHoverTimeoutRef.current) {
+      clearTimeout(rightHoverTimeoutRef.current);
+      rightHoverTimeoutRef.current = null;
+    }
+
+    if (panel === 'left') {
+      setIsLeftPanelVisible(isOpen);
+      setIsLeftDivVisible(isOpen);
+    } else if (panel === 'right') {
+      setIsRightPanelVisible(isOpen);
+      setIsRightDivVisible(isOpen);
+    } else if (panel === 'both') {
+      setIsLeftPanelVisible(isOpen);
+      setIsLeftDivVisible(isOpen);
+      setIsRightPanelVisible(isOpen);
+      setIsRightDivVisible(isOpen);
+    }
+    setAllowHover(false);
+    setTimeout(() => {
+      setAllowHover(true);
+    }, 200);
+  };
+
   const closeSidePanel = (panel) => {
     // Clear any pending timeouts when closing
     if (leftHoverTimeoutRef.current) {
@@ -140,5 +168,6 @@ export const usePanels = () => {
     handleMouseLeaveRight,
     toggleSidePanel,
     closeSidePanel,
+    setPanelState,
   };
 };

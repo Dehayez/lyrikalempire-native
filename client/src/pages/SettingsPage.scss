@@ -1,0 +1,158 @@
+@import '../globals/variables';
+
+.settings-page {
+  display: grid;
+  gap: 24px;
+  padding-bottom: 120px;
+
+  @media (max-width: 900px) {
+    padding-bottom: 140px;
+  }
+
+  @media (max-width: 600px) {
+    padding-bottom: 160px;
+  }
+}
+
+.settings-page__card {
+  background-color: $color-black;
+  border-radius: 10px;
+  padding: 24px;
+  border: $border-bottom-dark;
+  box-shadow: $box-shadow-card;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &--compact {
+    gap: 16px;
+  }
+}
+
+.settings-page__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.settings-page__card-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.settings-page__card-subtitle {
+  margin: 6px 0 0;
+  color: $color-gray-light;
+}
+
+.settings-page__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-page__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid $color-gray-dark;
+  background-color: rgba($color-black, 0.6);
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  &--stacked {
+    align-items: flex-start;
+  }
+}
+
+.settings-page__row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-page__label {
+  margin: 0;
+  font-weight: 700;
+  color: $color-gray-light;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.settings-page__description {
+  margin: 0;
+  color: $color-gray-default;
+}
+
+.settings-page__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: $color-white;
+
+  input {
+    width: 18px;
+    height: 18px;
+    accent-color: $color-primary;
+  }
+}
+
+.settings-page__toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.settings-page__toggle-text {
+  font-weight: 600;
+}
+
+.settings-page__select {
+  min-width: 200px;
+
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    background-color: $color-gray-dark;
+    border: 1px solid $color-gray-mid;
+    border-radius: 8px;
+    color: $color-white;
+    font-size: 14px;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+    }
+  }
+
+  @media (max-width: 720px) {
+    width: 100%;
+  }
+}
+
+.settings-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-page__note {
+  margin: 0;
+  color: $color-gray-light;
+  font-size: 13px;
+}

@@ -478,6 +478,7 @@ export const useAudioPlayerState = ({
     showLoadingAnimation,
     isCachedAudio,
     waveform,
+    setWaveform,
     isFullPage,
     setIsFullPage,
     isFullPageVisible,

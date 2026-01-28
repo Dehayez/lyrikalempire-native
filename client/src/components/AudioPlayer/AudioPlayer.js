@@ -189,6 +189,7 @@ const AudioPlayer = ({
     showLoadingAnimation,
     isCachedAudio,
     waveform,
+    setWaveform,
     isFullPage,
     setIsFullPage,
     isFullPageVisible,
@@ -271,6 +272,30 @@ const AudioPlayer = ({
     isReturningFromLyrics,
     setIsReturningFromLyrics
   });
+
+  useEffect(() => {
+    const handleSettingsUpdate = (event) => {
+      const { key, value } = event.detail || {};
+      if (!key) return;
+
+      if (key === 'showWaveform') {
+        setWaveform(Boolean(value));
+      }
+
+      if (key === 'openFullPlayer') {
+        const shouldOpen = Boolean(value);
+        if (shouldOpen && !isFullPage) {
+          toggleFullPagePlayer();
+        }
+        if (!shouldOpen && isFullPage) {
+          toggleFullPagePlayer();
+        }
+      }
+    };
+
+    window.addEventListener('settingsUpdated', handleSettingsUpdate);
+    return () => window.removeEventListener('settingsUpdated', handleSettingsUpdate);
+  }, [setWaveform, isFullPage, toggleFullPagePlayer]);
 
   // Create audioCore and audioInteractions objects for useAudioSync
   const audioCore = {

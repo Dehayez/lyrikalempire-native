@@ -11,3 +11,4 @@ export { default as ConfirmEmailPage } from './ConfirmEmailPage';
 export { default as RequestPasswordResetPage } from './RequestPasswordResetPage';
 export { default as ResetPasswordPage } from './ResetPasswordPage';
 export { default as ProfilePage } from './ProfilePage';
+export { default as SettingsPage } from './SettingsPage';
