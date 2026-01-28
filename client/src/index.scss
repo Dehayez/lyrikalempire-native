@@ -54,3 +54,11 @@ td {
 *::-webkit-scrollbar-track {
   background-color: $color-gray-dark;
 }
+
+::selection {
+  background-color: $color-primary-bg-hover;
+}
+
+::-moz-selection {
+  background-color: $color-primary-bg-hover;
+}
