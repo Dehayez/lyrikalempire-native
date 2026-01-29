@@ -274,6 +274,8 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     return phrase;
   }, []);
 
+  const textareaRef = useRef(null);
+
   const handleSelectionChange = useCallback((event) => {
     const nextWord = getSelectedWord(event.target);
     if (nextWord !== selectedWord) {
@@ -283,6 +285,27 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     }
     setSelectedWord((prev) => (prev === nextWord ? prev : nextWord));
   }, [getSelectedWord, selectedWord]);
+
+  // Mobile selection detection via document selectionchange event
+  useEffect(() => {
+    if (!isMobile || !lyricsModal) return undefined;
+
+    const handleDocumentSelectionChange = () => {
+      if (!textareaRef.current) return;
+      const nextWord = getSelectedWord(textareaRef.current);
+      if (nextWord !== selectedWord) {
+        setRhymeLimit(24);
+        setIsMorePending(false);
+        pendingRhymesScrollPosition.current = { left: null, top: null };
+      }
+      setSelectedWord((prev) => (prev === nextWord ? prev : nextWord));
+    };
+
+    document.addEventListener('selectionchange', handleDocumentSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleDocumentSelectionChange);
+    };
+  }, [isMobile, lyricsModal, getSelectedWord, selectedWord]);
 
   useEffect(() => {
     if (!selectedWord) {
@@ -552,6 +575,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
           <div className="lyrics-modal__editor">
             <FormTextarea
               id="lyrics-modal__textarea"
+              inputRef={textareaRef}
               value={lyrics}
               onChange={handleLyricsChange}
               onSelect={handleSelectionChange}

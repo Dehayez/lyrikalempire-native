@@ -40,11 +40,9 @@
 
     &--mobile {
       height: calc(100vh - 127px);
-      overflow-y: auto;
 
       & .modal-content {
         min-width: 0;
-        overflow: visible;
       }
     }
   }
@@ -281,9 +279,7 @@
     }
 
     .lyrics-modal__rhymes-bar {
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
+      display: block;
       width: 100%;
       padding: 0;
       background: $color-gray-dark;
