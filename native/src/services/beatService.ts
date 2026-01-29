@@ -13,10 +13,10 @@ export interface Beat {
   duration: number;
   created_at: string;
   user_id: string;
-  genres?: { id: number; name: string }[];
-  moods?: { id: number; name: string }[];
-  keywords?: { id: number; name: string }[];
-  features?: { id: number; name: string }[];
+  genres?: { genre_id: number; name: string }[];
+  moods?: { mood_id: number; name: string }[];
+  keywords?: { keyword_id: number; name: string }[];
+  features?: { feature_id: number; name: string }[];
 }
 
 export const getSignedUrl = async (userId: string, fileName: string): Promise<string> => {

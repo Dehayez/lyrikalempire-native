@@ -3,5 +3,6 @@ export * from './beatService';
 export * from './playlistService';
 export * from './genreService';
 export * from './moodService';
+export * from './keywordService';
 
 export { default as userService } from './userService';

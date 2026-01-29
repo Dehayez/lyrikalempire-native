@@ -17,6 +17,9 @@ import { BeatCard } from '../../components';
 import { AudioPlayer } from '../../components/AudioPlayer';
 import FilterModal, { FilterOption } from '../../components/FilterModal';
 import { Beat } from '../../services/beatService';
+import { getGenres, Genre } from '../../services/genreService';
+import { getMoods, Mood } from '../../services/moodService';
+import { getKeywords, Keyword } from '../../services/keywordService';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 
 type FilterType = 'tierlist' | 'genres' | 'moods' | 'keywords';
@@ -61,6 +64,11 @@ const HomeScreen: React.FC = () => {
   const [selectedMoods, setSelectedMoods] = useState<(string | number)[]>([]);
   const [selectedKeywords, setSelectedKeywords] = useState<(string | number)[]>([]);
   
+  // All available genres, moods, keywords from database
+  const [allGenres, setAllGenres] = useState<Genre[]>([]);
+  const [allMoods, setAllMoods] = useState<Mood[]>([]);
+  const [allKeywords, setAllKeywords] = useState<Keyword[]>([]);
+  
   // Bottom padding for list content
   const bottomPadding = spacing.xl;
 
@@ -69,6 +77,25 @@ const HomeScreen: React.FC = () => {
       setRefreshing(false);
     }
   }, [isLoadingFresh]);
+
+  // Fetch all genres, moods, and keywords from database
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      try {
+        const [genresData, moodsData, keywordsData] = await Promise.all([
+          getGenres(),
+          getMoods(),
+          getKeywords(),
+        ]);
+        setAllGenres(genresData);
+        setAllMoods(moodsData);
+        setAllKeywords(keywordsData);
+      } catch (error) {
+        console.error('Error fetching filter data:', error);
+      }
+    };
+    fetchFilterData();
+  }, []);
 
   // Calculate filter options from beats
   const tierlistOptions = useMemo((): FilterOption[] => {
@@ -98,49 +125,64 @@ const HomeScreen: React.FC = () => {
   }, [beats]);
 
   const genreOptions = useMemo((): FilterOption[] => {
-    const counts: Record<number, { name: string; count: number }> = {};
+    // Calculate counts from beats
+    const counts: Record<number, number> = {};
     beats.forEach(beat => {
       beat.genres?.forEach(genre => {
-        if (!counts[genre.id]) {
-          counts[genre.id] = { name: genre.name, count: 0 };
-        }
-        counts[genre.id].count++;
+        const genreId = genre.genre_id;
+        counts[genreId] = (counts[genreId] || 0) + 1;
       });
     });
-    return Object.entries(counts)
-      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [beats]);
+    
+    // Return all genres from database with their counts
+    return allGenres
+      .map(genre => ({ 
+        id: genre.id, 
+        name: genre.name, 
+        count: counts[genre.id] || 0 
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [beats, allGenres]);
 
   const moodOptions = useMemo((): FilterOption[] => {
-    const counts: Record<number, { name: string; count: number }> = {};
+    // Calculate counts from beats
+    const counts: Record<number, number> = {};
     beats.forEach(beat => {
       beat.moods?.forEach(mood => {
-        if (!counts[mood.id]) {
-          counts[mood.id] = { name: mood.name, count: 0 };
-        }
-        counts[mood.id].count++;
+        const moodId = mood.mood_id;
+        counts[moodId] = (counts[moodId] || 0) + 1;
       });
     });
-    return Object.entries(counts)
-      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [beats]);
+    
+    // Return all moods from database with their counts
+    return allMoods
+      .map(mood => ({ 
+        id: mood.id, 
+        name: mood.name, 
+        count: counts[mood.id] || 0 
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [beats, allMoods]);
 
   const keywordOptions = useMemo((): FilterOption[] => {
-    const counts: Record<number, { name: string; count: number }> = {};
+    // Calculate counts from beats
+    const counts: Record<number, number> = {};
     beats.forEach(beat => {
       beat.keywords?.forEach(keyword => {
-        if (!counts[keyword.id]) {
-          counts[keyword.id] = { name: keyword.name, count: 0 };
-        }
-        counts[keyword.id].count++;
+        const keywordId = keyword.keyword_id;
+        counts[keywordId] = (counts[keywordId] || 0) + 1;
       });
     });
-    return Object.entries(counts)
-      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [beats]);
+    
+    // Return all keywords from database with their counts
+    return allKeywords
+      .map(keyword => ({ 
+        id: keyword.id, 
+        name: keyword.name, 
+        count: counts[keyword.id] || 0 
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [beats, allKeywords]);
 
   // Filter beats based on selected filters
   const filteredBeats = useMemo(() => {
@@ -169,21 +211,21 @@ const HomeScreen: React.FC = () => {
     // Apply genre filter
     if (selectedGenres.length > 0) {
       result = result.filter(beat =>
-        beat.genres?.some(g => selectedGenres.includes(g.id))
+        beat.genres?.some(g => selectedGenres.includes(g.genre_id))
       );
     }
 
     // Apply mood filter
     if (selectedMoods.length > 0) {
       result = result.filter(beat =>
-        beat.moods?.some(m => selectedMoods.includes(m.id))
+        beat.moods?.some(m => selectedMoods.includes(m.mood_id))
       );
     }
 
     // Apply keyword filter
     if (selectedKeywords.length > 0) {
       result = result.filter(beat =>
-        beat.keywords?.some(k => selectedKeywords.includes(k.id))
+        beat.keywords?.some(k => selectedKeywords.includes(k.keyword_id))
       );
     }
 
