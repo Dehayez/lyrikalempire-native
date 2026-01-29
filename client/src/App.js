@@ -5,7 +5,7 @@ import { IoPersonSharp, IoSettingsSharp, IoSpeedometer } from "react-icons/io5";
 import classNames from 'classnames';
 
 import { isMobileOrTablet, getInitialState, isAuthPage } from './utils';
-import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache } from './hooks';
+import { useSort, useDragAndDrop, useLocalStorageSync, useAudioPlayer, usePanels, useAudioCache, useKeyboardInset } from './hooks';
 import { useBeat, useUser, useWebSocket } from './contexts';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { updateBeat as updateBeatService } from './services/beatService';
@@ -31,6 +31,7 @@ function App() {
   const { emitBeatChange } = useWebSocket();
   const { isDraggingOver, droppedFiles, clearDroppedFiles } = useDragAndDrop(setRefreshBeats, user.id);
   const { preloadQueue, checkBeatsCacheStatus, markBeatAsCached, isBeatCachedSync } = useAudioCache();
+  useKeyboardInset();
 
   // Core state
   const [viewState, setViewState] = useState(() => getInitialState('lastView', 'queue'));

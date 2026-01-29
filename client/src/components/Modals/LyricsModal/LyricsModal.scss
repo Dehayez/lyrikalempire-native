@@ -146,12 +146,15 @@
   }
 
   .lyrics-modal__rhymes-bar {
-    position: sticky;
-    bottom: var(--keyboard-offset, 0px);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--keyboard-inset, 0px);
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     background: $color-gray-dark;
     border-top: $border-bottom-dark;
     z-index: 2;
+    transition: bottom 0.2s ease;
   }
 
   .lyrics-modal__rhymes-header {
@@ -263,10 +266,8 @@
 
     .lyrics-modal__rhymes-bar {
       --rhymes-bar-height: 88px;
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: calc(var(--keyboard-offset, 0px) + env(safe-area-inset-bottom, 0px));
+      position: fixed;
+      bottom: calc(var(--keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px));
       z-index: 30;
     }
   }

@@ -44,6 +44,28 @@ const MODAL_STYLE = {
   },
 };
 
+const MOBILE_MODAL_STYLE = {
+  overlay: {
+    backgroundColor: 'transparent',
+    zIndex: 10,
+    pointerEvents: 'none',
+  },
+  content: {
+    backgroundColor: 'transparent',
+    color: 'white',
+    border: 'none',
+    height: 'var(--viewport-height, 100vh)',
+    width: '100%',
+    margin: 0,
+    position: 'fixed',
+    top: 'var(--viewport-offset-top, 0px)',
+    left: 0,
+    right: 0,
+    transform: 'none',
+    pointerEvents: 'none',
+  },
+};
+
 const LYRICS_SAVE_DEBOUNCE_MS = 1200;
 const LYRICS_POLL_INTERVAL_MS = 2000;
 
@@ -599,12 +621,14 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     </div>
   );
 
+  const modalStyle = isMobile ? MOBILE_MODAL_STYLE : MODAL_STYLE;
+
   return (
     <Modal
       className={`lyrics-modal ${isFullscreen ? 'lyrics-modal--fullscreen' : ''}`}
       isOpen={lyricsModal}
       onRequestClose={handleCancel}
-      style={MODAL_STYLE}
+      style={modalStyle}
       shouldCloseOnOverlayClick={false}
     >
       {isMobile ? (

@@ -8,11 +8,16 @@
   padding-bottom: $safe-area-inset-bottom;
   width: 100%;
   background-color: $color-black;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--keyboard-inset, 0px);
+  z-index: 6;
 
   &--lyrics-modal-open {
-    position: absolute;
+    position: fixed;
     z-index: 11;
-    bottom: 0;
+    bottom: var(--keyboard-inset, 0px);
   }
 
   &__item {
