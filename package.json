@@ -22,5 +22,6 @@
     "sass-loader": "^16.0.2",
     "wait-on": "^7.2.0",
     "webpack": "^5.95.0"
-  }
+  },
+  "packageManager": "yarn@3.6.4"
 }
