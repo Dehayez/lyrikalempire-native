@@ -414,6 +414,10 @@ audio {
   }
 }
 
+.rhap_main {
+  flex-direction: column-reverse;
+}
+
 .rhap_container {
   background-color: transparent;
   box-shadow: none;
