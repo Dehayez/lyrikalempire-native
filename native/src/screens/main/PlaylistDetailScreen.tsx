@@ -71,12 +71,14 @@ const PlaylistDetailScreen: React.FC = () => {
   const renderBeatItem = useCallback(({ item, index }: { item: Beat; index: number }) => (
     <BeatCard
       beat={item}
+      index={index}
+      totalCount={beats.length}
       onPress={() => {}}
       onPlayPress={() => handlePlayBeat(item, index)}
       isPlaying={isPlaying}
       isCurrentBeat={currentBeat?.id === item.id}
     />
-  ), [currentBeat, isPlaying, handlePlayBeat]);
+  ), [currentBeat, isPlaying, handlePlayBeat, beats]);
 
   const keyExtractor = useCallback((item: Beat) => item.id.toString(), []);
 

@@ -294,12 +294,13 @@ const HomeScreen: React.FC = () => {
     <BeatCard
       beat={item}
       index={index}
+      totalCount={filteredBeats.length}
       onPress={() => {}}
       onPlayPress={() => handlePlayBeat(item, index)}
       isPlaying={isPlaying}
       isCurrentBeat={currentBeat?.id === item.id}
     />
-  ), [currentBeat, isPlaying, handlePlayBeat]);
+  ), [currentBeat, isPlaying, handlePlayBeat, filteredBeats]);
 
   const keyExtractor = useCallback((item: Beat) => item.id.toString(), []);
 

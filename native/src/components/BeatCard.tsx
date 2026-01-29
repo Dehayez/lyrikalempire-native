@@ -7,6 +7,7 @@ import { Beat } from '../services/beatService';
 interface BeatCardProps {
   beat: Beat;
   index: number;
+  totalCount: number;
   onPress: () => void;
   onPlayPress: () => void;
   isPlaying?: boolean;
@@ -16,6 +17,7 @@ interface BeatCardProps {
 const BeatCard: React.FC<BeatCardProps> = ({
   beat,
   index,
+  totalCount,
   onPress,
   onPlayPress,
   isPlaying = false,
@@ -35,7 +37,7 @@ const BeatCard: React.FC<BeatCardProps> = ({
     >
       {/* Track Number */}
       <Text style={[styles.trackNumber, isCurrentBeat && styles.textActive]}>
-        {index + 1}
+        {totalCount - index}
       </Text>
 
       {/* Title */}
