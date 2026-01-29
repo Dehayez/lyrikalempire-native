@@ -6,6 +6,7 @@ import { Beat } from '../services/beatService';
 
 interface BeatCardProps {
   beat: Beat;
+  index: number;
   onPress: () => void;
   onPlayPress: () => void;
   isPlaying?: boolean;
@@ -14,6 +15,7 @@ interface BeatCardProps {
 
 const BeatCard: React.FC<BeatCardProps> = ({
   beat,
+  index,
   onPress,
   onPlayPress,
   isPlaying = false,
@@ -28,33 +30,30 @@ const BeatCard: React.FC<BeatCardProps> = ({
   return (
     <TouchableOpacity
       style={[styles.container, isCurrentBeat && styles.containerActive]}
-      onPress={onPress}
+      onPress={onPlayPress}
       activeOpacity={0.7}
     >
-      <TouchableOpacity style={styles.playButton} onPress={onPlayPress}>
-        <Icon
-          name={isPlaying && isCurrentBeat ? 'pause' : 'play'}
-          size={24}
-          color={colors.primary}
-        />
-      </TouchableOpacity>
+      {/* Track Number */}
+      <Text style={[styles.trackNumber, isCurrentBeat && styles.textActive]}>
+        {index + 1}
+      </Text>
 
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={1}>
-          {beat.title}
-        </Text>
-        <View style={styles.metadata}>
-          {beat.bpm && (
-            <Text style={styles.metaText}>{beat.bpm} BPM</Text>
-          )}
-          {beat.duration && (
-            <Text style={styles.metaText}>{formatDuration(beat.duration)}</Text>
-          )}
-        </View>
-      </View>
+      {/* Title */}
+      <Text 
+        style={[styles.title, isCurrentBeat && styles.textActive]} 
+        numberOfLines={1}
+      >
+        {beat.title}
+      </Text>
 
-      <TouchableOpacity style={styles.moreButton}>
-        <Icon name="ellipsis-horizontal" size={20} color={colors.grayDefault} />
+      {/* Duration */}
+      <Text style={[styles.duration, isCurrentBeat && styles.textActive]}>
+        {beat.duration ? formatDuration(beat.duration) : '--:--'}
+      </Text>
+
+      {/* More Button */}
+      <TouchableOpacity style={styles.moreButton} onPress={onPress}>
+        <Icon name="ellipsis-horizontal" size={18} color={colors.grayDefault} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -64,43 +63,39 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.grayDark,
-    borderRadius: borderRadius.sm,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayDark,
   },
   containerActive: {
-    borderColor: colors.primary,
-    borderWidth: 1,
+    backgroundColor: 'rgba(255, 204, 68, 0.1)',
   },
-  playButton: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    color: colors.white,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    marginBottom: spacing.xs,
-  },
-  metadata: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  metaText: {
+  trackNumber: {
+    width: 40,
     color: colors.grayDefault,
     fontSize: fontSize.sm,
+    textAlign: 'center',
+  },
+  title: {
+    flex: 1,
+    color: colors.white,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    paddingHorizontal: spacing.sm,
+  },
+  duration: {
+    width: 50,
+    color: colors.grayDefault,
+    fontSize: fontSize.sm,
+    textAlign: 'right',
   },
   moreButton: {
     padding: spacing.sm,
+    marginLeft: spacing.xs,
+  },
+  textActive: {
+    color: colors.primary,
   },
 });
 

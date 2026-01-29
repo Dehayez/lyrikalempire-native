@@ -253,23 +253,41 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
 
   const playQueue = async (beats: Beat[], startIndex = 0): Promise<void> => {
     if (!isReady || beats.length === 0) return;
+    if (startIndex < 0 || startIndex >= beats.length) {
+      startIndex = 0;
+    }
+    
     try {
       await TrackPlayer.reset();
       setQueue(beats);
 
+      // Get the beat the user selected
+      const selectedBeat = beats[startIndex];
+      
+      let activeQueue: Beat[];
+      let trackIndex: number;
+      
       if (isShuffle) {
-        const shuffled = shuffleArray(beats);
-        setShuffledQueue(shuffled);
+        // Create shuffled queue with selected beat first
+        const otherBeats = beats.filter((_, i) => i !== startIndex);
+        const shuffledRest = shuffleArray(otherBeats);
+        activeQueue = [selectedBeat, ...shuffledRest];
+        setShuffledQueue(activeQueue);
+        trackIndex = 0; // Selected beat is always first in shuffle
+      } else {
+        activeQueue = beats;
+        trackIndex = startIndex;
       }
 
-      const activeQueue = isShuffle ? shuffleArray(beats) : beats;
       const tracks = await Promise.all(activeQueue.map(beatToTrack));
-
       await TrackPlayer.add(tracks);
-      await TrackPlayer.skip(startIndex);
+      
+      if (trackIndex > 0) {
+        await TrackPlayer.skip(trackIndex);
+      }
+      
       await TrackPlayer.play();
-
-      setCurrentBeat(activeQueue[startIndex]);
+      setCurrentBeat(selectedBeat);
     } catch (error) {
       console.error('Error playing queue:', error);
     }
