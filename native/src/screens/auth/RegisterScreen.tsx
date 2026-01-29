@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -99,6 +100,13 @@ const RegisterScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Sign up to get started with Lyrikal Empire</Text>
           </View>
@@ -182,6 +190,16 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xxl,
+    alignItems: 'center',
+  },
+  logoContainer: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
   },
   title: {
     fontSize: fontSize.xxxl,
