@@ -130,7 +130,10 @@
       margin: 0;
       border-radius: 20px 20px 0 0;
       z-index: 3;
-      padding-bottom: $safe-area-inset-bottom;
+
+      @media (display-mode: standalone) {
+        padding-bottom: $safe-area-inset-bottom;
+      }
       
       // Reset desktop transitions for mobile
       opacity: 1;

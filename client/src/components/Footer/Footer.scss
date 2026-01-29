@@ -5,9 +5,12 @@
   grid-template-columns: 1fr 1fr 1fr;
   justify-content: center;
   align-items: center;
-  padding-bottom: $safe-area-inset-bottom;
   width: 100%;
   background-color: $color-black;
+
+  @media (display-mode: standalone) {
+    padding-bottom: $safe-area-inset-bottom;
+  }
 
   &--lyrics-modal-open {
     position: absolute;
