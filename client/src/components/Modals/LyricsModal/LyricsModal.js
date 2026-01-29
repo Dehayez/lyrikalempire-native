@@ -444,17 +444,7 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
       >
         {isFullscreen ? <IoContract /> : <IoExpand />}
       </IconButton>
-      
     )}
-      <IconButton 
-        className="modal__close-button" 
-        onClick={handleCancel}
-        text="Close"
-        shortcutText="Esc"
-        tooltipPosition="left"
-      >
-        <IoCloseSharp />
-      </IconButton>
       {isMobile && selectedWord && (
         <div className="lyrics-modal__rhymes-bar" aria-live="polite">
           <div className="lyrics-modal__rhymes-header">
@@ -499,7 +489,18 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
           </div>
         </div>
       )}
-      <h2 className="modal__title">{title}</h2>
+      <div className="lyrics-modal__header">
+        <IconButton 
+          className="modal__close-button" 
+          onClick={handleCancel}
+          text="Close"
+          shortcutText="Esc"
+          tooltipPosition="left"
+        >
+          <IoCloseSharp />
+        </IconButton>
+        <h2 className="modal__title">{title}</h2>
+      </div>
       {!isMobile && selectedWord && (
         <div className="lyrics-modal__rhymes-bar lyrics-modal__rhymes-bar--desktop" aria-live="polite">
           <div className="lyrics-modal__rhymes-header">
