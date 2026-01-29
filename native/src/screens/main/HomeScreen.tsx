@@ -308,7 +308,9 @@ const HomeScreen: React.FC = () => {
     <View style={styles.tableHeader}>
       <Text style={styles.headerNumber}>#</Text>
       <Text style={styles.headerTitle}>Title</Text>
-      <Icon name="time-outline" size={16} color={colors.grayDefault} />
+      <View style={styles.headerTime}>
+        <Icon name="time-outline" size={16} color={colors.grayDefault} />
+      </View>
       <View style={styles.headerSpacer} />
     </View>
   );
@@ -535,8 +537,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     paddingHorizontal: spacing.sm,
   },
+  headerTime: {
+    width: 50,
+    alignItems: 'flex-end',
+  },
   headerSpacer: {
-    width: 50 + spacing.sm + spacing.sm,
+    width: spacing.xs + spacing.sm + spacing.sm + 18,
   },
   listWrapper: {
     flex: 1,
