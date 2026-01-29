@@ -62,16 +62,18 @@ const FilterModal: React.FC<FilterModalProps> = ({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Capture any downward drag (positive dy)
-        // This allows dragging from anywhere on the modal
-        // Only capture if the movement is primarily vertical and downward
+        // Only capture downward drags when list is at the top
+        const isAtTop = scrollOffset.current <= 0;
         const isDownward = gestureState.dy > 10;
         const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-        return isDownward && isVertical;
+        return isAtTop && isDownward && isVertical;
       },
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        // Don't capture upward movements - let FlatList handle them
-        return gestureState.dy > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        // Only capture downward drags when list is at the top
+        const isAtTop = scrollOffset.current <= 0;
+        const isDownward = gestureState.dy > 10;
+        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        return isAtTop && isDownward && isVertical;
       },
       onPanResponderGrant: () => {
         setIsDragging(true);
