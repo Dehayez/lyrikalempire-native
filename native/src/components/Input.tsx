@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   TextInput as RNTextInput,
@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors, spacing, borderRadius, fontSize } from '../theme';
@@ -55,63 +56,165 @@ const Input: React.FC<InputProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const labelPosition = useRef(new Animated.Value(!!value ? 1 : 0)).current;
+  const labelScale = useRef(new Animated.Value(!!value ? 1 : 0)).current;
+  const labelColorFocus = useRef(new Animated.Value(0)).current;
+  const borderColor = useRef(new Animated.Value(0)).current;
+  const labelBackgroundOpacity = useRef(new Animated.Value(!!value ? 1 : 0)).current;
+
   const isSecure = secureTextEntry && !showPassword;
+  const hasValue = !!value;
+  const shouldFloatLabel = isFocused || hasValue;
+  const displayLabel = label || placeholder || '';
+  // Never show native placeholder when we have a floating label
+  const displayPlaceholder = displayLabel ? '' : placeholder;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(labelPosition, {
+        toValue: shouldFloatLabel ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(labelScale, {
+        toValue: shouldFloatLabel ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(labelColorFocus, {
+        toValue: isFocused ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(borderColor, {
+        toValue: isFocused ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+      Animated.timing(labelBackgroundOpacity, {
+        toValue: shouldFloatLabel ? 1 : 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [isFocused, hasValue, shouldFloatLabel]);
+
+  const labelTop = labelPosition.interpolate({
+    inputRange: [0, 1],
+    outputRange: [spacing.sm + 2, -8],
+  });
+
+  const labelLeft = labelPosition.interpolate({
+    inputRange: [0, 1],
+    outputRange: [leftIcon ? spacing.md + 24 : spacing.md, leftIcon ? spacing.md + 8 : spacing.md],
+  });
+
+  const labelFontSize = labelScale.interpolate({
+    inputRange: [0, 1],
+    outputRange: [fontSize.md, fontSize.xs],
+  });
+
+  const animatedLabelColor = labelColorFocus.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.grayDefault, colors.primary],
+  });
+
+  const animatedBorderColor = borderColor.interpolate({
+    inputRange: [0, 1],
+    outputRange: [error ? colors.warning : colors.grayMid, error ? colors.warning : colors.primary],
+  });
 
   return (
     <View style={[styles.container, style]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View
-        style={[
-          styles.inputContainer,
-          isFocused && styles.inputContainerFocused,
-          error && styles.inputContainerError,
-          !editable && styles.inputContainerDisabled,
-        ]}
-      >
-        {leftIcon && (
-          <Icon name={leftIcon} size={20} color={colors.grayDefault} style={styles.leftIcon} />
-        )}
-        <RNTextInput
+      <View style={styles.inputWrapper}>
+        <Animated.View
           style={[
-            styles.input,
-            multiline && styles.multilineInput,
-            inputStyle,
+            styles.inputContainer,
+            {
+              borderColor: animatedBorderColor,
+            },
+            error && styles.inputContainerError,
+            !editable && styles.inputContainerDisabled,
           ]}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.grayDefault}
-          secureTextEntry={isSecure}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          autoComplete={autoComplete}
-          editable={editable}
-          multiline={multiline}
-          numberOfLines={numberOfLines}
-          maxLength={maxLength}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-        />
-        {secureTextEntry && (
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
-            style={styles.rightIcon}
+        >
+          {leftIcon && (
+            <Icon name={leftIcon} size={20} color={colors.grayDefault} style={styles.leftIcon} />
+          )}
+          <RNTextInput
+            style={[
+              styles.input,
+              multiline && styles.multilineInput,
+              inputStyle,
+            ]}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={displayPlaceholder}
+            placeholderTextColor={colors.grayDefault}
+            selectionColor={colors.primary}
+            secureTextEntry={isSecure}
+            keyboardType={keyboardType}
+            autoCapitalize={autoCapitalize}
+            autoComplete={autoComplete}
+            editable={editable}
+            multiline={multiline}
+            numberOfLines={numberOfLines}
+            maxLength={maxLength}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          />
+          {secureTextEntry && (
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.rightIcon}
+            >
+              <Icon
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color={colors.grayDefault}
+              />
+            </TouchableOpacity>
+          )}
+          {rightIcon && !secureTextEntry && (
+            <TouchableOpacity
+              onPress={onRightIconPress}
+              style={styles.rightIcon}
+              disabled={!onRightIconPress}
+            >
+              <Icon name={rightIcon} size={20} color={colors.grayDefault} />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+        {displayLabel && (
+          <Animated.View
+            style={[
+              styles.labelContainer,
+              {
+                top: labelTop,
+                left: labelLeft,
+              },
+            ]}
+            pointerEvents="none"
           >
-            <Icon
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={20}
-              color={colors.grayDefault}
+            <Animated.View
+              style={[
+                styles.labelBackground,
+                {
+                  opacity: labelBackgroundOpacity,
+                },
+              ]}
             />
-          </TouchableOpacity>
-        )}
-        {rightIcon && !secureTextEntry && (
-          <TouchableOpacity
-            onPress={onRightIconPress}
-            style={styles.rightIcon}
-            disabled={!onRightIconPress}
-          >
-            <Icon name={rightIcon} size={20} color={colors.grayDefault} />
-          </TouchableOpacity>
+            <Animated.Text
+              style={[
+                styles.floatingLabel,
+                {
+                  fontSize: labelFontSize,
+                  color: animatedLabelColor,
+                },
+              ]}
+            >
+              {displayLabel}
+            </Animated.Text>
+          </Animated.View>
         )}
       </View>
       {error && <Text style={styles.error}>{error}</Text>}
@@ -123,10 +226,8 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
-  label: {
-    color: colors.white,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.xs,
+  inputWrapper: {
+    position: 'relative',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -134,10 +235,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.grayDark,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.grayMid,
-  },
-  inputContainerFocused: {
-    borderColor: colors.primary,
   },
   inputContainerError: {
     borderColor: colors.warning,
@@ -162,6 +259,25 @@ const styles = StyleSheet.create({
   rightIcon: {
     marginRight: spacing.md,
     padding: spacing.xs,
+  },
+  labelContainer: {
+    position: 'absolute',
+    zIndex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  labelBackground: {
+    position: 'absolute',
+    left: -4,
+    right: -4,
+    top: 5,
+    height: 6,
+    backgroundColor: colors.black,
+  },
+  floatingLabel: {
+    paddingHorizontal: 2,
+    backgroundColor: 'transparent',
+    zIndex: 2,
   },
   error: {
     color: colors.warning,

@@ -20,7 +20,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const DISMISS_THRESHOLD = 80;
+const DISMISS_THRESHOLD = 150;
 
 export interface FilterOption {
   id: string | number;
