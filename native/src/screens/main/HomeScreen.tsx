@@ -15,22 +15,27 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useBeat, useAudio } from '../../contexts';
 import { BeatCard } from '../../components';
 import { AudioPlayer } from '../../components/AudioPlayer';
+import FilterModal, { FilterOption } from '../../components/FilterModal';
 import { Beat } from '../../services/beatService';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+
+type FilterType = 'tierlist' | 'genres' | 'moods' | 'keywords';
 
 interface FilterButtonProps {
   label: string;
   onPress: () => void;
   isActive?: boolean;
+  count?: number;
 }
 
-const FilterButton: React.FC<FilterButtonProps> = ({ label, onPress, isActive }) => (
+const FilterButton: React.FC<FilterButtonProps> = ({ label, onPress, isActive, count }) => (
   <TouchableOpacity 
     style={[styles.filterButton, isActive && styles.filterButtonActive]} 
     onPress={onPress}
   >
     <Text style={[styles.filterButtonText, isActive && styles.filterButtonTextActive]}>
       {label}
+      {count && count > 0 ? ` (${count})` : ''}
     </Text>
     <Icon 
       name="chevron-down" 
@@ -49,6 +54,13 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   
+  // Filter state
+  const [activeFilterType, setActiveFilterType] = useState<FilterType | null>(null);
+  const [selectedTierlists, setSelectedTierlists] = useState<(string | number)[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<(string | number)[]>([]);
+  const [selectedMoods, setSelectedMoods] = useState<(string | number)[]>([]);
+  const [selectedKeywords, setSelectedKeywords] = useState<(string | number)[]>([]);
+  
   // Bottom padding for list content
   const bottomPadding = spacing.xl;
 
@@ -58,14 +70,125 @@ const HomeScreen: React.FC = () => {
     }
   }, [isLoadingFresh]);
 
+  // Calculate filter options from beats
+  const tierlistOptions = useMemo((): FilterOption[] => {
+    const counts: Record<string, number> = {};
+    let noTierlistCount = 0;
+    
+    beats.forEach(beat => {
+      if (beat.tierlist) {
+        counts[beat.tierlist] = (counts[beat.tierlist] || 0) + 1;
+      } else {
+        noTierlistCount++;
+      }
+    });
+    
+    // Sort by tier order: M, G, S, A, B, C, D, E, F + No tierlist
+    const tierOrder = ['M', 'G', 'S', 'A', 'B', 'C', 'D', 'E', 'F'];
+    const options: FilterOption[] = tierOrder
+      .filter(tier => counts[tier])
+      .map(tier => ({ id: tier, name: tier, count: counts[tier] }));
+    
+    // Add "No tierlist" option if there are beats without tierlist
+    if (noTierlistCount > 0) {
+      options.push({ id: 'none', name: 'No tierlist', count: noTierlistCount });
+    }
+    
+    return options;
+  }, [beats]);
+
+  const genreOptions = useMemo((): FilterOption[] => {
+    const counts: Record<number, { name: string; count: number }> = {};
+    beats.forEach(beat => {
+      beat.genres?.forEach(genre => {
+        if (!counts[genre.id]) {
+          counts[genre.id] = { name: genre.name, count: 0 };
+        }
+        counts[genre.id].count++;
+      });
+    });
+    return Object.entries(counts)
+      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [beats]);
+
+  const moodOptions = useMemo((): FilterOption[] => {
+    const counts: Record<number, { name: string; count: number }> = {};
+    beats.forEach(beat => {
+      beat.moods?.forEach(mood => {
+        if (!counts[mood.id]) {
+          counts[mood.id] = { name: mood.name, count: 0 };
+        }
+        counts[mood.id].count++;
+      });
+    });
+    return Object.entries(counts)
+      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [beats]);
+
+  const keywordOptions = useMemo((): FilterOption[] => {
+    const counts: Record<number, { name: string; count: number }> = {};
+    beats.forEach(beat => {
+      beat.keywords?.forEach(keyword => {
+        if (!counts[keyword.id]) {
+          counts[keyword.id] = { name: keyword.name, count: 0 };
+        }
+        counts[keyword.id].count++;
+      });
+    });
+    return Object.entries(counts)
+      .map(([id, data]) => ({ id: parseInt(id), name: data.name, count: data.count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [beats]);
+
+  // Filter beats based on selected filters
   const filteredBeats = useMemo(() => {
-    if (!searchQuery.trim()) return beats;
-    const query = searchQuery.toLowerCase();
-    return beats.filter(beat =>
-      beat.title.toLowerCase().includes(query) ||
-      beat.bpm?.toString().includes(query)
-    );
-  }, [beats, searchQuery]);
+    let result = beats;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(beat =>
+        beat.title.toLowerCase().includes(query) ||
+        beat.bpm?.toString().includes(query)
+      );
+    }
+
+    // Apply tierlist filter
+    if (selectedTierlists.length > 0) {
+      result = result.filter(beat => {
+        if (selectedTierlists.includes('none')) {
+          // Include beats with no tierlist
+          if (!beat.tierlist) return true;
+        }
+        return beat.tierlist && selectedTierlists.includes(beat.tierlist);
+      });
+    }
+
+    // Apply genre filter
+    if (selectedGenres.length > 0) {
+      result = result.filter(beat =>
+        beat.genres?.some(g => selectedGenres.includes(g.id))
+      );
+    }
+
+    // Apply mood filter
+    if (selectedMoods.length > 0) {
+      result = result.filter(beat =>
+        beat.moods?.some(m => selectedMoods.includes(m.id))
+      );
+    }
+
+    // Apply keyword filter
+    if (selectedKeywords.length > 0) {
+      result = result.filter(beat =>
+        beat.keywords?.some(k => selectedKeywords.includes(k.id))
+      );
+    }
+
+    return result;
+  }, [beats, searchQuery, selectedTierlists, selectedGenres, selectedMoods, selectedKeywords]);
 
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
@@ -84,6 +207,46 @@ const HomeScreen: React.FC = () => {
       playQueue(filteredBeats, index);
     }
   }, [currentBeat, isPlaying, pause, resume, playQueue, filteredBeats]);
+
+  const getFilterModalProps = () => {
+    switch (activeFilterType) {
+      case 'tierlist':
+        return {
+          title: 'Tierlist',
+          options: tierlistOptions,
+          selectedIds: selectedTierlists,
+          onSelect: setSelectedTierlists,
+        };
+      case 'genres':
+        return {
+          title: 'Genres',
+          options: genreOptions,
+          selectedIds: selectedGenres,
+          onSelect: setSelectedGenres,
+        };
+      case 'moods':
+        return {
+          title: 'Moods',
+          options: moodOptions,
+          selectedIds: selectedMoods,
+          onSelect: setSelectedMoods,
+        };
+      case 'keywords':
+        return {
+          title: 'Keywords',
+          options: keywordOptions,
+          selectedIds: selectedKeywords,
+          onSelect: setSelectedKeywords,
+        };
+      default:
+        return {
+          title: '',
+          options: [],
+          selectedIds: [],
+          onSelect: () => {},
+        };
+    }
+  };
 
   const renderBeatItem = useCallback(({ item, index }: { item: Beat; index: number }) => (
     <BeatCard
@@ -115,7 +278,9 @@ const HomeScreen: React.FC = () => {
         <>
           <Text style={styles.emptyTitle}>No Tracks Found</Text>
           <Text style={styles.emptySubtitle}>
-            {searchQuery ? 'Try a different search term' : 'Add some beats to get started'}
+            {searchQuery || selectedTierlists.length > 0 || selectedGenres.length > 0 || selectedMoods.length > 0 || selectedKeywords.length > 0
+              ? 'Try adjusting your filters' 
+              : 'Add some beats to get started'}
           </Text>
         </>
       )}
@@ -123,6 +288,8 @@ const HomeScreen: React.FC = () => {
   );
 
   const ListFooterComponent = () => <View style={{ height: bottomPadding }} />;
+
+  const filterModalProps = getFilterModalProps();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -167,10 +334,30 @@ const HomeScreen: React.FC = () => {
         contentContainerStyle={styles.filtersContainer}
         style={styles.filtersScrollView}
       >
-        <FilterButton label="Tierlist" onPress={() => {}} />
-        <FilterButton label="Genres" onPress={() => {}} />
-        <FilterButton label="Moods" onPress={() => {}} />
-        <FilterButton label="Keywords" onPress={() => {}} />
+        <FilterButton 
+          label="Tierlist" 
+          onPress={() => setActiveFilterType('tierlist')} 
+          isActive={selectedTierlists.length > 0}
+          count={selectedTierlists.length}
+        />
+        <FilterButton 
+          label="Genres" 
+          onPress={() => setActiveFilterType('genres')} 
+          isActive={selectedGenres.length > 0}
+          count={selectedGenres.length}
+        />
+        <FilterButton 
+          label="Moods" 
+          onPress={() => setActiveFilterType('moods')} 
+          isActive={selectedMoods.length > 0}
+          count={selectedMoods.length}
+        />
+        <FilterButton 
+          label="Keywords" 
+          onPress={() => setActiveFilterType('keywords')} 
+          isActive={selectedKeywords.length > 0}
+          count={selectedKeywords.length}
+        />
       </ScrollView>
 
       {/* Beat List */}
@@ -198,6 +385,16 @@ const HomeScreen: React.FC = () => {
 
       {/* Audio Player - positioned at bottom */}
       {currentBeat && <AudioPlayer />}
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={activeFilterType !== null}
+        title={filterModalProps.title}
+        options={filterModalProps.options}
+        selectedIds={filterModalProps.selectedIds}
+        onSelect={filterModalProps.onSelect}
+        onClose={() => setActiveFilterType(null)}
+      />
     </View>
   );
 };
@@ -296,7 +493,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   headerSpacer: {
-    width: 50 + spacing.sm + spacing.sm, // Duration + more button space
+    width: 50 + spacing.sm + spacing.sm,
   },
   listWrapper: {
     flex: 1,

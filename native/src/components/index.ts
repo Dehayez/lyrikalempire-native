@@ -5,3 +5,4 @@ export { default as SearchBar } from './SearchBar';
 export { default as BeatCard } from './BeatCard';
 export { default as PlaylistCard } from './PlaylistCard';
 export { AudioPlayer } from './AudioPlayer';
+export { default as FilterModal } from './FilterModal';
