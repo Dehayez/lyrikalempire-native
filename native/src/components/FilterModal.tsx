@@ -199,6 +199,33 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
   const combinedTranslateY = Animated.add(slideAnim, dragY);
 
+  // Use a larger range so opacity decreases more gradually
+  // Opacity reaches 0 only when modal is dragged much further down
+  const MAX_DRAG_DISTANCE = DISMISS_THRESHOLD * 3; // 240px
+
+  // Interpolate dragY to control overlay opacity (decreases as drag increases)
+  const dynamicOverlayOpacity = dragY.interpolate({
+    inputRange: [0, MAX_DRAG_DISTANCE],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Combine base overlay opacity with drag-based opacity
+  const finalOverlayOpacity = Animated.multiply(overlayOpacity, dynamicOverlayOpacity);
+
+  // Interpolate dragY to control blur intensity (using opacity of different blur layers)
+  const strongBlurOpacity = dragY.interpolate({
+    inputRange: [0, MAX_DRAG_DISTANCE / 2],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const weakBlurOpacity = dragY.interpolate({
+    inputRange: [0, MAX_DRAG_DISTANCE / 2, MAX_DRAG_DISTANCE],
+    outputRange: [0, 1, 0],
+    extrapolate: 'clamp',
+  });
+
   return (
     <Modal
       visible={modalVisible}
@@ -215,15 +242,29 @@ const FilterModal: React.FC<FilterModalProps> = ({
         <Animated.View 
           style={[
             styles.overlay,
-            { opacity: overlayOpacity }
+            { opacity: finalOverlayOpacity }
           ]} 
         >
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            blurType="dark"
-            blurAmount={2}
-            reducedTransparencyFallbackColor="black"
-          />
+          {/* Strong blur layer */}
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: strongBlurOpacity }]}>
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              blurType="dark"
+              blurAmount={2}
+              reducedTransparencyFallbackColor="black"
+            />
+          </Animated.View>
+          
+          {/* Weak blur layer */}
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: weakBlurOpacity }]}>
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              blurType="dark"
+              blurAmount={0.5}
+              reducedTransparencyFallbackColor="black"
+            />
+          </Animated.View>
+          
           <TouchableWithoutFeedback onPress={onClose}>
             <View style={StyleSheet.absoluteFill} />
           </TouchableWithoutFeedback>
