@@ -200,6 +200,7 @@
       overflow-y: hidden;
       white-space: nowrap;
       padding-left: 8px;
+      padding-right: 8px;
     }
 
     &--desktop {
@@ -282,8 +283,7 @@
       display: block;
       width: 100%;
       padding: 0;
-      background: $color-gray-dark;
-      border-bottom: $border-bottom-dark;
+      background: $color-black;
       z-index: 30;
     }
 
