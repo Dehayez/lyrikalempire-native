@@ -10,7 +10,6 @@ export { useDragToDismiss } from './useDragToDismiss';
 export { useWaveform } from './useWaveform';
 export { useMediaSession } from './useMediaSession';
 export { useCrossTabSync } from './useCrossTabSync';
-export { default as useKeyboardInset } from './useKeyboardInset';
 export { default as useOs } from './useOs';
 
 // Audio Player Hooks - organized in audioPlayer folder

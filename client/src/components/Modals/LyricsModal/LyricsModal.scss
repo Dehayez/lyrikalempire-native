@@ -146,19 +146,29 @@
   }
 
   .lyrics-modal__rhymes-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: var(--keyboard-inset, 0px);
-    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
     background: $color-gray-dark;
-    border-top: $border-bottom-dark;
-    z-index: 2;
-    transition: bottom 0.2s ease;
+    padding-top: 0;
+  }
+
+  .lyrics-modal__rhymes-bar--desktop {
+    position: absolute;
+    top: 72px;
+    right: 0;
+    width: 100px;
+    max-height: calc(100% - 88px);
+    padding: 12px;
+    background: rgba(20, 20, 20, 0.3);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
   }
 
   .lyrics-modal__rhymes-header {
     display: flex;
+    flex-direction: column;
     align-items: baseline;
     gap: 8px;
     margin-bottom: 12px;
@@ -174,6 +184,7 @@
   .lyrics-modal__rhymes-word {
     font-size: 14px;
     color: $color-white;
+    font-weight: 600;
   }
 
   .lyrics-modal__rhymes-list {
@@ -185,7 +196,7 @@
       overflow-x: auto;
       overflow-y: hidden;
       white-space: nowrap;
-      padding-bottom: 24px;
+      padding-left: 8px;
     }
 
     &--desktop {
@@ -196,6 +207,7 @@
       overflow-x: hidden;
       max-height: 100%;
       padding-right: 6px;
+      padding-bottom: 16px;
     }
   }
 
@@ -255,7 +267,6 @@
       flex-direction: column;
       gap: 0;
       position: relative;
-      padding-bottom: var(--rhymes-bar-height, 0px);
     }
 
     .lyrics-modal__rhymes-panel {
@@ -265,10 +276,20 @@
     }
 
     .lyrics-modal__rhymes-bar {
-      --rhymes-bar-height: 88px;
-      position: fixed;
-      bottom: calc(var(--keyboard-inset, 0px) + env(safe-area-inset-bottom, 0px));
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 0;
+      background: $color-gray-dark;
+      border-bottom: $border-bottom-dark;
+      border-top: none;
       z-index: 30;
+    }
+
+    .lyrics-modal__rhymes-header {
+      padding: 12px;
+      padding-bottom: 0;
     }
   }
 }

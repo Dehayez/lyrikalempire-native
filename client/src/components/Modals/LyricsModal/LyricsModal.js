@@ -44,28 +44,6 @@ const MODAL_STYLE = {
   },
 };
 
-const MOBILE_MODAL_STYLE = {
-  overlay: {
-    backgroundColor: 'transparent',
-    zIndex: 10,
-    pointerEvents: 'none',
-  },
-  content: {
-    backgroundColor: 'transparent',
-    color: 'white',
-    border: 'none',
-    height: 'var(--viewport-height, 100vh)',
-    width: '100%',
-    margin: 0,
-    position: 'fixed',
-    top: 'var(--viewport-offset-top, 0px)',
-    left: 0,
-    right: 0,
-    transform: 'none',
-    pointerEvents: 'none',
-  },
-};
-
 const LYRICS_SAVE_DEBOUNCE_MS = 1200;
 const LYRICS_POLL_INTERVAL_MS = 2000;
 
@@ -387,39 +365,6 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
     prevRhymesCount.current = rhymes.length;
   }, [isMorePending, rhymes.length]);
 
-  useEffect(() => {
-    if (!isMobile || !lyricsModal) return undefined;
-    const root = document.documentElement;
-    const visualViewport = window.visualViewport;
-    const updateKeyboardOffset = () => {
-      let offset = 0;
-      if (visualViewport) {
-        const heightDelta = window.innerHeight - visualViewport.height - visualViewport.offsetTop;
-        offset = Math.max(0, Math.round(heightDelta));
-      }
-      root.style.setProperty('--keyboard-offset', `${offset}px`);
-    };
-
-    updateKeyboardOffset();
-
-    if (!visualViewport) {
-      return () => {
-        root.style.setProperty('--keyboard-offset', '0px');
-      };
-    }
-
-    visualViewport.addEventListener('resize', updateKeyboardOffset);
-    visualViewport.addEventListener('scroll', updateKeyboardOffset);
-    window.addEventListener('orientationchange', updateKeyboardOffset);
-
-    return () => {
-      visualViewport.removeEventListener('resize', updateKeyboardOffset);
-      visualViewport.removeEventListener('scroll', updateKeyboardOffset);
-      window.removeEventListener('orientationchange', updateKeyboardOffset);
-      root.style.setProperty('--keyboard-offset', '0px');
-    };
-  }, [isMobile, lyricsModal]);
-
   const handleLoadMoreRhymes = useCallback(() => {
     if (rhymesListRef.current) {
       pendingRhymesScrollPosition.current = {
@@ -510,7 +455,95 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
       >
         <IoCloseSharp />
       </IconButton>
+      {isMobile && selectedWord && (
+        <div className="lyrics-modal__rhymes-bar" aria-live="polite">
+          <div className="lyrics-modal__rhymes-header">
+            <span className="lyrics-modal__rhymes-title">Rhymes</span>
+            <span className="lyrics-modal__rhymes-word">{selectedWord}</span>
+          </div>
+          <div
+            className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--mobile"
+            ref={rhymesListRef}
+          >
+            {rhymes.length ? (
+              <>
+                {rhymes.map((rhyme) => (
+                  <span className="lyrics-modal__rhymes-item" key={rhyme}>
+                    {rhyme}
+                  </span>
+                ))}
+                {shouldShowMoreButton && (
+                  <button
+                    className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
+                    type="button"
+                    onClick={handleLoadMoreRhymes}
+                    disabled={isRhymesLoading}
+                    aria-busy={isRhymesLoading}
+                  >
+                    <span className="lyrics-modal__rhymes-more-text">More</span>
+                    <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
+                      Loading...
+                    </span>
+                  </button>
+                )}
+              </>
+            ) : isRhymesLoading ? (
+              <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
+                Loading...
+              </span>
+            ) : (
+              <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
+                No rhymes found
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       <h2 className="modal__title">{title}</h2>
+      {!isMobile && selectedWord && (
+        <div className="lyrics-modal__rhymes-bar lyrics-modal__rhymes-bar--desktop" aria-live="polite">
+          <div className="lyrics-modal__rhymes-header">
+            <span className="lyrics-modal__rhymes-title">Rhymes</span>
+            <span className="lyrics-modal__rhymes-word">{selectedWord}</span>
+          </div>
+          <div
+            className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--desktop"
+            ref={rhymesListRef}
+          >
+            {rhymes.length ? (
+              <>
+                {rhymes.map((rhyme) => (
+                  <span className="lyrics-modal__rhymes-item" key={rhyme}>
+                    {rhyme}
+                  </span>
+                ))}
+                {shouldShowMoreButton && (
+                  <button
+                    className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
+                    type="button"
+                    onClick={handleLoadMoreRhymes}
+                    disabled={isRhymesLoading}
+                    aria-busy={isRhymesLoading}
+                  >
+                    <span className="lyrics-modal__rhymes-more-text">More</span>
+                    <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
+                      Loading...
+                    </span>
+                  </button>
+                )}
+              </>
+            ) : isRhymesLoading ? (
+              <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
+                Loading...
+              </span>
+            ) : (
+              <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
+                No rhymes found
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       {isLoading ? (
         <div className="lyrics-modal__loading">Loading lyrics...</div>
       ) : (
@@ -526,109 +559,17 @@ const LyricsModal = ({ beatId, title, beat, lyricsModal, setLyricsModal }) => {
               onTouchEnd={handleSelectionChange}
             />
           </div>
-          {isMobile && selectedWord && (
-            <div className="lyrics-modal__rhymes-bar" aria-live="polite">
-              <div className="lyrics-modal__rhymes-header">
-                <span className="lyrics-modal__rhymes-title">Rhymes</span>
-                <span className="lyrics-modal__rhymes-word">{selectedWord}</span>
-              </div>
-              <div
-                className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--mobile"
-                ref={rhymesListRef}
-              >
-                {rhymes.length ? (
-                  <>
-                    {rhymes.map((rhyme) => (
-                      <span className="lyrics-modal__rhymes-item" key={rhyme}>
-                        {rhyme}
-                      </span>
-                    ))}
-                    {shouldShowMoreButton && (
-                      <button
-                        className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
-                        type="button"
-                        onClick={handleLoadMoreRhymes}
-                        disabled={isRhymesLoading}
-                        aria-busy={isRhymesLoading}
-                      >
-                        <span className="lyrics-modal__rhymes-more-text">More</span>
-                        <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
-                          Loading...
-                        </span>
-                      </button>
-                    )}
-                  </>
-                ) : isRhymesLoading ? (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
-                    Loading...
-                  </span>
-                ) : (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
-                    No rhymes found
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-          {!isMobile && selectedWord && (
-            <aside className="lyrics-modal__rhymes-panel" aria-live="polite">
-              <div className="lyrics-modal__rhymes-header">
-                <span className="lyrics-modal__rhymes-title">Rhymes</span>
-                <span className="lyrics-modal__rhymes-word">
-                  {selectedWord}
-                </span>
-              </div>
-              <div
-                className="lyrics-modal__rhymes-list lyrics-modal__rhymes-list--desktop"
-                ref={rhymesListRef}
-              >
-                {rhymes.length ? (
-                  <>
-                    {rhymes.map((rhyme) => (
-                      <span className="lyrics-modal__rhymes-item" key={rhyme}>
-                        {rhyme}
-                      </span>
-                    ))}
-                    {shouldShowMoreButton && (
-                      <button
-                        className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--more"
-                        type="button"
-                        onClick={handleLoadMoreRhymes}
-                        disabled={isRhymesLoading}
-                        aria-busy={isRhymesLoading}
-                      >
-                        <span className="lyrics-modal__rhymes-more-text">More</span>
-                        <span className="lyrics-modal__rhymes-more-text lyrics-modal__rhymes-more-text--loading">
-                          Loading...
-                        </span>
-                      </button>
-                    )}
-                  </>
-                ) : isRhymesLoading ? (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--loading">
-                    Loading...
-                  </span>
-                ) : (
-                  <span className="lyrics-modal__rhymes-item lyrics-modal__rhymes-item--empty">
-                    No rhymes found
-                  </span>
-                )}
-              </div>
-            </aside>
-          )}
         </div>
       )}
     </div>
   );
-
-  const modalStyle = isMobile ? MOBILE_MODAL_STYLE : MODAL_STYLE;
 
   return (
     <Modal
       className={`lyrics-modal ${isFullscreen ? 'lyrics-modal--fullscreen' : ''}`}
       isOpen={lyricsModal}
       onRequestClose={handleCancel}
-      style={modalStyle}
+      style={MODAL_STYLE}
       shouldCloseOnOverlayClick={false}
     >
       {isMobile ? (
